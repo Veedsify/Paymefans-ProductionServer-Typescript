@@ -1,4 +1,4 @@
-import { EmailServiceProp, EmailServiceResponse } from "../../types/email";
+import { EmailServiceProp, EmailServiceResponse } from "../types/email";
 import transporter from "../libs/NodemailerTransporter";
 
 const { APP_NAME, MAIL_USER } = process.env;

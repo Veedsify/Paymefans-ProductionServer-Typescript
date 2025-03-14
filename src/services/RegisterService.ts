@@ -1,10 +1,11 @@
-import { RegisteredUser, RegisterServiceProp, RegisterServiceResponse } from "../../types/user";
+import { RegisteredUser } from "../types/user";
 import query from "../utils/prisma.ts";
 import { GenerateUniqueId } from "../utils/GenerateUniqueId.ts";
 import { CreateHashedPassword } from "../libs/HashPassword.ts";
-import { CheckForAdminResponse } from "../../types/admin";
+import { CheckForAdminResponse } from "../types/admin";
 import EmailService from "./EmailService.ts";
-import { EmailServiceProp } from "../../types/email";
+import { EmailServiceProp } from "../types/email";
+import { RegisterServiceProp, RegisterServiceResponse } from "../types/auth";
 
 export default class RegisterService {
     static async RegisterNewUser(data: RegisterServiceProp): Promise<RegisterServiceResponse> {

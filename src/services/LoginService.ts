@@ -1,4 +1,4 @@
-import { LoginUserProps, LoginUserResponse } from '../../types/auth.ts';
+import { LoginUserProps, LoginUserResponse } from '../types/auth.ts';
 import ComparePasswordHash from '../libs/ComparePassordHash.ts';
 import Authenticate from '../libs/jwt.ts';
 import query from '../utils/prisma.ts';
