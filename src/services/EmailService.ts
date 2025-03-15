@@ -29,7 +29,7 @@ export default class EmailService {
                   to: email,
                   subject: subject,
                   template: 'welcome', // Name of the Handlebars template
-                  context: { message } // Dynamic data
+                  context: { message, name: "Wisdom Dike" } // Dynamic data
             };
 
             try {

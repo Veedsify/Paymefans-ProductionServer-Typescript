@@ -1,22 +1,252 @@
 <!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Clean Email Template</title>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap">
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: 'Inter', sans-serif;
+      background-color: #F5F5F5;
+      color: #000000;
+      line-height: 1.6;
+    }
+    
+    .email-container {
+      max-width: 600px;
+      margin: 0 auto;
+      background-color: #ffffff;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.05);
+    }
+    
+    .email-header {
+      padding: 32px;
+      background: linear-gradient(135deg, #e057ff, #CC0DF8);
+      text-align: center;
+    }
+    
+    .logo {
+      width: 120px;
+      height: auto;
+    }
+    
+    .header-title {
+      color: #ffffff;
+      font-size: 24px;
+      font-weight: 600;
+      margin: 16px 0 0;
+      letter-spacing: -0.02em;
+    }
+    
+    .email-content {
+      padding: 40px 32px;
+    }
+    
+    .greeting {
+      font-size: 18px;
+      font-weight: 500;
+      margin: 0 0 24px;
+      color: #000000;
+    }
+    
+    .message {
+      font-size: 16px;
+      font-weight: 400;
+      margin: 0 0 24px;
+      color: #000000;
+      line-height: 1.7;
+    }
+    
+    .highlight-box {
+      background-color: #FCF1FF;
+      border-radius: 8px;
+      padding: 24px;
+      margin: 32px 0;
+    }
+    
+    .highlight-title {
+      color: #78158E;
+      font-weight: 600;
+      font-size: 18px;
+      margin: 0 0 16px;
+    }
+    
+    .highlight-content {
+      margin: 0;
+      color: #000000;
+    }
+    
+    .cta-button {
+      display: inline-block;
+      background-color: #000000;
+      color: #ffffff;
+      font-weight: 500;
+      font-size: 16px;
+      padding: 14px 30px;
+      border-radius: 8px;
+      text-decoration: none;
+      margin: 32px 0;
+      text-align: center;
+      letter-spacing: 0.02em;
+      transition: transform 0.2s ease;
+    }
+    
+    .cta-button:hover {
+      transform: translateY(-2px);
+    }
+    
+    .coins-section {
+      margin: 32px 0;
+      border-radius: 12px;
+      background: linear-gradient(135deg, #coins-card-top, #coins-card-bottom);
+      padding: 24px;
+      text-align: center;
+    }
+    
+    .coins-icon {
+      color: #F4900C;
+      font-size: 32px;
+      margin-bottom: 16px;
+    }
+    
+    .coins-title {
+      font-weight: 600;
+      font-size: 18px;
+      margin: 0 0 8px;
+      color: #000000;
+    }
+    
+    .notification-badge {
+      display: inline-block;
+      background-color: #04D900;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      margin-right: 8px;
+    }
+    
+    .email-footer {
+      padding: 24px 32px;
+      background-color: #FCF1FF;
+      text-align: center;
+    }
+    
+    .footer-links {
+      margin-bottom: 16px;
+    }
+    
+    .footer-link {
+      color: #78158E;
+      text-decoration: none;
+      font-size: 14px;
+      margin: 0 12px;
+    }
+    
+    .copyright {
+      color: #78158E;
+      font-size: 13px;
+      margin: 0;
+    }
+    
+    .divider {
+      height: 1px;
+      background-color: #FAE2FF;
+      margin: 32px 0;
+    }
+    
+    @media (max-width: 600px) {
+      .email-content {
+        padding: 32px 24px;
+      }
+      
+      .header-title {
+        font-size: 20px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="email-container">
+    <div class="email-header">
+      <img src="https://via.placeholder.com/120x40" alt="Logo" class="logo">
+      <h1 class="header-title">Welcome to Our Platform {{name}}</h1>
+    </div>
+    
+    <div class="email-content">
+      <p class="greeting">Hello Jane,</p>
+      
+      <p class="message">
+        Thank you for joining our platform. We're excited to have you on board and can't wait to help you get started on your journey with us.
+      </p>
+      
+      <div class="highlight-box">
+        <h2 class="highlight-title">Your account is ready</h2>
+        <p class="highlight-content">
+          You can now access all features of our platform. Start exploring and make the most of your experience.
+        </p>
+      </div>
+      
+      <p class="message">
+        To help you get started, we've prepared some resources that will guide you through the main features of our platform.
+      </p>
+      
+      <a href="#" class="cta-button">Get Started</a>
+      
+      <div class="divider"></div>
+      
+      <p class="message">
+        <span class="notification-badge"></span>
+        <strong>New feature available:</strong> You can now customize your profile with our new themes and options.
+      </p>
+      
+      <div class="coins-section">
+        <div class="coins-icon">🪙</div>
+        <h3 class="coins-title">You have 100 bonus coins</h3>
+        <p class="highlight-content">Use them to unlock premium content and features</p>
+      </div>
+    </div>
+    
+    <div class="email-footer">
+      <div class="footer-links">
+        <a href="#" class="footer-link">Privacy Policy</a>
+        <a href="#" class="footer-link">Terms of Service</a>
+        <a href="#" class="footer-link">Unsubscribe</a>
+      </div>
+      <p class="copyright">© 2023 Your Company. All rights reserved.</p>
+    </div>
+  </div>
+</body>
+</html>
+{{!-- <!DOCTYPE html>
 <html>
 <head>
     <meta charset="UTF-8">
     <title>PayMeFans Emails</title>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap');
         
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
+            font-family: 'Inter', Arial, sans-serif;
         }
         
         body {
-            font-family: 'Lexend','Trebuchet MS' ,'Ubuntu','Open Sans', Arial, sans-serif;
+            font-family: 'Inter', Arial, sans-serif;
             line-height: 1.6;
-            color: #4a4a4a;
-            background-color: #f9f9f9;
+            color: #000000;
+            background-color: #ffffff;
+        }
+
+        a{
+            text-decoration: none;
+            color: #ffffff;
         }
         
         .main-table {
@@ -31,14 +261,14 @@
         
         .header {
             padding: 30px 40px;
-            background: linear-gradient(135deg, #ffffff 0%, #fcfaff 100%);
-            border-bottom: 1px solid #f0e6f6;
+            background: linear-gradient(135deg, #ffffff 0%, #FCF1FF 100%);
+            border-bottom: 1px solid #FAE2FF;
         }
         
         .logo {
             height: 40px;
             margin-bottom: 5px;
-            color: #9d3d8c;
+            color: #CC0DF8;
         }
         
         .content {
@@ -58,15 +288,15 @@
         }
         
         .title {
-            color: #9d3d8c;
+            color: #78158E;
             font-size: 24px;
-            font-weight: 500;
+            font-weight: 600;
             margin-bottom: 20px;
             letter-spacing: -0.5px;
         }
         
         .text {
-            color: #666;
+            color: #000000;
             font-size: 16px;
             line-height: 1.6;
             margin-bottom: 25px;
@@ -75,7 +305,7 @@
         .btn {
             display: inline-block;
             padding: 14px 28px;
-            background-color: #9d3d8c;
+            background-color: #CC0DF8;
             color: white;
             text-decoration: none;
             border-radius: 8px;
@@ -85,69 +315,42 @@
         }
         
         .btn:hover {
-            background-color: #8d357c;
+            background-color: #78158E;
         }
         
         .secondary-btn {
-            background-color: #f7f1f9;
-            color: #9d3d8c;
+            background-color: #000000;
+            color: #ffffff;
             margin-left: 15px;
         }
         
         .footer {
-            background-color: #fcfaff;
+            background-color: #FCF1FF;
             padding: 30px 40px;
             text-align: center;
-            border-top: 1px solid #f0e6f6;
+            border-top: 1px solid #FAE2FF;
         }
         
         .footer-links a {
-            color: #9d3d8c;
+            color: #78158E;
             text-decoration: none;
             margin: 0 15px;
             font-size: 14px;
         }
         
-        .divider {
-            height: 1px;
-            background-color: #f0e6f6;
-            margin: 30px 0;
-        }
-        
         .info-box {
-            background-color: #fcfaff;
+            background-color: #FCF1FF;
             border-radius: 8px;
             padding: 20px;
             margin: 20px 0;
         }
-        
-        .transaction-table {
-            width: 100%;
-            margin: 25px 0;
-            border-collapse: collapse;
-        }
-        
-        .transaction-table th {
-            background-color: #fcfaff;
-            padding: 12px;
-            text-align: left;
-            color: #9d3d8c;
-            font-weight: 500;
-        }
-        
-        .transaction-table td {
-            padding: 12px;
-            border-top: 1px solid #f0e6f6;
-        }
     </style>
 </head>
 <body>
-    <!-- Template 1: Welcome Email -->
     <table class="main-table">
         <tr>
             <td class="header">
                 <svg class="logo" viewBox="0 0 24 24">
-                    <!-- Simple placeholder logo - replace with actual logo -->
                     <path fill="currentColor" d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
                 </svg>
             </td>
@@ -156,13 +359,11 @@
             <td class="content">
                 <h1 class="title">Welcome to PayMeFans</h1>
                 <div class="illustration-container">
-                    <!-- Placeholder for welcome illustration -->
                     <img src="/api/placeholder/300/200" alt="Welcome" class="illustration"/>
                 </div>
-                <p class="text">We're thrilled to have you join our creative community. Get ready to connect with amazing creators and enjoy exclusive content.</p>
+                <p class="text">We're thrilled to have you join our creative community. Please activate your account to start connecting with amazing creators and enjoy exclusive content.</p>
                 <div style="text-align: center;">
-                    <a href="#" class="btn">Explore Creators</a>
-                    <a href="#" class="btn secondary-btn">View Guide</a>
+                    <a href="#" class="btn">Activate Account</a>
                 </div>
                 <div class="info-box">
                     <p style="margin: 0;">🎉 New users get 50 bonus points to start!</p>
@@ -180,4 +381,4 @@
         </tr>
     </table>
 </body>
-</html>
+</html> --}}

@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "main": "index.js",
   "type": "module",
+  "prisma": {
+    "seed": "bun prisma/seed.ts"
+  },
   "scripts": {
     "build": "tsc",
     "bun-build": "bun build",
@@ -20,6 +23,7 @@
     "@socket.io/redis-adapter": "^8.3.0",
     "@stream-io/node-sdk": "^0.3.1",
     "@types/bcrypt": "^5.0.2",
+    "@types/morgan": "^1.9.9",
     "@types/multer": "^1.4.12",
     "@types/nodemailer": "^6.4.17",
     "@types/nodemailer-express-handlebars": "^4.0.5",
@@ -47,7 +51,7 @@
     "ioredis": "^5.6.0",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.12.1",
-    "morgan": "~1.9.1",
+    "morgan": "^1.10.0",
     "multer": "^1.4.5-lts.1",
     "multer-storage-cloudinary": "^4.0.0",
     "node-fetch": "^3.3.2",

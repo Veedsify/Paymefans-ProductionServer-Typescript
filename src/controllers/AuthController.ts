@@ -27,7 +27,7 @@ export default class AuthController {
     //  Username Checker
     static async Username(req: Request, res: Response): Promise<any> {
         const CheckForUsername = await UsernameService.CheckUsername({
-            username: req.body.usernamee
+            username: req.body.username
         });
 
         if (!CheckForUsername.status) {
