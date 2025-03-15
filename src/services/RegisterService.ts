@@ -29,11 +29,12 @@ export default class RegisterService {
         }
 
         const { checkPhone, checkEmail } = await this.CheckPhoneAndEmail(data.phone, data.email);
-        if (checkPhone) {
-            return { message: "Phone number already exists", error: true };
+        if (checkPhone && checkEmail) {
+            return { message: "Sorry This Account Already Exists", error: true };
         }
+
         if (checkEmail) {
-            return { message: "Email already exists", error: true };
+            return { message: "Sorry This Email Already Exists", error: true };
         }
 
         const user = await this.CreateUser(data);

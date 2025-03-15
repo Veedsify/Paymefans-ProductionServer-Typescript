@@ -36,3 +36,19 @@ export type BannerChangeResponse = {
       status: boolean;
       url?: string
 }
+
+export type ProfileUpdateResponse = {
+      message: string;
+      status: boolean;
+      url?: string
+}
+
+
+export type ProfileUpdateInfo = {
+      name: string;
+      location: string;
+      email: string;
+      bio: string;
+      website: string;
+      username: string;
+}

@@ -23,6 +23,17 @@ class ProfileController {
                   res.status(500).json({ error: 'Error changing banner' })
             }
       }
+
+      //Avatar Change
+      static async ProfileUpdate(req: Request, res: Response): Promise<any> {
+            try {
+                  const user = await ProfileService.ProfileUpdate(req)
+                  res.json(user)
+            } catch (error) {
+                  console.error('Avatar error:', error)
+                  res.status(500).json({ error: 'Error changing avatar' })
+            }
+      }
 }
 
 export default ProfileController

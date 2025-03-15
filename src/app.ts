@@ -30,7 +30,7 @@ AppSocket(server).then();
 RegisterCloudflareStreamWebhook()
 
 // Serve static files from the "public" directory
-app.use(express.static(path.join("../", 'public')));
+app.use(express.static(path.join('public')));
 app.use(express.urlencoded({ extended: false }));
 app.use(express.json());
 

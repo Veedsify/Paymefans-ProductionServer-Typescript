@@ -15,7 +15,7 @@ export default class AuthController {
 
             if (CreateAccount.error) {
                 console.log(CreateAccount.message)
-                return res.status(400).json({ message: CreateAccount.message, status: false });
+                return res.status(201).json({ message: CreateAccount.message, status: false });
             }
 
             return res.status(201).json({ message: "Account created successfully", status: true });

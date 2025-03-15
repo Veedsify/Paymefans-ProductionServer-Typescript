@@ -16,9 +16,12 @@ export function CreateUpload(dir: string) {
                   let FILEID = `FILE${GenerateUniqueId()}`;
                   const uniqueSuffix = `${FILEID}`;
                   const ext = path.extname(file.originalname);
-                  cb(null, `${uniqueSuffix}`);
+                  cb(null, `${uniqueSuffix}${ext}`);
             },
       });
 
-      return multer({ storage });
+      return multer({
+            storage,
+            limits: { fileSize: 7 * 1024 * 1024 * 1024 }
+      });
 }
