@@ -1,7 +1,7 @@
-const {CLOUDFLARE_WEBHOOK_URL, CLOUDFLARE_ACCOUNT_TOKEN, SERVER_ORIGINAL_URL} = process.env
+const { CLOUDFLARE_WEBHOOK_URL, CLOUDFLARE_ACCOUNT_TOKEN } = process.env
 const TEST_WEBHOOK_URL = `https://247b-197-211-59-109.ngrok-free.app`
 
-export function RegisterCloudflareStreamWebhook() {
+export function RegisterCloudflareStreamWebhook(): boolean {
     try {
         async function register() {
             const data = {
@@ -22,10 +22,13 @@ export function RegisterCloudflareStreamWebhook() {
             }
             const response = await res.json()
             console.log("Webhook registered", response)
+            return true
         }
 
         register()
+        return true
     } catch (error) {
         console.error("Failed to register webhook", error)
+        return false
     }
 }

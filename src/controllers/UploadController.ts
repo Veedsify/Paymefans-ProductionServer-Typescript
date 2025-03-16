@@ -1,19 +1,9 @@
 import { Request, Response } from 'express';
 import * as fs from 'fs';
-import * as sharp from 'sharp';
-import UploadImageCloudflare from '../libs/UploadImageCloudflare.ts';
-import tusUploader from '../libs/tus.ts';
-import socketserver from '../libs/io';
+import UploadImageCloudflare from '@libs/UploadImageCloudflare';
+import tusUploader from '@libs/tus';
+import socketserver from '@libs/io';
 import { UploadFileType } from '../types/cloudflare';
-
-interface FileUpload {
-      public: string;
-      blur?: string;
-      id?: string;
-      type: 'image' | 'video';
-      error?: boolean;
-      message?: string;
-}
 
 interface UploadedFile {
       path: string;

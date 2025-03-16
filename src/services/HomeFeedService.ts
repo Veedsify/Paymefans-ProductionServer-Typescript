@@ -1,5 +1,5 @@
 import { Post } from "@prisma/client";
-import query from "../utils/prisma";
+import query from "@utils/prisma";
 
 class FeedService {
   private static readonly POSTS_PER_HOME_PAGE = Number(process.env.POSTS_PER_HOME_PAGE) || 10;

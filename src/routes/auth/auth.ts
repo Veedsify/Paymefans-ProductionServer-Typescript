@@ -1,6 +1,6 @@
 import express from "express"
-import AuthController from "../../controllers/AuthController.ts"
-import Auth from "../../middleware/auth.ts"
+import AuthController from "@controllers/AuthController"
+import Auth from "@middleware/auth"
 const auth = express.Router()
 
 

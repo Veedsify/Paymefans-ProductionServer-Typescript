@@ -1,8 +1,8 @@
 import express from "express"
-import Auth from "../../middleware/auth";
-import UploadController from "../../controllers/UploadController.ts";
-import PostController from "../../controllers/PostController.ts";
-import { CreateUpload } from "../../middleware/FileUploadConfig";
+import Auth from "@middleware/auth";
+import UploadController from "@controllers/UploadController";
+import PostController from "@controllers/PostController";
+import { CreateUpload } from "@middleware/FileUploadConfig";
 const post = express()
 
 const postUpload = CreateUpload("post");

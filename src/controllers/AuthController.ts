@@ -1,11 +1,10 @@
-import express from "express";
-import RegisterService from "../services/RegisterService.ts";
+import RegisterService from "@services/RegisterService";
 import { Request, Response } from "express";
-import UsernameService from "../services/UsernameService.ts";
-import LoginService from "../services/LoginService.ts";
-import PointService from "../services/PointService.ts";
-import WalletService from "../services/WalletService.ts";
-import UserService from "../services/UserService.ts";
+import UsernameService from "@services/UsernameService";
+import LoginService from "@services/LoginService";
+import PointService from "@services/PointService";
+import WalletService from "@services/WalletService";
+import UserService from "@services/UserService";
 
 export default class AuthController {
     // Register Service

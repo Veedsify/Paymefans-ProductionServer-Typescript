@@ -1,7 +1,7 @@
 import { RemoveCloudflareMediaResponse } from "../types/cloudflare";
 import { RemovedMedia } from "../types/post";
 
-const getUrl = (file : RemovedMedia) => {
+const getUrl = (file: RemovedMedia): string => {
       const { CLOUDFLARE_ACCOUNT_ID } = process.env;
       if (file.type.trim().includes('image')) {
             return `https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/images/v1/${file.id}`
@@ -9,9 +9,10 @@ const getUrl = (file : RemovedMedia) => {
       if (file.type.trim().includes('video')) {
             return `https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/stream/${file.id}`
       }
+      return ''
 }
 
-async function RemoveCloudflareMedia (media: RemovedMedia[]): Promise<RemoveCloudflareMediaResponse> {
+async function RemoveCloudflareMedia(media: RemovedMedia[]): Promise<RemoveCloudflareMediaResponse> {
       try {
             const removeMediaPromises = media.map(async (file) => {
                   const url = getUrl(file)

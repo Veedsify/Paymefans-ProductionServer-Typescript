@@ -1,5 +1,5 @@
 import { EmailServiceProp, EmailServiceResponse } from "../types/email";
-import transporter from "../libs/NodemailerTransporter";
+import transporter from "@libs/NodemailerTransporter";
 
 const { APP_NAME, MAIL_USER } = process.env;
 
@@ -18,6 +18,7 @@ export default class EmailService {
                   if (RequiredFields.includes(key) && !value) {
                         return key;
                   }
+                  return null;      
             }).map(([key]) => key).join(", ");
 
             if (MissingFields) {

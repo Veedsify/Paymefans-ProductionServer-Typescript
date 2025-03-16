@@ -1,9 +1,10 @@
+import "module-alias/register";
 import express from 'express';
 import path from 'path';
 import http from "http"
-import api from "./routes/api.ts";
-import AppSocket from "./libs/AppSocket.ts";
-import { RegisterCloudflareStreamWebhook } from "./libs/RegisterCloudflareStreamWebhook.ts";
+import api from "@routes/api";
+import AppSocket from "@libs/AppSocket";
+import { RegisterCloudflareStreamWebhook } from "@libs/RegisterCloudflareStreamWebhook";
 import cors from "cors"
 import logger from "morgan"
 const { ADMIN_PANEL_URL, VERIFICATION_URL, APP_URL, LIVESTREAM_PORT } = process.env;

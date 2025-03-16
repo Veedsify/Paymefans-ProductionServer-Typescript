@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import FeedService from "../services/HomeFeedService";
+import FeedService from "@services/HomeFeedService";
 
 const feedService = new FeedService()
 

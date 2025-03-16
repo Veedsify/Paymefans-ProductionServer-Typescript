@@ -1,7 +1,6 @@
 import express from "express"
-import AuthController from "../../controllers/AuthController.ts"
-import Auth from "../../middleware/auth.ts"
-import HomeFeedController from "../../controllers/HomeFeedControllers.ts"
+import Auth from "@middleware/auth"
+import HomeFeedController from "@controllers/HomeFeedControllers"
 const feed = express.Router()
 
 

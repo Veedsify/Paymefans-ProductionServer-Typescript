@@ -1,10 +1,18 @@
-import jwt from "jsonwebtoken"
-import { AuthUser } from "../types/user";
-import { User } from "@prisma/client";
-let { JWT_SECRET, TOKEN_EXPIRATION = '24h' } = process.env;
+import { User } from '@prisma/client';
+import * as jwt from 'jsonwebtoken';
+import { SignOptions } from 'jsonwebtoken';
 
-async function Authenticate(data: Omit<User, "password">): Promise<string> {
-      return jwt.sign(data, JWT_SECRET as string, { expiresIn: TOKEN_EXPIRATION as string });
-};
+// Environment variables
+const JWT_SECRET = process.env.JWT_SECRET || 'your-fallback-secret';
+const TOKEN_EXPIRATION = process.env.TOKEN_EXPIRATION || '1h';
 
-export default Authenticate
+async function Authenticate(data: Omit<User, "password">): Promise<any> {
+  const payload = { ...data };
+  return jwt.sign(
+    payload,
+    JWT_SECRET,
+    { expiresIn: TOKEN_EXPIRATION } as SignOptions
+  );
+}
+
+export { Authenticate };

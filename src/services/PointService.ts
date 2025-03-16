@@ -1,4 +1,4 @@
-import query from "../utils/prisma";
+import query from "@utils/prisma";
 import { RetrievePointResponse } from "../types/points";
 
 export default class PointService {

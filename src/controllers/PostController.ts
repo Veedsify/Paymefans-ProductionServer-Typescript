@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import PostService from "../services/PostService.ts";
+import PostService from "@services/PostService";
 
 export default class PostController {
       static async CreatePost(req: Request, res: Response): Promise<any> {

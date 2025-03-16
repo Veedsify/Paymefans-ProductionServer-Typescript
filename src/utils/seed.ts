@@ -1,5 +1,5 @@
 import { PrismaClient } from '@prisma/client'
-import { CreateHashedPassword } from '../src/libs/HashPassword.ts'
+import { CreateHashedPassword } from '../libs/HashPassword'
 const { SERVER_ORIGINAL_URL } = process.env
 
 const prisma = new PrismaClient()
@@ -7,7 +7,7 @@ const uniqueUserId = Math.random().toString(36).substring(2, 15);
 
 async function main() {
   const password = await CreateHashedPassword("password")
-  const alice = await prisma.user.upsert({
+   await prisma.user.upsert({
     where: { email: 'admin@paymefans.com' },
     update: {},
     create: {

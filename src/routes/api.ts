@@ -1,8 +1,8 @@
 import express from "express"
-import auth from "./auth/auth.ts"
-import feed from "./feed/feed.ts"
-import profile from "./profile/profile.ts"
-import post from "./post/post.ts"
+import auth from "@routes/auth/auth"
+import feed from "@routes/feed/feed"
+import profile from "@routes/profile/profile"
+import post from "@routes/post/post"
 const api = express.Router()
 
 // Authentication

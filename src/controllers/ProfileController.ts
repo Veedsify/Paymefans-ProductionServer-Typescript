@@ -1,5 +1,5 @@
 import { Request, Response } from 'express'
-import ProfileService from '../services/ProfileService'
+import ProfileService from '@services/ProfileService'
 class ProfileController {
       // Load Profile
       static async Profile(req: Request, res: Response): Promise<any> {

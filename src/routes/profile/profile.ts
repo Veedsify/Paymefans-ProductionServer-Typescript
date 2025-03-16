@@ -1,7 +1,7 @@
 import express from "express"
-import Auth from "../../middleware/auth.ts"
-import ProfileController from "../../controllers/ProfileController.ts"
-import { CreateUpload } from "../../middleware/FileUploadConfig.ts"
+import Auth from "@middleware/auth"
+import ProfileController from "@controllers/ProfileController"
+import { CreateUpload } from "@middleware/FileUploadConfig"
 const profile = express.Router()
 
 // Multer Instance

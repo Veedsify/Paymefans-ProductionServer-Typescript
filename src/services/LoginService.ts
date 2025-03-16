@@ -1,7 +1,7 @@
-import { LoginUserProps, LoginUserResponse } from '../types/auth.ts';
-import ComparePasswordHash from '../libs/ComparePassordHash.ts';
-import Authenticate from '../libs/jwt.ts';
-import query from '../utils/prisma.ts';
+import { LoginUserProps, LoginUserResponse } from '../types/auth';
+import ComparePasswordHash from '@libs/ComparePassordHash';
+import { Authenticate } from '@libs/jwt';
+import query from '@utils/prisma';
 export default class LoginService {
       // Login User
       static async LoginUser(data: LoginUserProps): Promise<LoginUserResponse> {

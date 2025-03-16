@@ -1,8 +1,8 @@
-import fs from "fs";
+import * as fs from 'fs/promises';
 import sharp, { ResizeOptions } from "sharp";
 import { PutObjectCommand } from "@aws-sdk/client-s3";
 import path from "path";
-import s3 from "../utils/s3";
+import s3 from "@utils/s3";
 
 export interface UploadOptions {
       file: Express.Multer.File; // File from Multer
@@ -36,8 +36,9 @@ export async function UploadImageToS3({
             throw new Error("No file uploaded");
       }
 
-      const fileKey = `${folder}/${folder}-${file.filename}.${format}`;
-      const tempFilePath = path.join("public/uploads", `temp-${folder}-${file.filename}.${format}`);
+      const filename = file.filename.replace(/\.[^/.]+$/, ''); // Remove any existing extension
+      const fileKey = `${folder}/${folder}-${filename}.${format}`;
+      const tempFilePath = path.join("public/uploads", `temp-${folder}-${filename}.${format}`);
 
       // Resize and compress image
       await sharp(file.path)
@@ -47,7 +48,7 @@ export async function UploadImageToS3({
             .toFile(tempFilePath);
 
       // Read file buffer
-      const fileStream = fs.readFileSync(tempFilePath);
+      const fileStream = await fs.readFile(tempFilePath);
 
       // Upload to S3
       const command = new PutObjectCommand({
@@ -63,10 +64,19 @@ export async function UploadImageToS3({
       const fileUrl = `${process.env.CLOUDFRONT_URL}/${fileKey}`;
 
       // Delete local files if enabled
+
+      async function deleteFiles(tempFilePath: string, filePath: string) {
+            try {
+                  await fs.rm(tempFilePath); // Delete resized file
+                  await fs.rm(filePath);
+            }
+            catch (err) {
+                  console.error("Error deleting local files:", err);
+            }
+      }
       if (deleteLocal) {
             try {
-                  fs.unlinkSync(tempFilePath); // Delete resized file
-                  fs.unlinkSync(file.path); // Delete original uploaded file
+                  await deleteFiles(tempFilePath, file.path);
             } catch (err) {
                   console.error("Error deleting local files:", err);
             }

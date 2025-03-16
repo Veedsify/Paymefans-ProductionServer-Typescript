@@ -4,7 +4,7 @@ import dotenv from "dotenv";
 dotenv.config();
 import { TusUploader, TusUploaderResponse } from "../types/cloudflare";
 
-import IoInstance from "./io.ts";
+import IoInstance from "./io";
 const { CLOUDFLARE_ACCOUNT_TOKEN, CLOUDFLARE_ACCOUNT_ID } = process.env;
 
 const tusUploader = async ({ filePath, file, fileId }: TusUploader): Promise<TusUploaderResponse> => {

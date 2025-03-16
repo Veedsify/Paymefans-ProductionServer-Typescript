@@ -1,4 +1,4 @@
-import query from "../utils/prisma";
+import query from "@utils/prisma";
 import { RetrieveWalletResponse } from "../types/wallet";
 
 export default class WalletService {

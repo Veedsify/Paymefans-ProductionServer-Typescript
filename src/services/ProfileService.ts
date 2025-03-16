@@ -1,11 +1,7 @@
 import { Request } from "express";
 import { BannerChangeResponse, ProfileServiceResponse, ProfileUpdateInfo, ProfileUpdateResponse } from "../types/profile";
-import query from "../utils/prisma";
-import sharp from "sharp"
-import { PutObjectCommand } from "@aws-sdk/client-s3";
-import fs from "fs";
-import s3 from "../utils/s3";
-import { UploadOptions, UploadImageToS3 } from "../libs/UploadImageToS3";
+import query from "@utils/prisma";
+import { UploadOptions, UploadImageToS3 } from "@libs/UploadImageToS3";
 
 
 class ProfileService {

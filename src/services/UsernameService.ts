@@ -1,6 +1,5 @@
-import { Request, Response } from "express";
 import { CheckUsernameProps, CheckUsernameResponse, FindUserNameResponse } from "../types/auth";
-import query from "../utils/prisma";
+import query from "@utils/prisma";
 
 export default class UsernameService {
       static async CheckUsername({ username }: CheckUsernameProps): Promise<CheckUsernameResponse> {

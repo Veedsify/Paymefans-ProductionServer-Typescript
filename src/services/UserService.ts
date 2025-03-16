@@ -1,5 +1,5 @@
 import { RetrieveUserResponse } from "../types/user";
-import query from "../utils/prisma";
+import query from "@utils/prisma";
 
 export default class UserService {
       static async RetrieveUser(userid: number): Promise<RetrieveUserResponse> {

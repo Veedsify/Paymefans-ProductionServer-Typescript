@@ -1,9 +1,9 @@
 import { RegisteredUser } from "../types/user";
-import query from "../utils/prisma.ts";
-import { GenerateUniqueId } from "../utils/GenerateUniqueId.ts";
-import { CreateHashedPassword } from "../libs/HashPassword.ts";
+import query from "@utils/prisma";
+import { GenerateUniqueId } from "@utils/GenerateUniqueId";
+import { CreateHashedPassword } from "@libs/HashPassword";
 import { CheckForAdminResponse } from "../types/admin";
-import EmailService from "./EmailService.ts";
+import EmailService from "./EmailService";
 import { EmailServiceProp } from "../types/email";
 import { RegisterServiceProp, RegisterServiceResponse } from "../types/auth";
 
@@ -22,6 +22,7 @@ export default class RegisterService {
             if (RequiredFields.includes(key) && !value) {
                 return key;
             }
+            return null
         }).map(([key]) => key).join(", ");
 
         if (MissingFields) {
@@ -148,7 +149,7 @@ export default class RegisterService {
     static async CreateWelcomeConversationAndMessage(data: RegisteredUser, adminId: string) {
         const conversationId = `CONV${GenerateUniqueId()}`;
         const messageId = `MSG${GenerateUniqueId()}`;
-        const conversation = await query.conversations.create({
+        await query.conversations.create({
             data: {
                 conversation_id: conversationId,
                 participants: {
@@ -159,7 +160,7 @@ export default class RegisterService {
                 },
             },
         });
-        const newMessage = await query.messages.create({
+   await query.messages.create({
             data: {
                 message_id: messageId,
                 sender_id: adminId,
@@ -178,7 +179,7 @@ export default class RegisterService {
     // Create Welcome Notification
     static async CreateWelcomeNotification(data: RegisteredUser): Promise<true> {
         const notificationId = `NOT${GenerateUniqueId()}`;
-        const notification = await query.notifications.create({
+       await query.notifications.create({
             data: {
                 notification_id: notificationId,
                 message: `Thanks for joining us and creating an account, <strong>${data.fullname}</strong>. We are thrilled to meet you!`,

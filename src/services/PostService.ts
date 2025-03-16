@@ -1,8 +1,8 @@
 import { CreatePostProps, CreatePostResponse } from "../types/post";
 import { v4 as uuid } from "uuid";
-import query from "../utils/prisma";
+import query from "@utils/prisma";
 import { PostAudience } from "@prisma/client";
-import RemoveCloudflareMedia from "../libs/RemoveCloudflareMedia";
+import RemoveCloudflareMedia from "@libs/RemoveCloudflareMedia";
 
 
 export default class PostService {

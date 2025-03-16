@@ -1,7 +1,13 @@
 import nodemailer from 'nodemailer';
 import hbs from 'nodemailer-express-handlebars';
+import { create } from 'express-handlebars';
 import path from 'path';
-const { MAIL_USER, MAIL_HOST, MAIL_PORT, MAIL_PASS, APP_NAME } = process.env;
+
+const hbsEngine = create({
+  extname: '.hbs',
+});
+
+const { MAIL_USER, MAIL_HOST, MAIL_PORT, MAIL_PASS } = process.env;
 
 // 1. Create a transporter
 const transporter = nodemailer.createTransport({
@@ -13,14 +19,10 @@ const transporter = nodemailer.createTransport({
       }
 });
 
-// 2. Configure Handlebars template engine
+// 2. Set the template engine
 transporter.use('compile', hbs({
-      viewEngine: {
-            extname: '.hbs',
-            partialsDir: path.join(__dirname, "../", 'views/emails'),
-            defaultLayout: false,
-      },
-      viewPath: path.join(__dirname, "../", 'views/emails'),
+      viewEngine: hbsEngine,
+      viewPath: path.join("../", "views", "emails"),
       extName: '.hbs',
 }));
 
