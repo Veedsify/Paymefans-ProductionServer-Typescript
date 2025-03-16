@@ -1,11 +1,11 @@
 
-export interface UploadedFile extends Express.Multer.File  {
+export interface UploadedFile extends Express.Multer.File {
       filename: string;
 }
 
 export type TusUploader = {
       filePath: string;
-      file:  UploadedFile;
+      file: UploadedFile;
       fileId: string;
 }
 
@@ -21,7 +21,7 @@ export type TusUploaderErrorResponse = {
 export type TusUploaderResponse = TusUploaderSuccessResponse | TusUploaderErrorResponse;
 
 export type FileUploadSuccess = {
-      public: string; 
+      public: string;
       blur: string;
       id: string;
 }
@@ -36,3 +36,11 @@ export type FileUpload = FileUploadSuccess | FileUploadError;
 export interface UploadFileType extends FileUploadSuccess {
       type: 'image' | 'video';
 }
+
+export type RemoveCloudflareMediaResponse = {
+      error: boolean;
+      message: string;
+} | {
+      error: boolean;
+      message: string;
+}[]

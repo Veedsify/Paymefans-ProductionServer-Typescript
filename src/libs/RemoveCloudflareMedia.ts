@@ -1,4 +1,7 @@
-const getUrl = (file) => {
+import { RemoveCloudflareMediaResponse } from "../types/cloudflare";
+import { RemovedMedia } from "../types/post";
+
+const getUrl = (file : RemovedMedia) => {
       const { CLOUDFLARE_ACCOUNT_ID } = process.env;
       if (file.type.trim().includes('image')) {
             return `https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/images/v1/${file.id}`
@@ -8,7 +11,7 @@ const getUrl = (file) => {
       }
 }
 
-const removeCloudflareMedia = async (media) => {
+async function RemoveCloudflareMedia (media: RemovedMedia[]): Promise<RemoveCloudflareMediaResponse> {
       try {
             const removeMediaPromises = media.map(async (file) => {
                   const url = getUrl(file)
@@ -18,7 +21,7 @@ const removeCloudflareMedia = async (media) => {
                               "Authorization": `Bearer ${process.env.CLOUDFLARE_ACCOUNT_TOKEN}`
                         }
                   }
-                  const deleteMedia = await fetch(url, options)
+                  const deleteMedia = await fetch(url as string, options)
                   if (!deleteMedia.ok) {
                         return {
                               error: true,
@@ -43,4 +46,4 @@ const removeCloudflareMedia = async (media) => {
       }
 }
 
-export default removeCloudflareMedia;
+export default RemoveCloudflareMedia;

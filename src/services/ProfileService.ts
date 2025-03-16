@@ -79,7 +79,7 @@ class ProfileService {
                   saveToDb: true,
                   onUploadComplete: (BannerUrl: string) => SaveBannerToDb(BannerUrl),
                   format: "webp",
-                  quality: 80,
+                  quality: 100,
             }
 
             await UploadImageToS3(options)
