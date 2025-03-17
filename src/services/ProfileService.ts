@@ -2,7 +2,6 @@ import { Request } from "express";
 import { BannerChangeResponse, ProfileServiceResponse, ProfileUpdateInfo, ProfileUpdateResponse } from "../types/profile";
 import query from "@utils/prisma";
 import { UploadOptions, UploadImageToS3 } from "@libs/UploadImageToS3";
-import { GetMyPostErrorResponse, GetMyPostProps, GetMyPostResponse, GetMyPostSuccessResponse } from "types/post";
 
 
 class ProfileService {

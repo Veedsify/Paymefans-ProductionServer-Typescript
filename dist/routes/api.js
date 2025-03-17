@@ -8,6 +8,7 @@ const auth_1 = __importDefault(require("@routes/auth/auth"));
 const feed_1 = __importDefault(require("@routes/feed/feed"));
 const profile_1 = __importDefault(require("@routes/profile/profile"));
 const post_1 = __importDefault(require("@routes/post/post"));
+const story_1 = __importDefault(require("@routes/story/story"));
 const api = express_1.default.Router();
 // Authentication
 api.use("/auth", auth_1.default);
@@ -17,4 +18,6 @@ api.use("/feeds", feed_1.default);
 api.use("/profile", profile_1.default);
 // Post
 api.use("/post", post_1.default);
+// Story
+api.use("/story", story_1.default);
 exports.default = api;

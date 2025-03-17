@@ -15,5 +15,11 @@ post.get("/media", Auth, PostController.GetMedia)
 post.get("/media/:userId", Auth, PostController.GetOtherMedia)
 post.get("/user/:userId", Auth, PostController.GetUserPostByID)
 post.get("/:postId", Auth, PostController.GetSinglePost);
+post.get("/edit/:postId", Auth, PostController.EditPost)
+post.put("/update/audience/:postId", Auth, PostController.UpdatePostAudience)
+post.post("/repost/:postId", Auth, PostController.CreateRepost)   
+post.get("/:postId/comments", Auth, PostController.GetPostComments)
+post.post("/like/:postId", Auth, PostController.LikePost)
+post.delete("/:postId", Auth, PostController.DeletePost)
 
 export default post

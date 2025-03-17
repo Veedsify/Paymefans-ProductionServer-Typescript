@@ -4,6 +4,7 @@ import feed from "@routes/feed/feed"
 import profile from "@routes/profile/profile"
 import post from "@routes/post/post"
 import story from "@routes/story/story"
+import points from "@routes/points/point"
 const api = express.Router()
 
 // Authentication
@@ -14,6 +15,8 @@ api.use("/feeds", feed)
 api.use("/profile", profile)
 // Post
 api.use("/post", post)
+//Points
+api.use("/points", points)
 // Story
 api.use("/story", story)
 

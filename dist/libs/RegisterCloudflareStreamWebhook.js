@@ -29,18 +29,14 @@ function RegisterCloudflareStreamWebhook() {
                 });
                 if (!res.ok) {
                     console.error("Failed to register webhook", res);
-                    return false;
                 }
                 const response = yield res.json();
                 console.log("Webhook registered", response);
-                return true;
             });
         }
         register();
-        return true;
     }
     catch (error) {
         console.error("Failed to register webhook", error);
-        return false;
     }
 }
