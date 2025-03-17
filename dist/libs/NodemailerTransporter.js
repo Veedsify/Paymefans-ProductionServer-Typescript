@@ -9,11 +9,6 @@ const express_handlebars_1 = require("express-handlebars");
 const path_1 = __importDefault(require("path"));
 const hbsEngine = (0, express_handlebars_1.create)({
     extname: '.hbs',
-    defaultLayout: false,
-    runtimeOptions: {
-        allowProtoPropertiesByDefault: true,
-        allowProtoMethodsByDefault: true,
-    }
 });
 const { MAIL_USER, MAIL_HOST, MAIL_PORT, MAIL_PASS } = process.env;
 // 1. Create a transporter

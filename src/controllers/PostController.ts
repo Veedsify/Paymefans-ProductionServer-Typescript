@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import PostService from "@services/PostService";
 
 export default class PostController {
+      // Create Post
       static async CreatePost(req: Request, res: Response): Promise<any> {
             try {
 
@@ -18,6 +19,83 @@ export default class PostController {
 
             } catch (error: any) {
                   res.status(500).json({ message: error.message });
+            }
+      }
+
+      // My Posts
+      static async GetMyPosts(req: Request, res: Response): Promise<any> {
+            try {
+                  const MyPosts = await PostService.GetMyPosts({ userId: req.user?.id!, page: req.query.page as string, limit: req.query.limit as string })
+                  return res.status(200).json({ status: true, message: 'Post Retreived Successfully', data: MyPosts.data, total: MyPosts.total })
+            } catch (err: any) {
+                  console.error(err.message)
+                  res.status(500).json({ status: false, message: 'Internal Server Error!' })
+            }
+      }
+
+      // My Reposts
+      static async GetMyReposts(req: Request, res: Response): Promise<any> {
+            try {
+                  const MyReposts = await PostService.MyReposts({ userId: req.user?.id!, page: req.query.page as string, limit: req.query.limit as string })
+                  return res.status(200).json({ status: true, message: 'Reposts Retreived Successfully', data: MyReposts.data, total: MyReposts.total })
+            } catch (err: any) {
+                  console.error(err.message)
+                  res.status(500).json({ status: false, message: 'Internal Server Error!' })
+            }
+      }
+
+      // Get Reposts
+      static async GetReposts(req: Request, res: Response): Promise<any> {
+            try {
+                  const Reposts = await PostService.Reposts({ userId: req.params.userId, page: req.query.page as string, limit: req.query.limit as string })
+                  return res.status(200).json({ status: true, message: 'Reposts Retreived Successfully', data: Reposts.data, total: Reposts.total })
+            } catch (err: any) {
+                  console.error(err.message)
+                  res.status(500).json({ status: false, message: 'Internal Server Error!' })
+            }
+      }
+
+      // Get Media
+      static async GetMedia(req: Request, res: Response): Promise<any> {
+            try {
+                  const Media = await PostService.GetMedia({ userId: req.user?.id!, page: req.query.page as string, limit: req.query.limit as string })
+                  return res.status(200).json({ status: true, message: 'Media Retreived Successfully', data: Media.data, total: Media.total })
+            } catch (err: any) {
+                  console.error(err.message)
+                  res.status(500).json({ status: false, message: 'Internal Server Error!' })
+            }
+      }
+
+      //Get Other Media
+      static async GetOtherMedia(req: Request, res: Response): Promise<any> {
+            try {
+                  const Media = await PostService.GetOtherMedia({ userId: req.params.userId, page: req.query.page as string, limit: req.query.limit as string })
+                  return res.status(200).json({ status: true, message: 'Media Retreived Successfully', data: Media.data, total: Media.total })
+            } catch (err: any) {
+                  console.error(err.message)
+                  res.status(500).json({ status: false, message: 'Internal Server Error!' })
+            }
+      }
+
+      // Get User Post By User ID
+      static async GetUserPostByID(req: Request, res: Response): Promise<any> {
+            try {
+                  const UserPost = await PostService.GetUserPostByID({ userId: req.params.userId, page: req.query.page as string, limit: req.query.limit as string })
+                  return res.status(200).json({...UserPost})
+            } catch (err: any) {
+                  console.error(err.message)
+                  res.status(500).json({ status: false, message: 'Internal Server Error!' })
+            }
+      }
+
+      // Get Post By Post ID
+      static async GetSinglePost(req: Request, res: Response): Promise<any> {
+            try {
+                  const SinglePost = await PostService.GetSinglePost({ postId: req.params.postId, userId: req.user?.id! })
+                  return res.status(200).json({...SinglePost})
+            } catch (err: any) {
+                  console.error(err.message)
+                  res.status(500).json({ status: false, message: 'Internal Server Error!' })
             }
       }
 } 
