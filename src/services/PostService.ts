@@ -715,22 +715,24 @@ export default class PostService {
                   if (!findPost) {
                         return { error: true, message: "Post not found" }
                   }
-                  const updatePost = await query.post.update({
-                        where: {
-                              id: findPost.id
-                        },
-                        data: {
-                              post_audience: String(visibility).trim().toLowerCase() as PostAudience,
-                        }
-                  })
-                  const updateMedia = await query.userMedia.updateMany({
-                        where: {
-                              post_id: findPost.id
-                        },
-                        data: {
-                              accessible_to: String(visibility).trim().toLowerCase()
-                        }
-                  })
+                  const [updatePost, updateMedia] = await query.$transaction([
+                        query.post.update({
+                              where: {
+                                    id: findPost.id
+                              },
+                              data: {
+                                    post_audience: String(visibility).trim().toLowerCase() as PostAudience,
+                              }
+                        }),
+                        query.userMedia.updateMany({
+                              where: {
+                                    post_id: findPost.id
+                              },
+                              data: {
+                                    accessible_to: String(visibility).trim().toLowerCase()
+                              }
+                        })
+                  ]);
                   if (!updatePost || !updateMedia) {
                         return { error: true, message: "Could not update post audience" }
                   }
@@ -787,12 +789,26 @@ export default class PostService {
                         }
                   }
                   const repostId = uuid();
-                  const repost = await query.userRepost.create({
-                        data: {
-                              post_id: getPost.id,
-                              user_id: userId,
-                              repost_id: repostId
-                        }
+                  const repost = await query.$transaction(async (transaction) => {
+                        const repost = await transaction.userRepost.create({
+                              data: {
+                                    post_id: getPost.id,
+                                    user_id: userId,
+                                    repost_id: repostId
+                              }
+                        })
+                        await transaction.post.update({
+                              where: {
+                                    id: getPost.id,
+                              },
+                              data: {
+                                    post_reposts: {
+                                          increment: 1
+                                    },
+                              }
+                        })
+
+                        return repost
                   })
                   if (repost) {
                         query.$disconnect()

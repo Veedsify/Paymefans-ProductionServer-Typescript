@@ -84,51 +84,54 @@ class RegisterService {
             const hashPass = yield (0, HashPassword_1.CreateHashedPassword)(data.password);
             const walletId = `WL${(0, GenerateUniqueId_1.GenerateUniqueId)()}`;
             const subscriptionId = `SUB${(0, GenerateUniqueId_1.GenerateUniqueId)()}`;
-            return yield prisma_1.default.user.create({
-                data: {
-                    fullname: data.name,
-                    name: data.name,
-                    user_id: uniqueUserId,
-                    username: `@${data.username}`,
-                    email: data.email,
-                    phone: data.phone,
-                    profile_banner: `${process.env.SERVER_ORIGINAL_URL}/site/banner.png`,
-                    profile_image: `${process.env.SERVER_ORIGINAL_URL}/site/avatar.png`,
-                    location: data.location,
-                    password: hashPass,
-                    UserWallet: {
-                        create: {
-                            wallet_id: walletId,
-                            balance: 0,
+            return yield prisma_1.default.$transaction((tx) => __awaiter(this, void 0, void 0, function* () {
+                const user = yield tx.user.create({
+                    data: {
+                        fullname: data.name,
+                        name: data.name,
+                        user_id: uniqueUserId,
+                        username: `@${data.username}`,
+                        email: data.email,
+                        phone: data.phone,
+                        profile_banner: `${process.env.SERVER_ORIGINAL_URL}/site/banner.png`,
+                        profile_image: `${process.env.SERVER_ORIGINAL_URL}/site/avatar.png`,
+                        location: data.location,
+                        password: hashPass,
+                        UserWallet: {
+                            create: {
+                                wallet_id: walletId,
+                                balance: 0,
+                            },
+                        },
+                        UserPoints: {
+                            create: {
+                                points: 0,
+                                conversion_rate: 0,
+                            },
+                        },
+                        Settings: {
+                            create: {
+                                price_per_message: 0,
+                                enable_free_message: true,
+                                subscription_price: 0,
+                                subscription_duration: "1 month",
+                                subscription_type: "free",
+                            },
+                        },
+                        ModelSubscriptionPack: {
+                            create: {
+                                subscription_id: subscriptionId,
+                            },
                         },
                     },
-                    UserPoints: {
-                        create: {
-                            points: 0,
-                            conversion_rate: 0,
-                        },
+                    include: {
+                        UserWallet: true,
+                        UserPoints: true,
+                        Model: true,
                     },
-                    Settings: {
-                        create: {
-                            price_per_message: 0,
-                            enable_free_message: true,
-                            subscription_price: 0,
-                            subscription_duration: "1 month",
-                            subscription_type: "free",
-                        },
-                    },
-                    ModelSubscriptionPack: {
-                        create: {
-                            subscription_id: subscriptionId,
-                        },
-                    },
-                },
-                include: {
-                    UserWallet: true,
-                    UserPoints: true,
-                    Model: true,
-                },
-            });
+                });
+                return user;
+            }));
         });
     }
     //  Check For Admin User

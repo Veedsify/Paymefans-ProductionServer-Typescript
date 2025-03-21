@@ -73,54 +73,59 @@ export default class RegisterService {
 
     // Create The User
     static async CreateUser(data: RegisterServiceProp): Promise<RegisteredUser> {
-        const uniqueUserId = GenerateUniqueId()
+        const uniqueUserId = GenerateUniqueId();
         const hashPass = await CreateHashedPassword(data.password);
         const walletId = `WL${GenerateUniqueId()}`;
         const subscriptionId = `SUB${GenerateUniqueId()}`;
-        return await query.user.create({
-            data: {
-                fullname: data.name,
-                name: data.name,
-                user_id: uniqueUserId,
-                username: `@${data.username}`,
-                email: data.email,
-                phone: data.phone,
-                profile_banner: `${process.env.SERVER_ORIGINAL_URL}/site/banner.png`,
-                profile_image: `${process.env.SERVER_ORIGINAL_URL}/site/avatar.png`,
-                location: data.location,
-                password: hashPass,
-                UserWallet: {
-                    create: {
-                        wallet_id: walletId,
-                        balance: 0,
+
+        return await query.$transaction(async (tx) => {
+            const user = await tx.user.create({
+                data: {
+                    fullname: data.name,
+                    name: data.name,
+                    user_id: uniqueUserId,
+                    username: `@${data.username}`,
+                    email: data.email,
+                    phone: data.phone,
+                    profile_banner: `${process.env.SERVER_ORIGINAL_URL}/site/banner.png`,
+                    profile_image: `${process.env.SERVER_ORIGINAL_URL}/site/avatar.png`,
+                    location: data.location,
+                    password: hashPass,
+                    UserWallet: {
+                        create: {
+                            wallet_id: walletId,
+                            balance: 0,
+                        },
+                    },
+                    UserPoints: {
+                        create: {
+                            points: 0,
+                            conversion_rate: 0,
+                        },
+                    },
+                    Settings: {
+                        create: {
+                            price_per_message: 0,
+                            enable_free_message: true,
+                            subscription_price: 0,
+                            subscription_duration: "1 month",
+                            subscription_type: "free",
+                        },
+                    },
+                    ModelSubscriptionPack: {
+                        create: {
+                            subscription_id: subscriptionId,
+                        },
                     },
                 },
-                UserPoints: {
-                    create: {
-                        points: 0,
-                        conversion_rate: 0,
-                    },
+                include: {
+                    UserWallet: true,
+                    UserPoints: true,
+                    Model: true,
                 },
-                Settings: {
-                    create: {
-                        price_per_message: 0,
-                        enable_free_message: true,
-                        subscription_price: 0,
-                        subscription_duration: "1 month",
-                        subscription_type: "free",
-                    },
-                },
-                ModelSubscriptionPack: {
-                    create: {
-                        subscription_id: subscriptionId,
-                    },
-                },
-            },
-            include: {
-                UserWallet: true,
-                UserPoints: true,
-                Model: true,
-            },
+            });
+
+            return user;
         });
     }
 
@@ -160,7 +165,7 @@ export default class RegisterService {
                 },
             },
         });
-   await query.messages.create({
+        await query.messages.create({
             data: {
                 message_id: messageId,
                 sender_id: adminId,
@@ -179,7 +184,7 @@ export default class RegisterService {
     // Create Welcome Notification
     static async CreateWelcomeNotification(data: RegisteredUser): Promise<true> {
         const notificationId = `NOT${GenerateUniqueId()}`;
-       await query.notifications.create({
+        await query.notifications.create({
             data: {
                 notification_id: notificationId,
                 message: `Thanks for joining us and creating an account, <strong>${data.fullname}</strong>. We are thrilled to meet you!`,
