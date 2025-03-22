@@ -15,7 +15,7 @@ async function UploadImageCloudflare(image: { buffer: Buffer, originalname: stri
             body: formData  // Streaming formData
         });
         const uploadedImage = await response.json();
-        if(!uploadedImage.success) {
+        if (!uploadedImage.success) {
             return {
                 error: true,
                 message: uploadedImage.errors[0].message

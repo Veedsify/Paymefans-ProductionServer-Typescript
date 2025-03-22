@@ -7,9 +7,11 @@ export default class PostService {
       // Create Post
       static async CreatePost(data: CreatePostProps): Promise<CreatePostResponse> {
             try {
+                  const ACCOUNT_ID = process.env.CLOUDFLARE_ACCOUNT_ID;
                   const postId = uuid();
                   const user = data.user
                   const { content, visibility, media, removedMedia } = data;
+
                   if (removedMedia) {
                         const removeMedia = await RemoveCloudflareMedia(removedMedia)
                         if ('error' in removeMedia && removeMedia.error) {
@@ -20,6 +22,19 @@ export default class PostService {
                               };
                         }
                   }
+                  media.map(async (file) => {
+                        const signedUrl = await fetch(`https://api.cloudflare.com/client/v4/accounts/${ACCOUNT_ID}/stream/${file.id}`, {
+                              method: "POST",
+                              headers: {
+                                    "Authorization": `Bearer ${process.env.CLOUDFLARE_ACCOUNT_TOKEN}`
+                              },
+                              body: JSON.stringify({ uid: file.id, requireSignedURLs: true })  // Streaming formData
+                        });
+                        if (signedUrl.ok) {
+                              const token = await signedUrl.json();
+                              console.log("SIGNED", token);
+                        }
+                  })
                   if ((!content || content.trim().length === 0) && !visibility) {
                         return {
                               status: false,
