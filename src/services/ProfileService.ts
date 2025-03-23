@@ -70,7 +70,7 @@ class ProfileService {
                   file: file!,
                   folder: "banners",
                   contentType: "image/jpeg",
-                  resize: { width: 1500, height: 500, fit: "cover", position: "center" },
+                  resize: { width: 1950, height: 650, fit: "cover", position: "center" },
                   deleteLocal: true,
                   saveToDb: true,
                   onUploadComplete: (BannerUrl: string) => SaveBannerToDb(BannerUrl),
