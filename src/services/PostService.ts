@@ -150,11 +150,7 @@ export default class PostService {
                                           name: true,
                                           is_model: true,
                                           user_id: true,
-                                          Subscribers: {
-                                                select: {
-                                                      subscriber_id: true,
-                                                },
-                                          },
+                                          id: true,
                                     },
                               },
                         },
@@ -248,11 +244,7 @@ export default class PostService {
                                                       profile_image: true,
                                                       name: true,
                                                       user_id: true,
-                                                      Subscribers: {
-                                                            select: {
-                                                                  subscriber_id: true,
-                                                            },
-                                                      },
+                                                      id: true,
                                                 },
                                           },
                                     },
@@ -349,11 +341,7 @@ export default class PostService {
                                                       profile_image: true,
                                                       name: true,
                                                       user_id: true,
-                                                      Subscribers: {
-                                                            select: {
-                                                                  subscriber_id: true,
-                                                            },
-                                                      },
+                                                      id: true,
                                                 },
                                           },
                                     },
@@ -472,13 +460,14 @@ export default class PostService {
                               accessible_to: true,
                               post: {
                                     select: {
+                                          id: true,
                                           user: {
                                                 select: {
-                                                      Subscribers: true,
-                                                },
-                                          },
-                                    },
-                              },
+                                                      id: true
+                                                }
+                                          }
+                                    }
+                              }
                         },
                         skip: (validPage - 1) * validLimit,
                         take: validLimit,
@@ -569,11 +558,7 @@ export default class PostService {
                                           name: true,
                                           user_id: true,
                                           is_model: true,
-                                          Subscribers: {
-                                                select: {
-                                                      subscriber_id: true,
-                                                },
-                                          },
+                                          id: true,
                                     },
                               },
                         },
@@ -623,16 +608,6 @@ export default class PostService {
                                           name: true,
                                           is_model: true,
                                           user_id: true,
-                                          Subscribers: {
-                                                select: {
-                                                      subscriber_id: true,
-                                                },
-                                          },
-                                          Follow: {
-                                                select: {
-                                                      follower_id: true,
-                                                },
-                                          },
                                     },
                               },
                               id: true,

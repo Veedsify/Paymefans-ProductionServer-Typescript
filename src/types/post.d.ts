@@ -64,9 +64,9 @@ export type GetOtherMediaResponse = {
         accessible_to: string,
         post: {
             user: {
-                Subscribers: Subscribers[];
-            },
-        },
+                id: number;
+            }
+        }
     }[]
     total: number;
 }
@@ -132,9 +132,7 @@ export interface MyPost {
         profile_image: string | null;
         name: string;
         user_id: string;
-        Subscribers: {
-            subscriber_id: number;
-        }[];
+        id: number;
     };
 }
 /**
@@ -192,9 +190,7 @@ interface GetSinglePost {
         profile_image: string | null;
         name: string;
         user_id: string;
-        Subscribers: {
-            subscriber_id: number;
-        }[];
+        id: number;
     };
 }
 /**

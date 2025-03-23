@@ -5,6 +5,8 @@ export interface AuthUser extends Omit<User, "password"> {
     UserWallet: UserWallet[] | null;
     Settings: Settings | null;
     Model: Model | null;
+    subscriptions: number[];
+    purchasedPosts: number[];
     _count: {
         Follow: number;
         Subscribers: number;
@@ -27,5 +29,3 @@ export type RetrieveUserResponse = {
     status: boolean;
     message: string;
 }
-
-
