@@ -10,6 +10,8 @@ import model from "@routes/model/model"
 import wallet from "@routes/wallet/wallet"
 import follower from "@routes/follower/follower";
 import subscribers from "./subscriber/subscribers"
+import conversations from "@routes/conversations/conversations";
+import comments from "@routes/comments/comment";
 const api = express.Router()
 
 // Authentication
@@ -35,5 +37,7 @@ api.use("/subscribers", subscribers)
 // Followers
 api.use("/follower", follower)
 // Conversations
-
+api.use("/conversations", conversations)
+// Comments
+api.use("/comments", comments)
 export default api

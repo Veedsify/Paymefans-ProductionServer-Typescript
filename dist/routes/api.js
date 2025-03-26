@@ -15,6 +15,8 @@ const model_1 = __importDefault(require("@routes/model/model"));
 const wallet_1 = __importDefault(require("@routes/wallet/wallet"));
 const follower_1 = __importDefault(require("@routes/follower/follower"));
 const subscribers_1 = __importDefault(require("./subscriber/subscribers"));
+const conversations_1 = __importDefault(require("@routes/conversations/conversations"));
+const comment_1 = __importDefault(require("@routes/comments/comment"));
 const api = express_1.default.Router();
 // Authentication
 api.use("/auth", auth_1.default);
@@ -38,4 +40,8 @@ api.use("/wallet", wallet_1.default);
 api.use("/subscribers", subscribers_1.default);
 // Followers
 api.use("/follower", follower_1.default);
+// Conversations
+api.use("/conversations", conversations_1.default);
+// Comments
+api.use("/comments", comment_1.default);
 exports.default = api;

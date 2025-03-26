@@ -20,6 +20,7 @@ class PostService {
     static CreatePost(data) {
         return __awaiter(this, void 0, void 0, function* () {
             try {
+                const ACCOUNT_ID = process.env.CLOUDFLARE_ACCOUNT_ID;
                 const postId = (0, uuid_1.v4)();
                 const user = data.user;
                 const { content, visibility, media, removedMedia } = data;
@@ -33,6 +34,19 @@ class PostService {
                         };
                     }
                 }
+                media.map((file) => __awaiter(this, void 0, void 0, function* () {
+                    const signedUrl = yield fetch(`https://api.cloudflare.com/client/v4/accounts/${ACCOUNT_ID}/stream/${file.id}`, {
+                        method: "POST",
+                        headers: {
+                            "Authorization": `Bearer ${process.env.CLOUDFLARE_ACCOUNT_TOKEN}`
+                        },
+                        body: JSON.stringify({ uid: file.id, requireSignedURLs: true }) // Streaming formData
+                    });
+                    if (signedUrl.ok) {
+                        const token = yield signedUrl.json();
+                        console.log("SIGNED", token);
+                    }
+                }));
                 if ((!content || content.trim().length === 0) && !visibility) {
                     return {
                         status: false,
@@ -150,11 +164,7 @@ class PostService {
                                 name: true,
                                 is_model: true,
                                 user_id: true,
-                                Subscribers: {
-                                    select: {
-                                        subscriber_id: true,
-                                    },
-                                },
+                                id: true,
                             },
                         },
                     },
@@ -249,11 +259,7 @@ class PostService {
                                         profile_image: true,
                                         name: true,
                                         user_id: true,
-                                        Subscribers: {
-                                            select: {
-                                                subscriber_id: true,
-                                            },
-                                        },
+                                        id: true,
                                     },
                                 },
                             },
@@ -351,11 +357,7 @@ class PostService {
                                         profile_image: true,
                                         name: true,
                                         user_id: true,
-                                        Subscribers: {
-                                            select: {
-                                                subscriber_id: true,
-                                            },
-                                        },
+                                        id: true,
                                     },
                                 },
                             },
@@ -419,8 +421,8 @@ class PostService {
                 };
             }
             catch (error) {
-                throw new Error(error.message);
                 console.log(error);
+                throw new Error(error.message);
             }
         });
     }
@@ -476,13 +478,14 @@ class PostService {
                         accessible_to: true,
                         post: {
                             select: {
+                                id: true,
                                 user: {
                                     select: {
-                                        Subscribers: true,
-                                    },
-                                },
-                            },
-                        },
+                                        id: true
+                                    }
+                                }
+                            }
+                        }
                     },
                     skip: (validPage - 1) * validLimit,
                     take: validLimit,
@@ -574,11 +577,7 @@ class PostService {
                                 name: true,
                                 user_id: true,
                                 is_model: true,
-                                Subscribers: {
-                                    select: {
-                                        subscriber_id: true,
-                                    },
-                                },
+                                id: true,
                             },
                         },
                     },
@@ -604,23 +603,14 @@ class PostService {
     // Get Single Post By ID:
     static GetSinglePost(_a) {
         return __awaiter(this, arguments, void 0, function* ({ postId, userId }) {
-            var _b;
             try {
                 const post = yield prisma_1.default.post.findFirst({
                     where: {
                         post_id: postId,
                         post_status: "approved",
-                        OR: [
-                            {
-                                post_audience: "public",
-                            },
-                            {
+                        NOT: [{
                                 post_audience: "private",
-                            },
-                            {
-                                post_audience: "subscribers",
-                            },
-                        ],
+                            }],
                     },
                     select: {
                         user: {
@@ -632,16 +622,6 @@ class PostService {
                                 name: true,
                                 is_model: true,
                                 user_id: true,
-                                Subscribers: {
-                                    select: {
-                                        subscriber_id: true,
-                                    },
-                                },
-                                Follow: {
-                                    select: {
-                                        follower_id: true,
-                                    },
-                                },
                             },
                         },
                         id: true,
@@ -662,23 +642,24 @@ class PostService {
                         repost_username: true,
                     },
                 });
-                console.log("Post", post);
-                console.log("UserId", userId);
-                if (!post || !userId || (post.post_audience === "private" && ((_b = post.user) === null || _b === void 0 ? void 0 : _b.id) !== userId)) {
-                    return {
-                        status: false,
-                        data: null,
-                        message: "Post not found private",
-                    };
-                }
                 if (!post) {
                     return {
+                        error: true,
                         status: false,
                         message: "Post not found",
                         data: null,
                     };
                 }
+                if (post.post_audience === "private") {
+                    return {
+                        error: true,
+                        status: false,
+                        data: null,
+                        message: "Post not Private",
+                    };
+                }
                 return {
+                    error: false,
                     status: true,
                     message: "Post retrieved successfully",
                     data: post,
@@ -745,22 +726,24 @@ class PostService {
                 if (!findPost) {
                     return { error: true, message: "Post not found" };
                 }
-                const updatePost = yield prisma_1.default.post.update({
-                    where: {
-                        id: findPost.id
-                    },
-                    data: {
-                        post_audience: String(visibility).trim().toLowerCase(),
-                    }
-                });
-                const updateMedia = yield prisma_1.default.userMedia.updateMany({
-                    where: {
-                        post_id: findPost.id
-                    },
-                    data: {
-                        accessible_to: String(visibility).trim().toLowerCase()
-                    }
-                });
+                const [updatePost, updateMedia] = yield prisma_1.default.$transaction([
+                    prisma_1.default.post.update({
+                        where: {
+                            id: findPost.id
+                        },
+                        data: {
+                            post_audience: String(visibility).trim().toLowerCase(),
+                        }
+                    }),
+                    prisma_1.default.userMedia.updateMany({
+                        where: {
+                            post_id: findPost.id
+                        },
+                        data: {
+                            accessible_to: String(visibility).trim().toLowerCase()
+                        }
+                    })
+                ]);
                 if (!updatePost || !updateMedia) {
                     return { error: true, message: "Could not update post audience" };
                 }
@@ -820,13 +803,26 @@ class PostService {
                     }
                 }
                 const repostId = (0, uuid_1.v4)();
-                const repost = yield prisma_1.default.userRepost.create({
-                    data: {
-                        post_id: getPost.id,
-                        user_id: userId,
-                        repost_id: repostId
-                    }
-                });
+                const repost = yield prisma_1.default.$transaction((transaction) => __awaiter(this, void 0, void 0, function* () {
+                    const repost = yield transaction.userRepost.create({
+                        data: {
+                            post_id: getPost.id,
+                            user_id: userId,
+                            repost_id: repostId
+                        }
+                    });
+                    yield transaction.post.update({
+                        where: {
+                            id: getPost.id,
+                        },
+                        data: {
+                            post_reposts: {
+                                increment: 1
+                            },
+                        }
+                    });
+                    return repost;
+                }));
                 if (repost) {
                     prisma_1.default.$disconnect();
                     return {
@@ -891,12 +887,17 @@ class PostService {
                     },
                 },
                 skip: (parseInt(page) - 1) * parseInt(limit),
-                take: parseInt(limit),
+                take: parseInt(limit) + 1,
             });
+            const hasMore = comments.length > parseInt(limit);
+            if (hasMore) {
+                comments.pop();
+            }
             if (!comments || comments.length == 0) {
                 return {
                     error: false,
                     message: "No comments found",
+                    hasMore: false,
                     data: [],
                     total: 0
                 };
@@ -905,6 +906,7 @@ class PostService {
                 error: false,
                 message: "Comments found",
                 data: comments,
+                hasMore: hasMore,
                 total: countComments
             };
         });

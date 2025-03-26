@@ -116,6 +116,9 @@ class PostController {
             var _a;
             try {
                 const SinglePost = yield PostService_1.default.GetSinglePost({ postId: req.params.postId, userId: (_a = req.user) === null || _a === void 0 ? void 0 : _a.id });
+                if (SinglePost.error) {
+                    return res.status(400).json(Object.assign({}, SinglePost));
+                }
                 return res.status(200).json(Object.assign({}, SinglePost));
             }
             catch (err) {

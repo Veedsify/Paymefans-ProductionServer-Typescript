@@ -208,6 +208,7 @@ export type GetUserPostByIdResponse = {
 export type GetSinglePostResponse = {
     status: boolean;
     message: string;
+    error: boolean;
     data: GetSinglePost | null;
 }
 // --------------------------------------
@@ -307,6 +308,7 @@ export interface GetPostCommentsProps extends GetMyPostProps {
  */
 export interface GetPostCommentsResponse {
     error: boolean;
+    hasMore: boolean;
     message: string;
     data: {
         id: number;

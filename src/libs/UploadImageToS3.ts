@@ -7,7 +7,7 @@ import s3 from "@utils/s3";
 export interface UploadOptions {
       file: Express.Multer.File; // File from Multer
       folder?: string; // S3 folder (e.g., "banners", "avatars")
-      resize?: { width: number; height: number; fit?: sharp.FitEnum | string; position?: number | string | undefined }; // Resize options
+      resize?: { width: number; height: number | null; fit?: sharp.FitEnum | string; position?: number | string | undefined }; // Resize options
       format?: "webp" | "jpeg" | "png" | "avif"  // Image format
       quality?: number; // Image compression quality (1-100)
       contentType?: string; // Custom Content-Type (e.g., "image/png", "video/mp4")
@@ -61,10 +61,9 @@ export async function UploadImageToS3({
       await s3.send(command);
 
       // Construct file URL
-      const fileUrl = `${process.env.CLOUDFRONT_URL}/${fileKey}`;
+      const fileUrl = `${process.env.AWS_CLOUDFRONT_URL}/${fileKey}`;
 
       // Delete local files if enabled
-
       async function deleteFiles(tempFilePath: string, filePath: string) {
             try {
                   await fs.rm(tempFilePath); // Delete resized file

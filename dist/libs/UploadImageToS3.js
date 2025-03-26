@@ -80,7 +80,7 @@ function UploadImageToS3(_a) {
         });
         yield s3_1.default.send(command);
         // Construct file URL
-        const fileUrl = `${process.env.CLOUDFRONT_URL}/${fileKey}`;
+        const fileUrl = `${process.env.AWS_CLOUDFRONT_URL}/${fileKey}`;
         // Delete local files if enabled
         function deleteFiles(tempFilePath, filePath) {
             return __awaiter(this, void 0, void 0, function* () {

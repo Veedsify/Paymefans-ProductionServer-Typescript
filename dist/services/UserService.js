@@ -28,48 +28,61 @@ class UserService {
     static RetrieveUser(userid) {
         return __awaiter(this, void 0, void 0, function* () {
             try {
-                const user = yield prisma_1.default.user.findUnique({
-                    where: {
-                        id: userid
-                    },
-                    include: {
-                        UserPoints: true,
-                        UserWallet: true,
-                        Settings: true,
-                        Model: true,
-                        _count: {
-                            select: {
-                                Follow: {
-                                    where: {
-                                        user_id: userid
+                const result = yield prisma_1.default.$transaction((tx) => __awaiter(this, void 0, void 0, function* () {
+                    const user = yield tx.user.findUnique({
+                        where: {
+                            id: userid
+                        },
+                        include: {
+                            UserPoints: true,
+                            UserWallet: true,
+                            Settings: true,
+                            Model: true,
+                            _count: {
+                                select: {
+                                    Follow: {
+                                        where: {
+                                            user_id: userid
+                                        }
+                                    },
+                                    Subscribers: {
+                                        where: {
+                                            user_id: userid
+                                        }
                                     }
                                 },
-                                Subscribers: {
-                                    where: {
-                                        user_id: userid
-                                    }
-                                }
-                            },
-                        }
-                    }
-                });
-                const following = yield prisma_1.default.user.count({
-                    where: {
-                        Follow: {
-                            some: {
-                                follower_id: userid
                             }
                         }
+                    });
+                    if (!user) {
+                        return { message: "User not found", status: false };
                     }
-                });
-                if (user) {
+                    const following = yield tx.user.count({
+                        where: {
+                            Follow: {
+                                some: {
+                                    follower_id: userid
+                                }
+                            }
+                        }
+                    });
+                    const getMySubscriptions = yield tx.subscribers.findMany({
+                        where: {
+                            subscriber_id: userid
+                        },
+                        select: {
+                            user_id: true
+                        }
+                    });
                     const { password } = user, rest = __rest(user, ["password"]);
-                    const data = { user: Object.assign(Object.assign({}, rest), { following }), status: true };
-                    return data;
-                }
-                else {
-                    return { message: "User not found", status: false };
-                }
+                    const subscriptions = getMySubscriptions.map(sub => sub.user_id);
+                    const purchasedPosts = [2];
+                    return {
+                        user: Object.assign(Object.assign({}, rest), { following, subscriptions, purchasedPosts }),
+                        status: true
+                    };
+                }));
+                return result;
             }
             catch (error) {
                 console.log(error);

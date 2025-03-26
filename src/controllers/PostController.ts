@@ -80,6 +80,9 @@ export default class PostController {
       static async GetSinglePost(req: Request, res: Response): Promise<any> {
             try {
                   const SinglePost = await PostService.GetSinglePost({ postId: req.params.postId, userId: req.user?.id! })
+                  if(SinglePost.error) {
+                        return res.status(400).json({...SinglePost})
+                  }
                   return res.status(200).json({ ...SinglePost })
             } catch (err: any) {
                   console.error(err.message)

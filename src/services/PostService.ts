@@ -403,8 +403,8 @@ export default class PostService {
                         total: mediaCount,
                   };
             } catch (error: any) {
-                  throw new Error(error.message);
                   console.log(error);
+                  throw new Error(error.message);
             }
       }
       // Get Other Media
@@ -586,17 +586,9 @@ export default class PostService {
                         where: {
                               post_id: postId,
                               post_status: "approved",
-                              OR: [
-                                    {
-                                          post_audience: "public",
-                                    },
-                                    {
-                                          post_audience: "private",
-                                    },
-                                    {
-                                          post_audience: "subscribers",
-                                    },
-                              ],
+                              NOT: [{
+                                    post_audience: "private",
+                              }],
                         },
                         select: {
                               user: {
@@ -628,23 +620,24 @@ export default class PostService {
                               repost_username: true,
                         },
                   });
-                  console.log("Post", post);
-                  console.log("UserId", userId)
-                  if (!post || !userId || (post.post_audience === "private" && post.user?.id !== userId)) {
-                        return {
-                              status: false,
-                              data: null,
-                              message: "Post not found private",
-                        };
-                  }
                   if (!post) {
                         return {
+                              error: true,
                               status: false,
                               message: "Post not found",
                               data: null,
                         };
                   }
+                  if (post.post_audience === "private") {
+                        return {
+                              error: true,
+                              status: false,
+                              data: null,
+                              message: "Post not Private",
+                        };
+                  }
                   return {
+                        error: false,
                         status: true,
                         message: "Post retrieved successfully",
                         data: post,
@@ -861,12 +854,18 @@ export default class PostService {
                         },
                   },
                   skip: (parseInt(page) - 1) * parseInt(limit),
-                  take: parseInt(limit),
+                  take: parseInt(limit) + 1,
             });
+
+            const hasMore = comments.length > parseInt(limit);
+            if (hasMore) {
+                  comments.pop();
+            }                  
             if (!comments || comments.length == 0) {
                   return {
                         error: false,
                         message: "No comments found",
+                        hasMore: false,
                         data: [],
                         total: 0
                   };
@@ -875,6 +874,7 @@ export default class PostService {
                   error: false,
                   message: "Comments found",
                   data: comments,
+                  hasMore: hasMore,
                   total: countComments
             };
       }
