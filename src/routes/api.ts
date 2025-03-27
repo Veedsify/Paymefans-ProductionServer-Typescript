@@ -12,6 +12,7 @@ import follower from "@routes/follower/follower";
 import subscribers from "./subscriber/subscribers"
 import conversations from "@routes/conversations/conversations";
 import comments from "@routes/comments/comment";
+import notifications from "@routes/notifications/notification"
 const api = express.Router()
 
 // Authentication
@@ -40,4 +41,6 @@ api.use("/follower", follower)
 api.use("/conversations", conversations)
 // Comments
 api.use("/comments", comments)
+// Notifications
+api.use("/notifications", notifications)
 export default api
