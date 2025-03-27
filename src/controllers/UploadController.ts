@@ -12,7 +12,7 @@ interface UploadedFile {
 }
 
 class UploadController {
-      static async UploadImage(req: Request, res: Response): Promise<void> {
+      static async UploadMedia(req: Request, res: Response): Promise<void> {
             const io = socketserver.getIO();
             try {
                   const file = req.file as Express.Multer.File & UploadedFile;

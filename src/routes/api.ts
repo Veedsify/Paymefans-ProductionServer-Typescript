@@ -43,4 +43,6 @@ api.use("/conversations", conversations)
 api.use("/comments", comments)
 // Notifications
 api.use("/notifications", notifications)
+// Stories
+api.use("/stories", story)
 export default api

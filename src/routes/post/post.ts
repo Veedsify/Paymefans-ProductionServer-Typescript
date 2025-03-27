@@ -6,7 +6,7 @@ import { CreateUpload } from "@middleware/FileUploadConfig";
 const post = express()
 
 const postUpload = CreateUpload("post");
-post.post("/upload-post-media", Auth, postUpload.single("file"), UploadController.UploadImage);
+post.post("/upload-post-media", Auth, postUpload.single("file"), UploadController.UploadMedia);
 post.post("/create", Auth, PostController.CreatePost)
 post.get("/my-posts", Auth, PostController.GetMyPosts)
 post.get("/my-reposts", Auth, PostController.GetMyReposts)
