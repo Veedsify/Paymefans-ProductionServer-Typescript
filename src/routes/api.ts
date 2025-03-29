@@ -16,6 +16,7 @@ import notifications from "@routes/notifications/notification"
 import verification from "@routes/verification/verification"
 import store from "@routes/store/store"
 import help from "@routes/help/help"
+import webhooks from "@routes/webhooks/webhooks"
 const api = express.Router()
 
 // Authentication
@@ -54,4 +55,6 @@ api.use("/verification", verification)
 api.use("/store", store)
 // Help
 api.use("/help", help)
+// Webhooks
+api.use("/webhooks", webhooks)
 export default api
