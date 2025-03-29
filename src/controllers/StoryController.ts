@@ -67,7 +67,6 @@ export default class StoryController {
     try {
       const storyUpload = await StoryService.UploadStory({
         files: req.files as Express.Multer.File[],
-        user: req.user as AuthUser,
       });
       if (storyUpload.error) {
         return res.status(400).json(storyUpload);

@@ -1,5 +1,5 @@
 import { AuthUser } from "./user";
-import { Messages } from "@prisma/client";
+import { Messages, Participants } from "@prisma/client";
 
 export type AllConversationProps = {
   user: AuthUser;
@@ -69,4 +69,24 @@ export type SearchMessagesProp = {
 export type SearchMessageResponse = {
   error: boolean;
   messages: Messages[]
+}
+
+export type GetUserConversationsReponse = {
+  conversations: {
+    conversation: {
+      user_id: string;
+      name: string;
+      username: string;
+      profile_image: string | null;
+    }
+    conversation_id: string;
+    lastMessage: Messages;
+    receiver: {
+      user_id: string;
+      name: string;
+      username: string;
+      profile_image: string | null;
+    }
+  }[];
+  status: true;
 }

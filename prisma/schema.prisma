@@ -84,6 +84,8 @@ model User {
   PointConversionRateUsers  PointConversionRateUsers[]
   GroupParticipants         GroupParticipants[]
   BlockedGroupParticipant   BlockedGroupParticipant[]
+  PostImpression            PostImpression[]
+  CommentImpression         CommentImpression[]
 }
 
 model Participants {
@@ -203,30 +205,45 @@ model StoryMedia {
 }
 
 model Post {
-  id              Int           @id @default(autoincrement())
-  post_id         String
-  was_repost      Boolean       @default(false)
-  repost_username String?       @default("")
-  repost_id       String?       @default("")
-  user_id         Int
-  content         String?       @db.LongText
-  media           Json?
-  post_status     PostStatus    @default(pending)
-  post_audience   PostAudience
-  post_is_visible Boolean       @default(true)
-  post_likes      Int           @default(0)
-  post_comments   Int           @default(0)
-  post_reposts    Int           @default(0)
-  created_at      DateTime      @default(now())
-  updated_at      DateTime      @updatedAt
-  PostComment     PostComment[]
-  PostLike        PostLike[]
-  PostShared      PostShared[]
-  ReportPost      ReportPost[]
-  UserRepost      UserRepost[]
+  id               Int           @id @default(autoincrement())
+  post_id          String
+  was_repost       Boolean       @default(false)
+  repost_username  String?       @default("")
+  repost_id        String?       @default("")
+  user_id          Int
+  content          String?       @db.LongText
+  media            Json?
+  post_status      PostStatus    @default(pending)
+  post_audience    PostAudience
+  post_is_visible  Boolean       @default(true)
+  post_likes       Int           @default(0)
+  post_comments    Int           @default(0)
+  post_reposts     Int           @default(0)
+  post_impressions Int           @default(0)
+  created_at       DateTime      @default(now())
+  updated_at       DateTime      @updatedAt
+  PostComment      PostComment[]
+  PostLike         PostLike[]
+  PostShared       PostShared[]
+  ReportPost       ReportPost[]
+  UserRepost       UserRepost[]
+  PostImpression PostImpression[]
+  UserMedia      UserMedia[]
 
-  user      User        @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
-  UserMedia UserMedia[]
+  user           User             @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
+}
+
+model PostImpression {
+  id         Int      @id @default(autoincrement())
+  post_id    Int
+  user_id    Int
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+  post       Post     @relation(fields: [post_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  user       User     @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@index([post_id], map: "PostImpression_post_id_fkey")
+  @@index([user_id], map: "PostImpression_user_id_fkey")
 }
 
 model PostComment {
@@ -235,6 +252,7 @@ model PostComment {
   user_id                Int
   post_id                Int
   comment                String
+  comment_impressions    Int                      @default(0)
   created_at             DateTime                 @default(now())
   updated_at             DateTime                 @updatedAt
   post                   Post                     @relation(fields: [post_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
@@ -242,8 +260,23 @@ model PostComment {
   PostCommentAttachments PostCommentAttachments[]
   user                   User                     @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
   PostCommentLikes       PostCommentLikes[]
+  CommentImpression      CommentImpression[]
 
   @@index([post_id], map: "PostComment_post_id_fkey")
+}
+
+model CommentImpression {
+  id         Int         @id @default(autoincrement())
+  comment_id Int
+  user_id    Int
+  created_at DateTime    @default(now())
+  updated_at DateTime    @updatedAt
+  comment    PostComment @relation(fields: [comment_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  user       User        @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  postId     Int?
+
+  @@index([comment_id], map: "CommentImpression_comment_id_fkey")
+  @@index([user_id], map: "CommentImpression_user_id_fkey")
 }
 
 model PostCommentAttachments {

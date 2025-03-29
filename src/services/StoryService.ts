@@ -183,6 +183,7 @@ export default class StoryService {
       const parsedPage = page ? parseInt(String(page), 10) : 1;
       const validPage =
         Number.isNaN(parsedPage) || parsedPage <= 0 ? 1 : parsedPage;
+      let hasMore = false;
       return await query.$transaction(async (prisma) => {
         const postCount = await prisma.post.findMany({
           where: { user_id: user.id },
@@ -201,17 +202,23 @@ export default class StoryService {
             post_id: { in: postIds },
           },
           skip: (validPage - 1) * validLimit,
-          take: validLimit,
+          take: validLimit + 1,
           orderBy: {
             created_at: "desc",
           },
         });
+
+        if (media.length > validLimit) {
+          hasMore = true;
+          media.pop();
+        }
 
         return {
           status: true,
           error: false,
           message: "Media retrieved successfully",
           data: media,
+          hasMore: hasMore,
           total: mediaCount,
         };
       });
@@ -276,7 +283,6 @@ export default class StoryService {
   // Upload Story
   static async UploadStory({
     files,
-    user,
   }: UploadStoryProps): Promise<UploadStoryResponse> {
     try {
       const fileUploads = files.map(async (file) => {

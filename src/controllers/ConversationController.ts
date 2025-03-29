@@ -42,6 +42,8 @@ export default class ConversationController {
     try {
       const conversations = await ConversationService.MyConversations({
         user: req.user as AuthUser,
+        page: req.query.page as string,
+        limit: req.query.limit as string,
       });
       if (conversations.error) {
         res.status(401).json({ ...conversations });

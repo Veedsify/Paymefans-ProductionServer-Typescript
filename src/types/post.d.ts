@@ -120,6 +120,8 @@ export interface MyPost {
     post_comments: number;
     post_reposts: number;
     was_repost: boolean;
+    post_status: string;
+    post_impressions: number;
     repost_id: string | null;
     repost_username: string | null;
     UserMedia?: UserMedia[];
@@ -177,6 +179,8 @@ interface GetSinglePost {
     post_likes: number;
     post_comments: number;
     post_reposts: number;
+    post_impressions: number;
+    post_status: string;
     was_repost: boolean;
     repost_id: string | null;
     repost_username: string | null;

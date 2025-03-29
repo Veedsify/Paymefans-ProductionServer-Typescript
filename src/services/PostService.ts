@@ -7,7 +7,6 @@ export default class PostService {
       // Create Post
       static async CreatePost(data: CreatePostProps): Promise<CreatePostResponse> {
             try {
-                  const ACCOUNT_ID = process.env.CLOUDFLARE_ACCOUNT_ID;
                   const postId = uuid();
                   const user = data.user
                   const { content, visibility, media, removedMedia } = data;
@@ -114,6 +113,7 @@ export default class PostService {
                               media: true,
                               created_at: true,
                               post_status: true,
+                              post_impressions: true,
                               post_likes: true,
                               post_comments: true,
                               post_reposts: true,
@@ -207,6 +207,7 @@ export default class PostService {
                                           post_id: true,
                                           post_audience: true,
                                           post_status: true,
+                                          post_impressions: true,
                                           media: true,
                                           created_at: true,
                                           post_likes: true,
@@ -305,6 +306,7 @@ export default class PostService {
                                           post_audience: true,
                                           media: true,
                                           post_status: true,
+                                          post_impressions: true,
                                           created_at: true,
                                           post_likes: true,
                                           post_comments: true,
@@ -523,6 +525,7 @@ export default class PostService {
                               created_at: true,
                               post_likes: true,
                               post_status: true,
+                              post_impressions: true,
                               post_comments: true,
                               post_reposts: true,
                               was_repost: true,
@@ -607,6 +610,7 @@ export default class PostService {
                               post_id: true,
                               post_audience: true,
                               post_status: true,
+                              post_impressions: true,
                               created_at: true,
                               post_likes: true,
                               media: true,
@@ -662,6 +666,7 @@ export default class PostService {
                               post_audience: true,
                               created_at: true,
                               post_status: true,
+                              post_impressions: true,
                               post_likes: true,
                               post_comments: true,
                               post_reposts: true,

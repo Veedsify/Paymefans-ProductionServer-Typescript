@@ -12,6 +12,7 @@ export type GetStoryMediaResponse = {
   message: string;
   data: UserMedia[];
   total: number;
+  hasMore: boolean;
 };
 
 export interface GetStoryMediaProps {
@@ -49,7 +50,6 @@ export interface SaveStoryResponse {
 
 export interface UploadStoryProps {
   files: Express.Multer.File[];
-  user: AuthUser;
 }
 
 export interface UploadStoryResponse {

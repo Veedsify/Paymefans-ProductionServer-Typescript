@@ -3,6 +3,7 @@ import {
   AllConversationResponse,
   Conversations,
   CreateNewConversationResponse,
+  GetUserConversationsReponse,
   MyConversationResponse,
   SearchMessageResponse,
   SearchMessagesProp,
@@ -26,6 +27,7 @@ import {
 } from "@aws-sdk/client-mediaconvert";
 const { AWS_ACCESS_KEY, AWS_REGION, AWS_SECRET_KEY } = process.env;
 import { Upload } from "@aws-sdk/lib-storage";
+import _ from "lodash";
 
 export default class ConversationService {
   // Fetch Conversations
@@ -237,16 +239,16 @@ export default class ConversationService {
   // This method retrieves all conversations for the authenticated user.
   static async MyConversations({
     user: authUser,
-    page = 1,
-    limit = 2,
+    page = "1",
+    limit = "2",
   }: {
     user: AuthUser;
-    page?: number;
-    limit?: number;
+    page?: string;
+    limit?: string;
   }): Promise<MyConversationResponse> {
     try {
       return await query.$transaction(async (prisma) => {
-        const skip = (page - 1) * limit;
+        const skip = (Number(page) - 1) * Number(limit);
         const conversationsByParticipants = await prisma.conversations.findMany(
           {
             where: {
@@ -260,11 +262,11 @@ export default class ConversationService {
               },
             },
             skip,
-            take: limit + 1, // Fetch one extra to check if there's more
+            take: parseInt(limit) + 1, // Fetch one extra to check if there's more
           }
         );
 
-        const hasMore = conversationsByParticipants.length > limit;
+        const hasMore = conversationsByParticipants.length > Number(limit);
         if (hasMore) {
           conversationsByParticipants.pop(); // Remove the extra item
         }
@@ -341,7 +343,7 @@ export default class ConversationService {
           conversations: filteredConversations,
           page,
           limit,
-          hasMore,
+          hasMore: hasMore,
         };
       });
     } catch (error) {
@@ -596,7 +598,6 @@ export default class ConversationService {
 
   // Search Messages
   // Search For Messages In A Conversation
-
   static async SearchMessages({
     q,
     conversationId,
@@ -634,5 +635,82 @@ export default class ConversationService {
     } catch (error) {
       return { error: true, messages: [] };
     }
+  }
+
+  // GetUser Conversations
+  // Fetch all conversations for a specific user
+  static async GetUserConversations (userId: string): Promise<GetUserConversationsReponse> {
+    return await query.$transaction(async (tx) => {
+      // Fetch conversations with essential relations
+      const conversationsData = await tx.conversations.findMany({
+        where: {
+          participants: {
+            some: {
+              OR: [{ user_1: userId }, { user_2: userId }]
+            }
+          }
+        },
+        select: {
+          conversation_id: true,
+          participants: true,
+          messages: {
+            orderBy: { created_at: "desc" },
+            take: 1
+          }
+        }
+      });
+  
+      if (!conversationsData.length) return { conversations: [], status: true };
+  
+      // Batch process participants and messages
+      const receiverIds = conversationsData.flatMap(conv => {
+        const participant = conv.participants.find(p => 
+          p.user_1 === userId || p.user_2 === userId
+        );
+        return participant ? 
+          [participant.user_1 === userId ? participant.user_2 : participant.user_1] : 
+          [];
+      });
+  
+      // Batch fetch user data
+      const users = await tx.user.findMany({
+        where: { user_id: { in: receiverIds } },
+        select: {
+          user_id: true,
+          name: true,
+          username: true,
+          profile_image: true
+        }
+      });
+  
+      const userMap = _.keyBy(users, 'user_id');
+  
+      // Map conversations with Lodash
+      const conversations = _.chain(conversationsData)
+        .map(conv => {
+          const participant = conv.participants.find(p => 
+            p.user_1 === userId || p.user_2 === userId
+          );
+          if (!participant) return null;
+  
+          const receiverId = participant.user_1 === userId ? 
+            participant.user_2 : 
+            participant.user_1;
+          const user = userMap[receiverId];
+          const lastMessage = conv.messages[0] || { created_at: new Date(0) };
+  
+          return {
+            conversation: user,
+            conversation_id: conv.conversation_id,
+            lastMessage,
+            receiver: user
+          };
+        })
+        .compact()
+        .orderBy([conv => conv.lastMessage.created_at], ['desc'])
+        .value();
+  
+      return { conversations, status: true };
+    });
   }
 }

@@ -133,65 +133,51 @@ export default class CommentsService {
   ): Promise<LikeCommentResponse> {
     try {
       let action: string = "";
-      async function LikeComment(commentId: string, userId: number) {
-        try {
-          const commentLike = await query.postCommentLikes.findFirst({
-            where: {
-              comment_id: Number(commentId),
-              user_id: Number(userId),
-            },
-          });
-
-          if (commentLike) {
-            await remove(commentId, userId);
-            action = "Comment Like Removed";
-
-            return {
-              error: false,
-              status: true,
-              message: "Comment like removed successfully",
-            };
-          } else {
-            await query.postCommentLikes.create({
-              data: {
-                comment_id: Number(commentId),
-                user_id: Number(userId),
-              },
-            });
-            return {
-              error: false,
-              status: true,
-              message: "Comment liked successfully",
-            };
-          }
-        } catch (error) {
-          console.error(error);
-          return {
-            error: true,
-            status: false,
-            message: "An error occured while liking comment",
-          };
-        }
-      }
-
-      const remove = async (commentId: string, userId: number) => {
-        await query.postCommentLikes.deleteMany({
+      const result = await query.$transaction(async (prisma) => {
+        const commentLike = await prisma.postCommentLikes.findFirst({
           where: {
             comment_id: Number(commentId),
-            user_id: Number(userId),
+            user_id: Number(user.id),
           },
         });
-        action = "Comment Like Removed";
-        return {
-          error: false,
-          status: true,
-          message: "Comment like removed successfully",
-        };
-      };
-      return await LikeComment(commentId, user.id);
+
+        if (commentLike) {
+          await prisma.postCommentLikes.deleteMany({
+            where: {
+              comment_id: Number(commentId),
+              user_id: Number(user.id),
+            },
+          });
+          action = "Comment Like Removed";
+          return {
+            error: false,
+            status: true,
+            message: "Comment like removed successfully",
+          };
+        } else {
+          await prisma.postCommentLikes.create({
+            data: {
+              comment_id: Number(commentId),
+              user_id: Number(user.id),
+            },
+          });
+          action = "Comment Liked";
+          return {
+            error: false,
+            status: true,
+            message: "Comment liked successfully",
+          };
+        }
+      });
+
+      return result;
     } catch (error) {
       console.log(error);
-      throw new Error();
+      return {
+        error: true,
+        status: false,
+        message: "An error occurred while processing comment like",
+      };
     }
   }
 }

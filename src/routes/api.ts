@@ -13,6 +13,9 @@ import subscribers from "./subscriber/subscribers"
 import conversations from "@routes/conversations/conversations";
 import comments from "@routes/comments/comment";
 import notifications from "@routes/notifications/notification"
+import verification from "@routes/verification/verification"
+import store from "@routes/store/store"
+import help from "@routes/help/help"
 const api = express.Router()
 
 // Authentication
@@ -45,4 +48,10 @@ api.use("/comments", comments)
 api.use("/notifications", notifications)
 // Stories
 api.use("/stories", story)
+// Verification 
+api.use("/verification", verification)
+// Store
+api.use("/store", store)
+// Help
+api.use("/help", help)
 export default api

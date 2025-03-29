@@ -37,3 +37,18 @@ export interface GetAllFollowersResponse {
     }[]
     minmax: string;
 }
+
+
+export type CheckUserIsFollowingResponse = | {
+    status: boolean;
+    followId: string;
+} | {
+    status: boolean;
+    message: string;
+}
+
+export type FollowUserResponse = {
+    status: boolean;
+    action: "followed" | "unfollowed" | "error";
+    followUuid: string | null;
+}
