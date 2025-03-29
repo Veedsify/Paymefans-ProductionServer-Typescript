@@ -113,9 +113,8 @@ class PostController {
     // Get Post By Post ID
     static GetSinglePost(req, res) {
         return __awaiter(this, void 0, void 0, function* () {
-            var _a;
             try {
-                const SinglePost = yield PostService_1.default.GetSinglePost({ postId: req.params.postId, userId: (_a = req.user) === null || _a === void 0 ? void 0 : _a.id });
+                const SinglePost = yield PostService_1.default.GetSinglePost({ postId: req.params.postId });
                 if (SinglePost.error) {
                     return res.status(400).json(Object.assign({}, SinglePost));
                 }

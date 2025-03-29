@@ -20,7 +20,6 @@ class PostService {
     static CreatePost(data) {
         return __awaiter(this, void 0, void 0, function* () {
             try {
-                const ACCOUNT_ID = process.env.CLOUDFLARE_ACCOUNT_ID;
                 const postId = (0, uuid_1.v4)();
                 const user = data.user;
                 const { content, visibility, media, removedMedia } = data;
@@ -34,19 +33,19 @@ class PostService {
                         };
                     }
                 }
-                media.map((file) => __awaiter(this, void 0, void 0, function* () {
-                    const signedUrl = yield fetch(`https://api.cloudflare.com/client/v4/accounts/${ACCOUNT_ID}/stream/${file.id}`, {
-                        method: "POST",
-                        headers: {
-                            "Authorization": `Bearer ${process.env.CLOUDFLARE_ACCOUNT_TOKEN}`
-                        },
-                        body: JSON.stringify({ uid: file.id, requireSignedURLs: true }) // Streaming formData
-                    });
-                    if (signedUrl.ok) {
-                        const token = yield signedUrl.json();
-                        console.log("SIGNED", token);
-                    }
-                }));
+                // media.map(async (file) => {
+                //       const signedUrl = await fetch(`https://api.cloudflare.com/client/v4/accounts/${ACCOUNT_ID}/stream/${file.id}`, {
+                //             method: "POST",
+                //             headers: {
+                //                   "Authorization": `Bearer ${process.env.CLOUDFLARE_ACCOUNT_TOKEN}`
+                //             },
+                //             body: JSON.stringify({ uid: file.id, requireSignedURLs: true })  // Streaming formData
+                //       });
+                //       if (signedUrl.ok) {
+                //             const token = await signedUrl.json();
+                //             console.log("SIGNED", token);
+                //       }
+                // })
                 if ((!content || content.trim().length === 0) && !visibility) {
                     return {
                         status: false,
@@ -128,6 +127,7 @@ class PostService {
                         media: true,
                         created_at: true,
                         post_status: true,
+                        post_impressions: true,
                         post_likes: true,
                         post_comments: true,
                         post_reposts: true,
@@ -222,6 +222,7 @@ class PostService {
                                 post_id: true,
                                 post_audience: true,
                                 post_status: true,
+                                post_impressions: true,
                                 media: true,
                                 created_at: true,
                                 post_likes: true,
@@ -321,6 +322,7 @@ class PostService {
                                 post_audience: true,
                                 media: true,
                                 post_status: true,
+                                post_impressions: true,
                                 created_at: true,
                                 post_likes: true,
                                 post_comments: true,
@@ -542,6 +544,7 @@ class PostService {
                         created_at: true,
                         post_likes: true,
                         post_status: true,
+                        post_impressions: true,
                         post_comments: true,
                         post_reposts: true,
                         was_repost: true,
@@ -602,7 +605,7 @@ class PostService {
     }
     // Get Single Post By ID:
     static GetSinglePost(_a) {
-        return __awaiter(this, arguments, void 0, function* ({ postId, userId }) {
+        return __awaiter(this, arguments, void 0, function* ({ postId }) {
             try {
                 const post = yield prisma_1.default.post.findFirst({
                     where: {
@@ -629,6 +632,7 @@ class PostService {
                         post_id: true,
                         post_audience: true,
                         post_status: true,
+                        post_impressions: true,
                         created_at: true,
                         post_likes: true,
                         media: true,
@@ -687,6 +691,7 @@ class PostService {
                         post_audience: true,
                         created_at: true,
                         post_status: true,
+                        post_impressions: true,
                         post_likes: true,
                         post_comments: true,
                         post_reposts: true,

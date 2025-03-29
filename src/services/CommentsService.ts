@@ -9,8 +9,6 @@ export default class CommentsService {
   // Fuction takes in the postId, post_id, reply_to, comment, user and files
   static async NewComment(
     postId: string,
-    post_id: string,
-    reply_to: string,
     comment: string,
     user: AuthUser,
     files?: Express.Multer.File[]
@@ -151,6 +149,7 @@ export default class CommentsService {
           action = "Comment Like Removed";
           return {
             error: false,
+            action,
             status: true,
             message: "Comment like removed successfully",
           };
@@ -165,6 +164,7 @@ export default class CommentsService {
           return {
             error: false,
             status: true,
+            action,
             message: "Comment liked successfully",
           };
         }
@@ -175,6 +175,7 @@ export default class CommentsService {
       console.log(error);
       return {
         error: true,
+        action: "",
         status: false,
         message: "An error occurred while processing comment like",
       };

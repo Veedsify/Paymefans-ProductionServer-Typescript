@@ -583,7 +583,7 @@ export default class PostService {
             }
       }
       // Get Single Post By ID:
-      static async GetSinglePost({ postId, userId }: { postId: string; userId: number }): Promise<GetSinglePostResponse> {
+      static async GetSinglePost({ postId }: { postId: string; }): Promise<GetSinglePostResponse> {
             try {
                   const post = await query.post.findFirst({
                         where: {

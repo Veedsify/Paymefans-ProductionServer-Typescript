@@ -17,6 +17,11 @@ const follower_1 = __importDefault(require("@routes/follower/follower"));
 const subscribers_1 = __importDefault(require("./subscriber/subscribers"));
 const conversations_1 = __importDefault(require("@routes/conversations/conversations"));
 const comment_1 = __importDefault(require("@routes/comments/comment"));
+const notification_1 = __importDefault(require("@routes/notifications/notification"));
+const verification_1 = __importDefault(require("@routes/verification/verification"));
+const store_1 = __importDefault(require("@routes/store/store"));
+const help_1 = __importDefault(require("@routes/help/help"));
+const webhooks_1 = __importDefault(require("@routes/webhooks/webhooks"));
 const api = express_1.default.Router();
 // Authentication
 api.use("/auth", auth_1.default);
@@ -44,4 +49,16 @@ api.use("/follower", follower_1.default);
 api.use("/conversations", conversations_1.default);
 // Comments
 api.use("/comments", comment_1.default);
+// Notifications
+api.use("/notifications", notification_1.default);
+// Stories
+api.use("/stories", story_1.default);
+// Verification 
+api.use("/verification", verification_1.default);
+// Store
+api.use("/store", store_1.default);
+// Help
+api.use("/help", help_1.default);
+// Webhooks
+api.use("/webhooks", webhooks_1.default);
 exports.default = api;

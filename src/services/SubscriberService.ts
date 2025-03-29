@@ -1,6 +1,5 @@
 import query from '@utils/prisma';
 import { CheckSubscriberResponse, GetSubscriptionDataResponse, CreateNewSubscriptionResponse, CheckSubscriberProps, CreateNewSubscriptionProps } from '../types/subscribers';
-import { error } from 'console';
 import { GenerateUniqueId } from '@utils/GenerateUniqueId';
 
 export default class SubscriberService {

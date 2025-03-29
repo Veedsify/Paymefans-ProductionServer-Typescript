@@ -19,5 +19,6 @@ export interface NewCommentResponse {
 export interface LikeCommentResponse{
     error: boolean;
     status: boolean;
+    action: string;
     message: string
 }

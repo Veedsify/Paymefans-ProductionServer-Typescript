@@ -10,7 +10,7 @@ const PostController_1 = __importDefault(require("@controllers/PostController"))
 const FileUploadConfig_1 = require("@middleware/FileUploadConfig");
 const post = (0, express_1.default)();
 const postUpload = (0, FileUploadConfig_1.CreateUpload)("post");
-post.post("/upload-post-media", auth_1.default, postUpload.single("file"), UploadController_1.default.UploadImage);
+post.post("/upload-post-media", auth_1.default, postUpload.single("file"), UploadController_1.default.UploadMedia);
 post.post("/create", auth_1.default, PostController_1.default.CreatePost);
 post.get("/my-posts", auth_1.default, PostController_1.default.GetMyPosts);
 post.get("/my-reposts", auth_1.default, PostController_1.default.GetMyReposts);

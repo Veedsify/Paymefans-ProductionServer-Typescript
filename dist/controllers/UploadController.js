@@ -50,7 +50,7 @@ const UploadImageCloudflare_1 = __importDefault(require("@libs/UploadImageCloudf
 const tus_1 = __importDefault(require("@libs/tus"));
 const io_1 = __importDefault(require("@libs/io"));
 class UploadController {
-    static UploadImage(req, res) {
+    static UploadMedia(req, res) {
         return __awaiter(this, void 0, void 0, function* () {
             const io = io_1.default.getIO();
             try {

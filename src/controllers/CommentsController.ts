@@ -6,10 +6,10 @@ export default class CommentsController {
     // This is for creating a new comment on a post
     static NewComment = async (req: Request, res: Response): Promise<any> => {
         try{
-            const { postId, comment, post_id, reply_to } = req.body
+            const { postId, comment} = req.body
             const { user } = req as {user: AuthUser}
             const { files } = req.files as { files: Express.Multer.File[] }
-            const newComment = await CommentsService.NewComment(postId, post_id, reply_to, comment, user, files)
+            const newComment = await CommentsService.NewComment(postId, comment, user, files)
             if(newComment.error){
                 return res.status(400).json({...newComment})
             }

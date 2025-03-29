@@ -11,7 +11,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.RegisterCloudflareStreamWebhook = RegisterCloudflareStreamWebhook;
 const { CLOUDFLARE_WEBHOOK_URL, CLOUDFLARE_ACCOUNT_TOKEN } = process.env;
-const TEST_WEBHOOK_URL = `https://247b-197-211-59-109.ngrok-free.app`;
+const TEST_WEBHOOK_URL = `https://5129-102-89-22-49.ngrok-free.app`;
 function RegisterCloudflareStreamWebhook() {
     try {
         function register() {
