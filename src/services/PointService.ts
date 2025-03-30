@@ -3,7 +3,7 @@ import { BuyPointResponse, ConversionRateResponse, CreatePaystackPaymentProps, G
 import { GlobalPointsBuy } from "@prisma/client";
 import { AuthUser } from "types/user";
 import { GenerateUniqueId } from "@utils/GenerateUniqueId";
-import redis from "@libs/RedisStore";
+import { redis } from "@libs/RedisStore";
 
 export default class PointService {
       static async RetrievePoints(userid: number): Promise<RetrievePointResponse> {

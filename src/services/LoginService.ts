@@ -1,7 +1,10 @@
 import { LoginUserProps, LoginUserResponse } from '../types/auth';
 import ComparePasswordHash from '@libs/ComparePassordHash';
 import { Authenticate } from '@libs/jwt';
+import { redis } from '@libs/RedisStore';
 import query from '@utils/prisma';
+import ModelService from './ModelService';
+import { AuthUser } from 'types/user';
 export default class LoginService {
       // Login User
       static async LoginUser(data: LoginUserProps): Promise<LoginUserResponse> {

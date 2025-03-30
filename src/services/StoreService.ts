@@ -1,4 +1,4 @@
-import redis from "@libs/RedisStore";
+import { redis } from "@libs/RedisStore";
 import query from "@utils/prisma";
 import {
   AllProductProps,

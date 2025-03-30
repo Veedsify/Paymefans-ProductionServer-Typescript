@@ -10,7 +10,7 @@ import {
   UploadAttachmentsProps,
   UploadAttachmentsResponse,
 } from "../types/conversations";
-import redis from "@libs/RedisStore";
+import { redis } from "@libs/RedisStore";
 import { GenerateUniqueId } from "@utils/GenerateUniqueId";
 import query from "@utils/prisma";
 import { AuthUser } from "types/user";

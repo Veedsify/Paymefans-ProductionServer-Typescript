@@ -1,4 +1,4 @@
-import redis from "@libs/RedisStore";
+import { redis } from "@libs/RedisStore";
 import { GenerateUniqueId } from "@utils/GenerateUniqueId";
 import query from "@utils/prisma";
 import { CreatePack, CreateSubscriptionTierProps, CreateSubscriptionTierResponse, Tiers, UserSubscriptionsResponse } from "types/subscriptiontier";

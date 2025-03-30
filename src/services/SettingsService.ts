@@ -4,7 +4,7 @@ import { ChangePassWordProps, ChangePasswordResponse, HookupStatusChangeResponse
 import { AuthUser } from "types/user";
 import { passwordStrength } from 'check-password-strength'
 import { CreateHashedPassword } from "@libs/HashPassword";
-import redis from "@libs/RedisStore";
+import { redis } from "@libs/RedisStore";
 export default class SettingsService {
       static async SettingsProfileChange(body: SettingProfileProps, userId: number): Promise<SettingsProfileChangeResponse> {
             try {

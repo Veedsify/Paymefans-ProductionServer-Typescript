@@ -21,11 +21,22 @@ import {StreamClient} from "@stream-io/node-sdk"
 const client = new StreamClient(apiKey, secret, {timeout: 6000});
 import query from "@utils/prisma";
 import {GenerateUniqueId} from "@utils/GenerateUniqueId";
+import { redis } from "@libs/RedisStore"
 
 export default class ModelService {
-    static async GetModels(body: ModelsSearchProps, user: AuthUser): Promise<GetModelsResponse> {
+    static async GetModels(body: {limit: number}, user: AuthUser): Promise<GetModelsResponse> {
         const {limit} = body;
         try {
+            const models = await redis.get(`models`)
+            if(models){
+                const modelsData = JSON.parse(models)
+                return {
+                    error: false,
+                    message: "Successfully fetched models",
+                    models: modelsData,
+                }
+            }
+
             const result = await query.$transaction(async (tx) => {
                 const models: Models = await tx.$queryRaw`
                     SELECT *
@@ -39,6 +50,9 @@ export default class ModelService {
                 `;
 
                 const modelsWithoutPassword = models.map(({password, ...rest}: { password: string }) => rest);
+
+                // Save to redis
+                await redis.set(`models`, JSON.stringify(modelsWithoutPassword), "EX", 1000 * 60 * 10); // 10 minutes
 
                 return {
                     error: false,

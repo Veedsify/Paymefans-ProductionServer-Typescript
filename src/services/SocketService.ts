@@ -1,4 +1,4 @@
-import redis from "@libs/RedisStore";
+import { redis } from "@libs/RedisStore";
 import { Socket } from "socket.io";
 import IoInstance from "../libs/io";
 import { HandleFollowUserDataProps, HandleSeenProps } from "types/socket";
@@ -7,6 +7,7 @@ import ConversationService from "./ConversationService";
 import _ from "lodash";
 import FollowerService from "./FollowerService";
 import query from "@utils/prisma";
+import NotificationService from "./NotificationService";
 export default class SocketService {
       // Emit active users
       // Get active users from redis
@@ -172,5 +173,13 @@ export default class SocketService {
                   console.log("Error in HandlePostViewed", error)
                   throw new Error("Error in HandlePostViewed");
             }
+      }
+      // Handle notification join
+      // Join notification room for user notifications
+      static async HandleNotificationJoin(userId: string, socket: Socket) {
+            socket.join(`notifications-${userId}`);
+            const unreadNotifications = await NotificationService.GetUnreadNotifications(userId);
+            console.log("Unread Notifications", unreadNotifications);
+            socket.emit(`notifications-${userId}`, unreadNotifications);
       }
 }

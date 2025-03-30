@@ -7,6 +7,10 @@ import AppSocket from "@libs/AppSocket";
 import { RegisterCloudflareStreamWebhook } from "@libs/RegisterCloudflareStreamWebhook";
 import cors from "cors"
 import logger from "morgan"
+import cron from "node-cron";
+import ModelsRedisPubSub from "@libs/ModelsRedisPubSub";
+import IoInstance from "@libs/io";
+import TriggerModels from "jobs/models";
 const { ADMIN_PANEL_URL, VERIFICATION_URL, APP_URL, LIVESTREAM_PORT } = process.env;
 
 
@@ -24,11 +28,22 @@ app.use(cors({
     optionsSuccessStatus: 200,
 }))
 
-// Socket
-AppSocket(server).then();
+// Instance of Socket.IO
+IoInstance.init(server).then((instance) => {
+    // Socket
+    AppSocket(instance).then();
+    //Redis Model PubSub
+    ModelsRedisPubSub(instance)
+})
 
 //Register Cloudflare Webhook
 RegisterCloudflareStreamWebhook()
+
+// Cron Jobs
+cron.schedule("*/2 * * * *", async () => {
+    // Trigger Model Jobs
+    await TriggerModels(1)
+})
 
 // Serve static files from the "public" directory
 app.use(express.static(path.join('public')));

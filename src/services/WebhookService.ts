@@ -1,4 +1,4 @@
-import redis from "@libs/RedisStore";
+import { redis } from "@libs/RedisStore";
 import query from "@utils/prisma";
 
 // Retry intervals in milliseconds: 2 minutes, 4 minutes, 10 minutes, 30 minutes.

@@ -1,11 +1,9 @@
 import { SocketUser } from "types/socket";
-import IoInstance from "./io";
-import redis from "./RedisStore";
+import { redis } from "./RedisStore";
 import SocketService from "@services/SocketService";
 
 let appSocket: any;
-async function AppSocket(server: any) {
-    const io = await IoInstance.init(server);
+async function AppSocket(io: any) {
     io.on("connection", (socket: any) => {
         appSocket = socket;
         console.log("Socket Connected", appSocket.id);
@@ -43,6 +41,7 @@ async function AppSocket(server: any) {
         socket.on("followUser", (data: any) => SocketService.HandleFollowUser(data, socket));
         socket.on("join-upload-room", (data: any) => SocketService.JoinUploadRoom(socket, data));
         socket.on("post-viewed", (data: any) => SocketService.HandlePostViewed(data));
+        socket.on("notifications-join", (userId: string) => SocketService.HandleNotificationJoin(userId, socket));
         // socket.on("new-message", handleMessage);
         socket.on("disconnect", async () => {
             clearInterval(interval);
@@ -51,7 +50,6 @@ async function AppSocket(server: any) {
             await SocketService.HandleUserInactive(user.userId);
         });
     });
-    return io;
 }
 
 export default AppSocket;
