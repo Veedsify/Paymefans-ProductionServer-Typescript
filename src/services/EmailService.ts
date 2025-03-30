@@ -40,4 +40,5 @@ export default class EmailService {
                   return { message: error.message, error: true };
             }
       }
+
 }
