@@ -148,22 +148,20 @@ export default class SocketService {
                                     }
                               })
                               canUpdate = true
-                        }
+                        }     
                         return
                   })
-                  _.debounce(async () => {
-                        if (!canUpdate) return
-                        await query.post.update({
-                              where: {
-                                    id: data.postId
-                              },
-                              data: {
-                                    post_impressions: {
-                                          increment: 1
-                                    }
+                  if (!canUpdate) return
+                  await query.post.update({
+                        where: {
+                              id: data.postId
+                        },
+                        data: {
+                              post_impressions: {
+                                    increment: 1
                               }
-                        })
-                  }, 1000)
+                        }
+                  })
                   return {
                         status: true,
                         message: "Post Viewed",

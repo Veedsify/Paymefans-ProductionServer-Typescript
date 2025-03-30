@@ -1,5 +1,5 @@
 const { CLOUDFLARE_WEBHOOK_URL, CLOUDFLARE_ACCOUNT_TOKEN } = process.env
-const TEST_WEBHOOK_URL = `https://34be-197-211-59-93.ngrok-free.app`
+const TEST_WEBHOOK_URL = `https://abd1-102-88-109-233.ngrok-free.app`
 
 export function RegisterCloudflareStreamWebhook(): void {
     try {
