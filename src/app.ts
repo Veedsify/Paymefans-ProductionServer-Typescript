@@ -1,4 +1,4 @@
-import "module-alias/register";
+import 'module-alias/register';
 import express from 'express';
 import path from 'path';
 import http from "http"
@@ -10,7 +10,9 @@ import logger from "morgan"
 import cron from "node-cron";
 import ModelsRedisPubSub from "@libs/ModelsRedisPubSub";
 import IoInstance from "@libs/io";
-import TriggerModels from "jobs/models";
+import TriggerModels from "@jobs/models";
+import TriggerHookups from "@jobs/hookup";
+import HookupRedisPubSub from "@libs/HookupRedisPubSub";
 const { ADMIN_PANEL_URL, VERIFICATION_URL, APP_URL, LIVESTREAM_PORT } = process.env;
 
 
@@ -34,15 +36,18 @@ IoInstance.init(server).then((instance) => {
     AppSocket(instance).then();
     //Redis Model PubSub
     ModelsRedisPubSub(instance)
+    // Hookup Redis PubSub
+    HookupRedisPubSub(instance)
 })
 
 //Register Cloudflare Webhook
 RegisterCloudflareStreamWebhook()
 
 // Cron Jobs
-cron.schedule("*/2 * * * *", async () => {
+cron.schedule("* * * * *", async () => {
     // Trigger Model Jobs
     await TriggerModels(1)
+    await TriggerHookups(1)
 })
 
 // Serve static files from the "public" directory

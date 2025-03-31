@@ -18,7 +18,8 @@
       "@routes/*": ["routes/*"],
       "@services/*": ["services/*"],
       "@utils/*": ["utils/*"],
-      "@views/*": ["views/*"]
+      "@views/*": ["views/*"],
+      "@jobs/*": ["jobs/*"],
     },
     "declaration": false,
     "noImplicitAny": true,
