@@ -1,0 +1,11 @@
+  "_moduleAliases": {
+    "@controllers": "dist/controllers",
+    "@libs": "dist/libs",
+    "@middleware": "dist/middleware",
+    "@routes": "dist/routes",
+    "@services": "dist/services",
+    "@types": "dist/types",
+    "@utils": "dist/utils",
+    "@views": "dist/views",
+    "@jobs": "dist/jobs"
+  }

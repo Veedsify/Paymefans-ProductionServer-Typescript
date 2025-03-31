@@ -1,7 +1,7 @@
 {
   "name": "server2",
   "version": "1.0.0",
-  "main": "dist/app.js",
+  "main": "src/app.ts",
   "type": "commonjs",
   "prisma": {
     "seed": "bun src/utils/seed.ts"
@@ -89,16 +89,5 @@
     "tsconfig-paths": "^4.2.0",
     "tsx": "^4.19.3",
     "typescript": "^5.8.2"
-  },
-  "_moduleAliases": {
-    "@controllers": "dist/controllers",
-    "@libs": "dist/libs",
-    "@middleware": "dist/middleware",
-    "@routes": "dist/routes",
-    "@services": "dist/services",
-    "@types": "dist/types",
-    "@utils": "dist/utils",
-    "@views": "dist/views",
-    "@jobs": "dist/jobs"
   }
 }
