@@ -30,7 +30,7 @@ export default class AuthController {
         });
 
         if (!CheckForUsername.status) {
-            return res.status(400).json({ message: CheckForUsername.message, status: false });
+            return res.status(401).json({ message: CheckForUsername.message, status: false });
         }
 
         return res.status(200).json({ message: CheckForUsername.message, status: true });
@@ -43,7 +43,7 @@ export default class AuthController {
 
             if (LoginAccount.error) {
                 console.log(LoginAccount.message)
-                return res.status(400).json({ message: LoginAccount.message, status: false });
+                return res.status(401).json({ message: LoginAccount.message, status: false });
             }
 
             return res.status(200).json({ message: "Login successful", status: true, token: LoginAccount.token, user: LoginAccount.user });

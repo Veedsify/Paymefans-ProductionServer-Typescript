@@ -7,7 +7,7 @@ export default class ModelController {
         try {
             const modelssearch = await ModelService.GetModels(req.body, req.user as AuthUser)
             if (modelssearch.error) {
-                res.status(400).json({message: modelssearch.message})
+                res.status(401).json({message: modelssearch.message})
                 return
             }
             res.status(200).json({...modelssearch})
@@ -22,7 +22,7 @@ export default class ModelController {
         try {
             const modelSearch = await ModelService.ModelsSearch({searchQuery: req.query as any, user: req.user as AuthUser})
             if (modelSearch.error) {
-                res.status(400).json({message: modelSearch.message})
+                res.status(401).json({message: modelSearch.message})
                 return
             }
             res.status(200).json({...modelSearch})
@@ -36,7 +36,7 @@ export default class ModelController {
         try {
             const getmodelavailableforhookup = await ModelService.GetModelAvailableForHookup(req.body, req.user as AuthUser)
             if (getmodelavailableforhookup.error) {
-                res.status(400).json({message: getmodelavailableforhookup.message})
+                res.status(401).json({message: getmodelavailableforhookup.message})
                 return
             }
             res.status(200).json({...getmodelavailableforhookup})
@@ -51,7 +51,7 @@ export default class ModelController {
         try {
             const signupmodel = await ModelService.SignupModel(req.body, req.user as AuthUser)
             if (signupmodel.error) {
-                res.status(400).json({message: signupmodel.message})
+                res.status(401).json({message: signupmodel.message})
                 return
             }
             res.status(200).json({...signupmodel})
@@ -66,7 +66,7 @@ export default class ModelController {
     //       try {
     //             const validatemodelpayment = await ModelService.ValidateModelPayment(req.body)
     //             if (validatemodelpayment.error) {
-    //                   res.status(400).json({ message: validatemodelpayment.message })
+    //                   res.status(401).json({ message: validatemodelpayment.message })
     //                   return
     //             }
     //             res.status(200).json({ ...validatemodelpayment })

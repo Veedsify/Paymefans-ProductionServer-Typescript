@@ -8,7 +8,7 @@ export default class WalletController {
         try {
             const addBank = await WalletService.AddBank(req.body, req.user as AuthUser)
             if (addBank.error) {
-                res.status(400).send({...addBank})
+                res.status(401).send({...addBank})
             }
             res.status(200).send({...addBank})
         } catch (err: any) {
@@ -21,7 +21,7 @@ export default class WalletController {
         try {
             const getBanks = await WalletService.GetBanks(req.user as AuthUser)
             if (getBanks.error) {
-                res.status(400).send({...getBanks})
+                res.status(401).send({...getBanks})
             }
             res.status(200).send(getBanks)
         } catch (err: any) {
@@ -34,7 +34,7 @@ export default class WalletController {
         try {
             const deleteBank = await WalletService.DeleteBank(req.body, req.user as AuthUser)
             if (!deleteBank.status) {
-                res.status(400).send({...deleteBank})
+                res.status(401).send({...deleteBank})
             }
             res.status(200).send(deleteBank)
         } catch (err: any) {
@@ -47,7 +47,7 @@ export default class WalletController {
         try {
             const getTransactions = await WalletService.GetTransactions(req.user as AuthUser)
             if (getTransactions.error) {
-                res.status(400).send({...getTransactions})
+                res.status(401).send({...getTransactions})
             }
             res.status(200).send(getTransactions)
         } catch (err: any) {
@@ -60,7 +60,7 @@ export default class WalletController {
         try {
             const getTransactions = await WalletService.OtherTransactions(req.user as AuthUser)
             if (getTransactions.error) {
-                res.status(400).send({...getTransactions})
+                res.status(401).send({...getTransactions})
             }
             res.status(200).send(getTransactions)
         } catch (err: any) {

@@ -58,7 +58,7 @@ class UploadController {
                         };
                   }
                   if (!upload) {
-                        res.status(400).json({ error: "Invalid file type" });
+                        res.status(401).json({ error: "Invalid file type" });
                   }
 
                   res.json(upload);

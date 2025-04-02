@@ -7,7 +7,7 @@ export default class SubscriberController {
         try {
             const checksubscriber = await SubscriberService.CheckSubscriber({ ...req.body });
             if (checksubscriber.error) {
-                res.status(400).json({ ...checksubscriber })
+                res.status(401).json({ ...checksubscriber })
             }
             res.status(200).json({ ...checksubscriber })
         }
@@ -21,7 +21,7 @@ export default class SubscriberController {
         try {
             const getsubscriptiondata = await SubscriberService.GetSubscriptionData(req.params.userId);
             if (getsubscriptiondata.error) {
-                res.status(400).json({ ...getsubscriptiondata })
+                res.status(401).json({ ...getsubscriptiondata })
             }
             res.status(200).json({ ...getsubscriptiondata })
         } catch (error) {
@@ -39,7 +39,7 @@ export default class SubscriberController {
             }
             const createnewsubscription = await SubscriberService.CreateNewSubscription(options);
             if (createnewsubscription.error) {
-                res.status(400).json({ ...createnewsubscription })
+                res.status(401).json({ ...createnewsubscription })
             }
             res.status(200).json({ ...createnewsubscription })
         } catch (error) {

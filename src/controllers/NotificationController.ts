@@ -8,7 +8,7 @@ export default class NotificationController {
             try {
                   const notifications = await NotificationService.MyNotifications({ page: req.params.page, userId: req.user!.id as number })
                   if (notifications.error) {
-                        res.status(400).json(notifications)
+                        res.status(401).json(notifications)
                   }
                   res.status(200).json(notifications)
             }
@@ -26,7 +26,7 @@ export default class NotificationController {
             try {
                   const notification = await NotificationService.ReadNotification(req.params.id as string, req.user!.id as number)
                   if (notification.error) {
-                        res.status(400).json(notification)
+                        res.status(401).json(notification)
                   }
                   res.status(200).json(notification)
             }

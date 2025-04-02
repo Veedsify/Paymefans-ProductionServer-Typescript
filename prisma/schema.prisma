@@ -69,7 +69,6 @@ model User {
   UserTransaction           UserTransaction[]
   UserWallet                UserWallet[]
   UserWithdrawalBankAccount UserWithdrawalBankAccount[]
-  Messages                  Messages[]
   Model                     Model?
   UserAttachments           UserAttachments[]
   Post                      Post[]
@@ -86,6 +85,9 @@ model User {
   BlockedGroupParticipant   BlockedGroupParticipant[]
   PostImpression            PostImpression[]
   CommentImpression         CommentImpression[]
+  sentMessages              Messages[]                  @relation("MessageSender")
+  receivedMessages          Messages[]                  @relation("MessageReceiver")
+  Messages                  Messages[]
 }
 
 model Participants {
@@ -116,10 +118,13 @@ model Messages {
   attachment      Json?           @db.Json
   created_at      DateTime        @default(now())
   updated_at      DateTime        @updatedAt
-  sender          User            @relation(fields: [sender_id], references: [user_id], onDelete: Cascade, onUpdate: Cascade)
+  sender          User            @relation("MessageSender", fields: [sender_id], references: [user_id], onDelete: Cascade, onUpdate: Cascade)
+  receiver        User            @relation("MessageReceiver", fields: [receiver_id], references: [user_id], onDelete: Cascade, onUpdate: Cascade)
   ReportMessage   ReportMessage[]
   Conversations   Conversations?  @relation(fields: [conversationsId], references: [conversation_id], onDelete: SetNull, onUpdate: Cascade)
   conversationsId String?
+  User            User?           @relation(fields: [userId], references: [id])
+  userId          Int?
 
   @@index([sender_id], map: "Messages_sender_id_fkey")
 }
@@ -205,32 +210,32 @@ model StoryMedia {
 }
 
 model Post {
-  id               Int           @id @default(autoincrement())
+  id               Int              @id @default(autoincrement())
   post_id          String
-  was_repost       Boolean       @default(false)
-  repost_username  String?       @default("")
-  repost_id        String?       @default("")
+  was_repost       Boolean          @default(false)
+  repost_username  String?          @default("")
+  repost_id        String?          @default("")
   user_id          Int
-  content          String?       @db.LongText
+  content          String?          @db.LongText
   media            Json?
-  post_status      PostStatus    @default(pending)
+  post_status      PostStatus       @default(pending)
   post_audience    PostAudience
-  post_is_visible  Boolean       @default(true)
-  post_likes       Int           @default(0)
-  post_comments    Int           @default(0)
-  post_reposts     Int           @default(0)
-  post_impressions Int           @default(0)
-  created_at       DateTime      @default(now())
-  updated_at       DateTime      @updatedAt
+  post_is_visible  Boolean          @default(true)
+  post_likes       Int              @default(0)
+  post_comments    Int              @default(0)
+  post_reposts     Int              @default(0)
+  post_impressions Int              @default(0)
+  created_at       DateTime         @default(now())
+  updated_at       DateTime         @updatedAt
   PostComment      PostComment[]
   PostLike         PostLike[]
   PostShared       PostShared[]
   ReportPost       ReportPost[]
   UserRepost       UserRepost[]
-  PostImpression PostImpression[]
-  UserMedia      UserMedia[]
+  PostImpression   PostImpression[]
+  UserMedia        UserMedia[]
 
-  user           User             @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
 }
 
 model PostImpression {

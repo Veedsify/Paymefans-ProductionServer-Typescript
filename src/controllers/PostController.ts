@@ -9,7 +9,7 @@ export default class PostController {
                         ...req.body,
                   });
                   if ('error' in SavePost && SavePost.error) {
-                        return res.status(400).json({ message: SavePost.error });
+                        return res.status(401).json({ message: SavePost.error });
                   }
                   res.status(201).json(SavePost);
             } catch (error: any) {
@@ -81,7 +81,7 @@ export default class PostController {
             try {
                   const SinglePost = await PostService.GetSinglePost({ postId: req.params.postId })
                   if(SinglePost.error) {
-                        return res.status(400).json({...SinglePost})
+                        return res.status(401).json({...SinglePost})
                   }
                   return res.status(200).json({ ...SinglePost })
             } catch (err: any) {

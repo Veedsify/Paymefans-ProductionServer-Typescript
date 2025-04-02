@@ -21,47 +21,40 @@ import {StreamClient} from "@stream-io/node-sdk"
 const client = new StreamClient(apiKey, secret, {timeout: 6000});
 import query from "@utils/prisma";
 import {GenerateUniqueId} from "@utils/GenerateUniqueId";
-import { redis } from "@libs/RedisStore"
+import {redis} from "@libs/RedisStore"
 
 export default class ModelService {
-    static async GetModels(body: {limit: number}, user: AuthUser): Promise<GetModelsResponse> {
+    static async GetModels(body: { limit: number }, user: AuthUser): Promise<GetModelsResponse> {
         const {limit} = body;
         try {
             const models = await redis.get(`models`)
-            if(models){
-                const modelsData = JSON.parse(models)
-                return {
-                    error: false,
-                    message: "Successfully fetched models",
-                    models: modelsData,
-                }
+            if (!models) {
+                return await query.$transaction(async (tx) => {
+                    const models: Models = await tx.$queryRaw`
+                        SELECT *
+                        FROM User
+                                 INNER JOIN Model ON User.id = Model.user_id
+                        WHERE User.is_model = true
+                          AND User.id != ${user.id}
+                          AND Model.verification_status = true
+                        ORDER BY RAND()
+                            LIMIT ${limit};
+                    `;
+
+                    const modelsWithoutPassword = models.map(({password, ...rest}: { password: string }) => rest);
+                    const options = {
+                        error: false,
+                        message: "Successfully fetched models",
+                        models: modelsWithoutPassword,
+                    };
+
+                    // Save to redis
+                    await redis.set(`models`, JSON.stringify(options), "EX", 1000 * 60 * 10); // 10 minutes
+                    return options
+                });
             }
 
-            const result = await query.$transaction(async (tx) => {
-                const models: Models = await tx.$queryRaw`
-                    SELECT *
-                    FROM User
-                             INNER JOIN Model ON User.id = Model.user_id
-                    WHERE User.is_model = true
-                      AND User.id != ${user.id}
-                      AND Model.verification_status = true
-                    ORDER BY RAND()
-                        LIMIT ${limit};
-                `;
-
-                const modelsWithoutPassword = models.map(({password, ...rest}: { password: string }) => rest);
-
-                // Save to redis
-                await redis.set(`models`, JSON.stringify(modelsWithoutPassword), "EX", 1000 * 60 * 10); // 10 minutes
-
-                return {
-                    error: false,
-                    message: "Successfully fetched models",
-                    models: modelsWithoutPassword,
-                };
-            });
-
-            return result;
+            return JSON.parse(models)
         } catch (error) {
             console.error(error);
             return {
@@ -150,46 +143,43 @@ export default class ModelService {
         const {limit} = body;
         try {
             const hookups = await redis.get(`hookups`)
-            if(hookups){
-                const hookupsData = JSON.parse(hookups)
-                return {
+            if (!hookups) {
+                // Parse limit to an integer or default to 5 if not provided
+                const parsedLimit = limit ? parseInt(limit, 10) : 6;
+                const validLimit = Number.isNaN(parsedLimit) || parsedLimit <= 0 ? 5 : parsedLimit;
+                const models: Hookups = await query.$queryRaw`
+                    SELECT User.id,
+                           User.username,
+                           User.fullname,
+                           User.profile_image,
+                           User.profile_banner,
+                           User.is_model,
+                           Settings.price_per_message,
+                           Settings.subscription_price,
+                           Model.hookup
+                    FROM User
+                             INNER JOIN Model ON User.id = Model.user_id
+                             LEFT JOIN Settings ON User.id = Settings.user_id
+                    WHERE Model.verification_status = true
+                      AND Model.hookup = true
+                      AND User.id != ${user.id}
+                    ORDER BY RAND()
+                        LIMIT ${validLimit};
+                `;
+
+                const modelsWithoutPassword = models.map(({password, ...rest}: { password: string }) => rest);
+                const options = {
                     error: false,
                     message: "Successfully fetched hookups",
-                    hookups: hookupsData,
+                    hookups: modelsWithoutPassword,
                 }
-            }
-            // Parse limit to an integer or default to 5 if not provided
-            const parsedLimit = limit ? parseInt(limit, 10) : 6;
-            const validLimit = Number.isNaN(parsedLimit) || parsedLimit <= 0 ? 5 : parsedLimit;
-            const models: Hookups = await query.$queryRaw`
-                SELECT 
-                    User.id, 
-                    User.username, 
-                    User.fullname, 
-                    User.profile_image, 
-                    User.profile_banner, 
-                    User.is_model,
-                    Settings.price_per_message,
-                    Settings.subscription_price,
-                    Model.hookup
-                FROM User
-                INNER JOIN Model ON User.id = Model.user_id
-                LEFT JOIN Settings ON User.id = Settings.user_id
-                WHERE Model.verification_status = true
-                AND Model.hookup = true
-                AND User.id != ${user.id}
-                ORDER BY RAND()
-                LIMIT ${validLimit};
-            `;
 
-            // Save to redis
-            await redis.set(`hookups`, JSON.stringify(models), "EX", 1000 * 60 * 10); // 10 minutes
-            const modelsWithoutPassword = models.map(({password, ...rest}: { password: string }) => rest);
-            return {
-                error: false,
-                message: "Successfully fetched hookups",
-                hookups: modelsWithoutPassword,
+                // Save to redis
+                await redis.set(`hookups`, JSON.stringify(options), "EX", 1000 * 60 * 10); // 10 minutes
+                return options
             }
+
+            return JSON.parse(hookups)
         } catch (err) {
             return {
                 error: true,

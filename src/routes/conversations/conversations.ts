@@ -10,5 +10,6 @@ conversations.get("/my-conversations", Auth, ConversationController.MyConversati
 conversations.get("/messages/:conversationId", Auth, ConversationController.AllConversations)
 conversations.post("/create-new", Auth, ConversationController.CreateConversation)
 conversations.post("/upload/attachments", attachments.single("file"), ConversationController.UploadAttachments)
+conversations.get("/search/", Auth, ConversationController.SearchConversations)
 conversations.post("/search/messages/:conversationId", Auth, ConversationController.SearchMessages)
 export default conversations

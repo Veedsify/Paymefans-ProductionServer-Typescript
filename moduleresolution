@@ -9,3 +9,32 @@
     "@views": "dist/views",
     "@jobs": "dist/jobs"
   }
+
+
+// Invalidate cache when a new message is added
+static async AddMessage({ conversationId, senderId, messageText }: { conversationId: string; senderId: string; messageText: string }) {
+    try {
+        const message = await query.messages.create({
+            data: {
+                conversationId,
+                senderId,
+                message: messageText,
+            },
+        });
+
+        // Invalidate cache for all participants in the conversation
+        const conversation = await query.conversations.findUnique({
+            where: { id: conversationId },
+            select: { user_1: true, user_2: true },
+        });
+
+        if (conversation) {
+            await redis.del(`search:${conversation.user_1}:*`);
+            await redis.del(`search:${conversation.user_2}:*`);
+        }
+
+        return { success: true, message };
+    } catch (error) {
+        return { success: false, error };
+    }
+}

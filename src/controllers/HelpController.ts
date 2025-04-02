@@ -5,7 +5,7 @@ export default class HelpController {
     try {
       const categories = await HelpService.GetHelpCategories();
       if (categories.error) {
-        res.status(400).json(categories);
+        res.status(401).json(categories);
       }
       res.status(200).json(categories);
     } catch (error: any) {

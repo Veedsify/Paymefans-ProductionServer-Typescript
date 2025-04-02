@@ -11,7 +11,7 @@ export default class SubscriptionTierController {
                 user: req.user as unknown as AuthUser
             });
             if (createSubscriptionTier.error) {
-                return res.status(400).json({ error: true, message: createSubscriptionTier.message });
+                return res.status(401).json({ error: true, message: createSubscriptionTier.message });
             }
             return res.status(200).json({ error: false, message: createSubscriptionTier.message });
         } catch (error) {
@@ -25,7 +25,7 @@ export default class SubscriptionTierController {
             const subscription_tiers = await SubscriptionTierService.UserSubscriptions(req.user?.id!, req.params.user_id)
 
             if (subscription_tiers.error) {
-                return res.status(400).json({
+                return res.status(401).json({
                     message: subscription_tiers.message,
                     status: 'error'
                 })

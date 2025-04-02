@@ -18,7 +18,7 @@ export default class VerificationController {
             });
           if (startVerification.error) {
             return res
-              .status(400)
+              .status(401)
               .json({ error: true, message: startVerification.message });
           }
           return res
@@ -30,7 +30,7 @@ export default class VerificationController {
             });
         default:
           return res
-            .status(400)
+            .status(401)
             .json({ error: true, message: "Invalid action" });
       }
     } catch (error: any) {

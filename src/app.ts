@@ -4,7 +4,7 @@ import path from 'path';
 import http from "http"
 import api from "@routes/api";
 import AppSocket from "@libs/AppSocket";
-import { RegisterCloudflareStreamWebhook } from "@libs/RegisterCloudflareStreamWebhook";
+import {RegisterCloudflareStreamWebhook} from "@libs/RegisterCloudflareStreamWebhook";
 import cors from "cors"
 import logger from "morgan"
 import cron from "node-cron";
@@ -13,7 +13,8 @@ import IoInstance from "@libs/io";
 import TriggerModels from "@jobs/models";
 import TriggerHookups from "@jobs/hookup";
 import HookupRedisPubSub from "@libs/HookupRedisPubSub";
-const { ADMIN_PANEL_URL, VERIFICATION_URL, APP_URL, LIVESTREAM_PORT } = process.env;
+
+const {ADMIN_PANEL_URL, VERIFICATION_URL, APP_URL, LIVESTREAM_PORT} = process.env;
 
 
 const app = express();
@@ -52,7 +53,7 @@ cron.schedule("* * * * *", async () => {
 
 // Serve static files from the "public" directory
 app.use(express.static(path.join('public')));
-app.use(express.urlencoded({ extended: false }));
+app.use(express.urlencoded({extended: false}));
 app.use(express.json());
 
 
