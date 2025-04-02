@@ -22,20 +22,13 @@ export default class SubscriptionTierController {
     // Fetch user subscription tiers
     static async FetchUserSubscription(req: Request, res: Response): Promise<any> {
         try {
-            const subscription_tiers = await SubscriptionTierService.UserSubscriptions(req.user?.id!, req.params.user_id)
+            const subscription_tiers = await SubscriptionTierService.UserSubscriptions(req.params.user_id)
 
             if (subscription_tiers.error) {
-                return res.status(401).json({
-                    message: subscription_tiers.message,
-                    status: 'error'
-                })
+                return res.status(401).json(subscription_tiers)
             }
 
-            return res.status(200).json({
-                message: 'Subscription Tier Retrieved Successfully',
-                data: subscription_tiers.data,
-                status: 'success'
-            })
+            return res.status(200).json(subscription_tiers)
         }
         catch (err: any) {
             console.error(err)

@@ -80,10 +80,10 @@ export default class SocketService {
                   });
                   await redis.del(`conversations:${data.userId}`);
                   await redis.del(`conversations:${data.receiver_id}`);
-                  const conversations = await this.GetCachedConversations(data.userId);
-                  const receiverConversations = await this.GetCachedConversations(data.receiver_id);
-                  socket.emit("conversations", conversations);
-                  socket.to(userRoom).emit("conversations", receiverConversations);
+                  // const conversations = await this.GetCachedConversations(data.userId);
+                  // const receiverConversations = await this.GetCachedConversations(data.receiver_id);
+                  socket.emit("refetch-conversations", "conversations");
+                  // socket.to(userRoom).emit("conversations", receiverConversations);
             }
       };
       // Handle typing

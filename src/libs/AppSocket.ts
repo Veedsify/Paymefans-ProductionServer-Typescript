@@ -16,6 +16,7 @@ async function AppSocket(io: any) {
 
         const emitActiveUsers = async () => {
             const activeUsers = await redis.hgetall("activeUsers");
+            console.log("Active Users", activeUsers);
             io.emit(
                 "active_users",
                 Object.values(activeUsers).map((value) => JSON.parse(value))
@@ -24,7 +25,7 @@ async function AppSocket(io: any) {
         emitActiveUsers();
 
         const interval = setInterval(() => {
-            if (!user.userId) return;
+            // if (!user.userId) return;
             emitActiveUsers();
         }, 500);
 

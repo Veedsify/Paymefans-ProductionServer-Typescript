@@ -36,6 +36,7 @@ export default class SubscriptionTierService {
 
                         // Cache the model subscription pack
                         async function CacheModelSubscriptionPack(pack: CreatePack) {
+                              redis.hdel(key)
                               const getTiers = await prisma.modelSubscriptionTier.findMany({
                                     where: {
                                           subscription_id: pack.id,
@@ -92,9 +93,8 @@ export default class SubscriptionTierService {
             return transaction; // Return the transaction result
       }
 
-      static async UserSubscriptions(id: number, user_id: string): Promise<UserSubscriptionsResponse> {
+      static async UserSubscriptions(user_id: string): Promise<UserSubscriptionsResponse> {
             const key = `user:${user_id}:subscriptions`;
-
             try {
                   // Try to get subscriptions from Redis cache first
                   const result = await redis.get(key);
@@ -109,7 +109,7 @@ export default class SubscriptionTierService {
                   // Fetch subscriptions from database if not in cache
                   const subscriptions = await query.user.findFirst({
                         where: {
-                              OR: [{ id: id }, { user_id: user_id }],
+                              OR: [{ user_id: user_id }],
                         },
                         select: {
                               ModelSubscriptionPack: {

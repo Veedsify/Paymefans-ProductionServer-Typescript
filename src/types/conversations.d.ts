@@ -1,5 +1,5 @@
 import { AuthUser } from "./user";
-import { Messages, Participants } from "@prisma/client";
+import { Messages, Participants, Settings } from "@prisma/client";
 
 export type AllConversationProps = {
   user: AuthUser;

@@ -87,7 +87,6 @@ model User {
   CommentImpression         CommentImpression[]
   sentMessages              Messages[]                  @relation("MessageSender")
   receivedMessages          Messages[]                  @relation("MessageReceiver")
-  Messages                  Messages[]
 }
 
 model Participants {
@@ -123,9 +122,6 @@ model Messages {
   ReportMessage   ReportMessage[]
   Conversations   Conversations?  @relation(fields: [conversationsId], references: [conversation_id], onDelete: SetNull, onUpdate: Cascade)
   conversationsId String?
-  User            User?           @relation(fields: [userId], references: [id])
-  userId          Int?
-
   @@index([sender_id], map: "Messages_sender_id_fkey")
 }
 

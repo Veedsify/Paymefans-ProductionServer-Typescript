@@ -10,10 +10,10 @@ import {
     UploadAttachmentsProps,
     UploadAttachmentsResponse,
 } from "../types/conversations";
-import {redis} from "@libs/RedisStore";
-import {GenerateUniqueId} from "@utils/GenerateUniqueId";
+import { redis } from "@libs/RedisStore";
+import { GenerateUniqueId } from "@utils/GenerateUniqueId";
 import query from "@utils/prisma";
-import {AuthUser} from "types/user";
+import { AuthUser } from "types/user";
 import fs from "fs";
 import s3 from "@utils/s3";
 import {
@@ -25,19 +25,17 @@ import {
     AudioCodec,
     ContainerType,
 } from "@aws-sdk/client-mediaconvert";
-
-const {AWS_ACCESS_KEY, AWS_REGION, AWS_SECRET_KEY} = process.env;
-import {Upload} from "@aws-sdk/lib-storage";
+const { AWS_ACCESS_KEY, AWS_REGION, AWS_SECRET_KEY } = process.env;
+import { Upload } from "@aws-sdk/lib-storage";
 import _ from "lodash";
-
 export default class ConversationService {
     // Fetch Conversations
     // Fetch all conversations for a user
     // This method retrieves all conversations for a user, including messages and participant details.
     static async AllConversations({
-                                      user,
-                                      conversationId,
-                                  }: AllConversationProps): Promise<AllConversationResponse> {
+        user,
+        conversationId,
+    }: AllConversationProps): Promise<AllConversationResponse> {
         const redisKey = `user:${user.user_id}:conversations:${conversationId}`;
         try {
             // Check if the conversation data is cached
@@ -51,86 +49,70 @@ export default class ConversationService {
                     messages: parsedData.messages,
                 };
             }
-
             // Use Prisma transaction for atomicity
-            const result = await query.$transaction(async (prisma) => {
-                // Validate user's participation in the conversation
-                const validateUserConversation = await prisma.conversations.findFirst({
-                    where: {
-                        conversation_id: conversationId,
-                        participants: {
-                            some: {
-                                OR: [{user_1: user.user_id}, {user_2: user.user_id}],
-                            },
+            // Validate user's participation in the conversation
+            const validateUserConversation = await query.conversations.findFirst({
+                where: {
+                    conversation_id: conversationId,
+                    participants: {
+                        some: {
+                            OR: [{ user_1: user.user_id }, { user_2: user.user_id }],
                         },
                     },
-                    select: {id: true, conversation_id: true},
-                });
-
-                if (!validateUserConversation) {
-                    return {
-                        messages: [],
-                        receiver: null,
-                        message: "Invalid conversation",
-                        status: false,
-                        invalid_conversation: true,
-                        error: true,
-                    };
-                }
-
-                // Fetch conversation details
-                const data = await prisma.conversations.findFirst({
-                    where: {conversation_id: conversationId},
-                    select: {
-                        messages: {orderBy: {created_at: "asc"}},
-                        participants: true,
-                    },
-                });
-
-                if (!data) {
-                    return {messages: [], receiver: null, error: false, status: true};
-                }
-
-                // Determine the receiver
-                // Determine the receiver
-                const participant = data.participants.find(
-                    (p) => p.user_1 === user.user_id || p.user_2 === user.user_id
-                );
-
-                if (participant) {
-                    const receiverId =
-                        participant.user_1 === user.user_id
-                            ? participant.user_2
-                            : participant.user_1;
-
-                    // Fetch receiver data
-                    const receiverData = await prisma.user.findFirst({
-                        where: {user_id: receiverId},
-                        select: {
-                            id: true,
-                            user_id: true,
-                            name: true,
-                            username: true,
-                            profile_image: true,
-                            Settings: true,
-                        },
-                    });
-
-                    return {
-                        messages: data.messages,
-                        receiver: receiverData,
-                        error: false,
-                        status: true,
-                    };
-                }
-
-                return {messages: [], receiver: null, error: false, status: true};
+                },
+                select: { id: true, conversation_id: true },
             });
-
+            if (!validateUserConversation) {
+                return {
+                    messages: [],
+                    receiver: null,
+                    message: "Invalid conversation",
+                    status: false,
+                    invalid_conversation: true,
+                    error: true,
+                };
+            }
+            // Fetch conversation details
+            const data = await query.conversations.findFirst({
+                where: { conversation_id: conversationId },
+                select: {
+                    messages: { orderBy: { created_at: "asc" } },
+                    participants: true,
+                },
+            });
+            if (!data) {
+                return { messages: [], receiver: null, error: false, status: true };
+            }
+            // Determine the receiver
+            const participant = data.participants.find(
+                (p) => p.user_1 === user.user_id || p.user_2 === user.user_id
+            );
+            if (participant) {
+                const receiverId =
+                    participant.user_1 === user.user_id ? participant.user_2 : participant.user_1;
+                // Fetch receiver data
+                const receiverData = await query.user.findFirst({
+                    where: { user_id: receiverId },
+                    select: {
+                        id: true,
+                        user_id: true,
+                        name: true,
+                        username: true,
+                        profile_image: true,
+                        Settings: true,
+                    },
+                });
+                const result = {
+                    messages: data.messages,
+                    receiver: receiverData,
+                    error: false,
+                    status: true,
+                } as AllConversationResponse;
+                await redis.set(redisKey, JSON.stringify(result), "EX", 3600); // Cache for 1 hour
+                return result;
+            }
             // Cache the result in Redis
-            await redis.set(redisKey, JSON.stringify(result), "EX", 3600); // Cache for 1 hour
-
-            return result;
+            return { messages: [], receiver: null, error: false, status: true };
         } catch (error) {
             console.error("Error fetching conversation:", error);
             return {
@@ -144,14 +126,13 @@ export default class ConversationService {
             await query.$disconnect(); // Ensure connection is closed
         }
     }
-
     // Create Conversation
     // Create a new conversation between two users
     // This method creates a new conversation and adds the participants to it.
     static async CreateConversation({
-                                        user,
-                                        profileId,
-                                    }: {
+        user,
+        profileId,
+    }: {
         user: AuthUser;
         profileId: string;
     }): Promise<CreateNewConversationResponse> {
@@ -185,7 +166,6 @@ export default class ConversationService {
                         conversation_id: true,
                     },
                 });
-
                 if (getConversation) {
                     return {
                         error: false,
@@ -194,7 +174,6 @@ export default class ConversationService {
                         conversation_id: getConversation.conversation_id,
                     };
                 }
-
                 // Create a new conversation
                 const createConversation = await prisma.conversations.create({
                     data: {
@@ -207,7 +186,6 @@ export default class ConversationService {
                         },
                     },
                 });
-
                 if (createConversation) {
                     return {
                         message: "Conversation created",
@@ -216,7 +194,6 @@ export default class ConversationService {
                         conversation_id: conversationId,
                     };
                 }
-
                 return {
                     message: "Error creating conversation",
                     status: false,
@@ -234,13 +211,12 @@ export default class ConversationService {
             };
         }
     }
-
     // Fetch My Conversations
     // Fetch all conversations for the authenticated user
     // This method retrieves all conversations for the authenticated user.
     static async MyConversations({
-                                     user: authUser, page = "1", limit = "30"
-                                 }: {
+        user: authUser, page = "1", limit = "30"
+    }: {
         user: AuthUser;
         page?: string;
         limit?: string;
@@ -254,8 +230,8 @@ export default class ConversationService {
                             participants: {
                                 some: {
                                     OR: [
-                                        {user_1: authUser.user_id},
-                                        {user_2: authUser.user_id},
+                                        { user_1: authUser.user_id },
+                                        { user_2: authUser.user_id },
                                     ],
                                 },
                             },
@@ -264,15 +240,12 @@ export default class ConversationService {
                         take: parseInt(limit) + 1, // Fetch one extra to check if there's more
                     }
                 );
-
                 const hasMore = conversationsByParticipants.length > Number(limit);
                 if (hasMore) {
                     conversationsByParticipants.pop(); // Remove the extra item
                 }
-
                 if (
-                    !conversationsByParticipants ||
-                    conversationsByParticipants.length === 0
+                    !conversationsByParticipants
                 ) {
                     return {
                         error: false,
@@ -281,37 +254,31 @@ export default class ConversationService {
                         hasMore: false,
                     };
                 }
-
                 const conversations = conversationsByParticipants.map(
                     async (participant) => {
                         const conversation = await prisma.conversations.findFirst({
-                            where: {conversation_id: participant.conversation_id},
+                            where: { conversation_id: participant.conversation_id },
                             select: {
-                                messages: {orderBy: {created_at: "desc"}, take: 1},
+                                messages: { orderBy: { created_at: "desc" }, take: 1 },
                                 participants: true,
                             },
                         });
-
                         if (!conversation) {
                             return null;
                         }
-
                         const participantData = conversation.participants.find(
                             (p) =>
                                 p.user_1 === authUser.user_id || p.user_2 === authUser.user_id
                         );
-
                         if (!participantData) {
                             return null;
                         }
-
                         const receiverId =
                             participantData.user_1 === authUser.user_id
                                 ? participantData.user_2
                                 : participantData.user_1;
-
                         const receiver = await prisma.user.findFirst({
-                            where: {user_id: receiverId},
+                            where: { user_id: receiverId },
                             select: {
                                 id: true,
                                 user_id: true,
@@ -320,7 +287,6 @@ export default class ConversationService {
                                 profile_image: true,
                             },
                         });
-
                         return {
                             receiver,
                             conversation_id: participant.conversation_id,
@@ -328,14 +294,12 @@ export default class ConversationService {
                         };
                     }
                 ) as Promise<Conversations | null>[];
-
                 const filteredConversations = await Promise.all(conversations)
                     .then((results) => results.filter((result) => result !== null))
                     .catch((error) => {
                         console.error("Error filtering conversations:", error);
                         return [];
                     });
-
                 return {
                     error: false,
                     status: true,
@@ -356,14 +320,13 @@ export default class ConversationService {
             };
         }
     }
-
     // Upload Attachments
     // Upload attachments to a conversation
     // This method uploads attachments to a conversation and returns the attachment URLs.
     static async UploadAttachments({
-                                       conversationId,
-                                       file,
-                                   }: UploadAttachmentsProps): Promise<UploadAttachmentsResponse> {
+        conversationId,
+        file,
+    }: UploadAttachmentsProps): Promise<UploadAttachmentsResponse> {
         try {
             if (!file) {
                 return {
@@ -373,7 +336,6 @@ export default class ConversationService {
                     attachments: [],
                 };
             }
-
             // Check if it's a video file and process with AWS MediaConvert if needed
             const videoMimeTypes = [
                 "video/mp4",
@@ -382,24 +344,19 @@ export default class ConversationService {
                 "video/quicktime",
             ];
             let processedPath: string | null = null;
-
             if (videoMimeTypes.includes(file.mimetype)) {
                 try {
                     // Verify file exists and is readable
                     await fs.promises.access(file.path, fs.constants.R_OK);
-
                     // Upload original file to S3
                     const s3Key = `uploads/videos/${conversationId}/${file.filename}`;
-
                     // Create a promise that resolves when the upload is complete
                     const uploadPromise = new Promise(async (resolve, reject) => {
                         try {
                             const fileStream = fs.createReadStream(file.path);
-
                             fileStream.on("error", (err: Error) => {
                                 reject(new Error(`Error reading file: ${err.message}`));
                             });
-
                             const uploadParams = {
                                 client: s3,
                                 params: {
@@ -411,15 +368,12 @@ export default class ConversationService {
                                 },
                                 queueSize: 10, // Number of parts to upload in parallel
                             };
-
                             const parallelUpload = new Upload(uploadParams);
-
                             parallelUpload.on("httpUploadProgress", (progress) => {
                                 console.log(
                                     `Uploaded ${progress.loaded} bytes out of ${progress.total}`
                                 );
                             });
-
                             await parallelUpload.done();
                             fs.unlinkSync(file.path);
                             resolve(s3Key);
@@ -432,11 +386,9 @@ export default class ConversationService {
                             reject(new Error(`Error uploading file: ${error.message}`));
                         }
                     });
-
                     // Wait for upload to complete
                     await uploadPromise;
                     console.log(`Successfully uploaded ${file.filename} to S3`);
-
                     const jobSettings = {
                         Queue: process.env.AWS_MEDIACONVERT_QUEUE_ARN,
                         Role: process.env.AWS_MEDIACONVERT_ROLE_ARN,
@@ -541,7 +493,6 @@ export default class ConversationService {
                             ],
                         },
                     };
-
                     const processCommand = new CreateJobCommand(jobSettings);
                     const client = new MediaConvertClient({
                         region: AWS_REGION as string,
@@ -552,21 +503,17 @@ export default class ConversationService {
                     });
                     const data = await client.send(processCommand);
                     console.log("MediaConvert Job created:", data);
-
                     // Clean up original local file
                     await fs.promises.unlink(file.path);
-
                     // Set the HLS manifest path
                     processedPath = `processed/${conversationId}/${file.filename}/master.m3u8`;
                 } catch (error) {
                     console.error(`Error processing video file ${file.filename}:`, error);
                 }
             }
-
             //   const OnUploadComplete = async (fileUrl: string) => {
             //     console.log("File URL:", fileUrl);
             //   };
-
             //   await UploadImageToS3({
             //     file: file,
             //     folder: "attachments/images",
@@ -578,7 +525,6 @@ export default class ConversationService {
             //     saveToDb: false,
             //     onUploadComplete: async (url: string) => OnUploadComplete(url),
             //   });
-
             return {
                 message: "Attachment uploaded successfully",
                 status: true,
@@ -595,16 +541,15 @@ export default class ConversationService {
             };
         }
     }
-
     // Search Messages
     // Search For Messages In A Conversation
     static async SearchMessages({
-                                    q,
-                                    conversationId,
-                                }: SearchMessagesProp): Promise<SearchMessageResponse> {
+        q,
+        conversationId,
+    }: SearchMessagesProp): Promise<SearchMessageResponse> {
         try {
             if (!q || q.length == 0) {
-                return {error: false, messages: []};
+                return { error: false, messages: [] };
             }
             const messages = await query.messages.findMany({
                 where: {
@@ -615,8 +560,8 @@ export default class ConversationService {
                                 participants: {
                                     some: {
                                         OR: [
-                                            {user_1: {contains: q}},
-                                            {user_2: {contains: q}},
+                                            { user_1: { contains: q } },
+                                            { user_2: { contains: q } },
                                         ],
                                     },
                                 },
@@ -630,13 +575,11 @@ export default class ConversationService {
                     ],
                 },
             });
-
-            return {error: false, messages};
+            return { error: false, messages };
         } catch (error) {
-            return {error: true, messages: []};
+            return { error: true, messages: [] };
         }
     }
-
     // GetUser Conversations
     // Fetch all conversations for a specific user
     static async GetUserConversations(userId: string): Promise<GetUserConversationsReponse> {
@@ -646,7 +589,7 @@ export default class ConversationService {
                 where: {
                     participants: {
                         some: {
-                            OR: [{user_1: userId}, {user_2: userId}]
+                            OR: [{ user_1: userId }, { user_2: userId }]
                         }
                     }
                 },
@@ -654,14 +597,12 @@ export default class ConversationService {
                     conversation_id: true,
                     participants: true,
                     messages: {
-                        orderBy: {created_at: "desc"},
+                        orderBy: { created_at: "desc" },
                         take: 1
                     }
                 }
             });
-
-            if (!conversationsData.length) return {conversations: [], status: true};
-
+            if (!conversationsData.length) return { conversations: [], status: true };
             // Batch process participants and messages
             const receiverIds = conversationsData.flatMap(conv => {
                 const participant = conv.participants.find(p =>
@@ -671,10 +612,9 @@ export default class ConversationService {
                     [participant.user_1 === userId ? participant.user_2 : participant.user_1] :
                     [];
             });
-
             // Batch fetch user data
             const users = await tx.user.findMany({
-                where: {user_id: {in: receiverIds}},
+                where: { user_id: { in: receiverIds } },
                 select: {
                     user_id: true,
                     name: true,
@@ -682,9 +622,7 @@ export default class ConversationService {
                     profile_image: true
                 }
             });
-
             const userMap = _.keyBy(users, 'user_id');
-
             // Map conversations with Lodash
             const conversations = _.chain(conversationsData)
                 .map(conv => {
@@ -692,13 +630,11 @@ export default class ConversationService {
                         p.user_1 === userId || p.user_2 === userId
                     );
                     if (!participant) return null;
-
                     const receiverId = participant.user_1 === userId ?
                         participant.user_2 :
                         participant.user_1;
                     const user = userMap[receiverId];
-                    const lastMessage = conv.messages[0] || {created_at: new Date(0)};
-
+                    const lastMessage = conv.messages[0] || { created_at: new Date(0) };
                     return {
                         conversation: user,
                         conversation_id: conv.conversation_id,
@@ -709,50 +645,44 @@ export default class ConversationService {
                 .compact()
                 .orderBy([conv => conv.lastMessage.created_at], ['desc'])
                 .value();
-
-            return {conversations, status: true};
+            return { conversations, status: true };
         });
     }
-
     // Search Conversations
     static async SearchConversations(
-        {q, user, page = 1, limit = 30}:
-        { q: string; user: AuthUser; page?: number; limit?: number }
+        { q, user, page = 1, limit = 30 }:
+            { q: string; user: AuthUser; page?: number; limit?: number }
     ): Promise<any> {
         try {
             if (!q || q.length === 0) {
-                return {error: false, messages: [], total: 0};
+                return { error: false, messages: [], total: 0 };
             }
-
             // Normalize pagination
             const parsedPage = Math.max(1, page);
             const parsedPageSize = Math.min(100, Math.max(1, limit));
-
             // Cache key with pagination context
             const cacheKey = `search:${user.user_id}:${q}:${parsedPage}:${parsedPageSize}`;
             const cachedData = await redis.get(cacheKey);
-
             if (cachedData) {
                 return JSON.parse(cachedData);
             }
-
             // Database query with pagination
             const [messages, total] = await Promise.all([
                 query.messages.findMany({
                     where: {
-                        message: {contains: q},
+                        message: { contains: q },
                         Conversations: {
                             participants: {
                                 some: {
                                     OR: [
-                                        {user_1: user.user_id},
-                                        {user_2: user.user_id}
+                                        { user_1: user.user_id },
+                                        { user_2: user.user_id }
                                     ]
                                 }
                             }
                         }
                     },
-                    orderBy: {created_at: 'desc'},
+                    orderBy: { created_at: 'desc' },
                     skip: (parsedPage - 1) * parsedPageSize,
                     take: parsedPageSize,
                     include: {
@@ -763,13 +693,13 @@ export default class ConversationService {
                 }),
                 query.messages.count({
                     where: {
-                        message: {contains: q},
+                        message: { contains: q },
                         Conversations: {
                             participants: {
                                 some: {
                                     OR: [
-                                        {user_1: user.user_id},
-                                        {user_2: user.user_id}
+                                        { user_1: user.user_id },
+                                        { user_2: user.user_id }
                                     ]
                                 }
                             }
@@ -777,7 +707,6 @@ export default class ConversationService {
                     }
                 })
             ]);
-
             // Cache structure with pagination metadata
             const result = {
                 error: false,
@@ -787,15 +716,12 @@ export default class ConversationService {
                 limit: parsedPageSize,
                 hasMore: total > parsedPage * parsedPageSize
             };
-
             // Cache with 60-second TTL
             await redis.setex(cacheKey, 60, JSON.stringify(result));
-
             return result;
         } catch (error) {
             console.error('Search error:', error);
-            return {error: true, messages: [], total: 0, hasMore: false};
+            return { error: true, messages: [], total: 0, hasMore: false };
         }
     }
-
 }

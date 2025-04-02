@@ -152,6 +152,7 @@ type GetMyPostSuccessResponse = {
     status: boolean;
     message: string;
     data: MyPost[];
+    hasMore?: boolean;
     total: number;
 }
 /**

@@ -172,16 +172,13 @@ export default class PostService {
             }
       }
       // Get Current User Reposts
-      static async MyReposts({ userId, page, limit }: GetMyPostProps): Promise<GetMyPostResponse> {
+      static async MyReposts({ userId, page = "1", limit = "20" }: GetMyPostProps): Promise<GetMyPostResponse> {
             try {
                   // Parse limit to an integer or default to 5 if not provided
                   const parsedLimit = limit ? parseInt(limit, 10) : 5;
                   const validLimit =
                         Number.isNaN(parsedLimit) || parsedLimit <= 0 ? 5 : parsedLimit;
                   // Parse page to an integer or default to 1 if not provided
-                  const parsedPage = page ? parseInt(page, 10) : 1;
-                  const validPage =
-                        Number.isNaN(parsedPage) || parsedPage <= 0 ? 1 : parsedPage;
                   const userRepostCount = await query.userRepost.count({
                         where: {
                               user_id: userId,
@@ -251,17 +248,24 @@ export default class PostService {
                                     },
                               },
                         },
-                        skip: (validPage - 1) * validLimit,
-                        take: validLimit,
+                        skip: (Number(page) - 1) * validLimit,
+                        take: validLimit + 1,
                         orderBy: {
                               id: "desc",
                         },
                   });
+
+                  let hasMore = false;
+                  if (userReposts.length > validLimit) {
+                        hasMore = true
+                  }
+
                   const reposts = userReposts.map((repost) => repost.post)
                   return {
                         status: true,
                         message: "Reposts retrieved successfully",
                         data: reposts,
+                        hasMore,
                         total: userRepostCount,
                   };
             } catch (error: any) {
@@ -865,7 +869,7 @@ export default class PostService {
             const hasMore = comments.length > parseInt(limit);
             if (hasMore) {
                   comments.pop();
-            }                  
+            }
             if (!comments || comments.length == 0) {
                   return {
                         error: false,

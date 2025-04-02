@@ -10,7 +10,7 @@
     "build": "tsc", 
     "bun-build": "bun build",
     "start": "node dist/app.js",
-    "dev": "bun --hot run src/app.ts",
+    "dev": "bun --hot tsx src/app.ts",
     "dev2": "nodemon"
   },
   "keywords": [],
