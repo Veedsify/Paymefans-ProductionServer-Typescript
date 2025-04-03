@@ -4,7 +4,7 @@
   "main": "src/app.ts",
   "type": "commonjs",
   "prisma": {
-    "seed": "bun src/utils/seed.ts"
+    "seed": "bun tsx src/utils/seed.ts"
   },
   "scripts": {
     "build": "tsc", 
