@@ -27,7 +27,7 @@ interface SunbscriberData {
 }
 
 export interface CreateNewSubscriptionProps {
-      profileid: string;
+      profileId: string;
       tier_id: string;
       user: AuthUser
 }
