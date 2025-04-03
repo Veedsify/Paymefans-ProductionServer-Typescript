@@ -17,6 +17,7 @@ import verification from "@routes/verification/verification"
 import store from "@routes/store/store"
 import help from "@routes/help/help"
 import webhooks from "@routes/webhooks/webhooks"
+import LogOutController from "@controllers/LogoutController";
 const api = express.Router()
 
 // Authentication
@@ -57,5 +58,7 @@ api.use("/store", store)
 api.use("/help", help)
 // Webhooks
 api.use("/webhooks", webhooks)
+// Logout
+api.post("/logout", LogOutController.Logout)
 
 export default api
