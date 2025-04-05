@@ -1,4 +1,4 @@
-import { CheckUsernameProps, CheckUsernameResponse, FindUserNameResponse } from "../types/auth";
+import type { CheckUsernameProps, CheckUsernameResponse, FindUserNameResponse } from "../types/auth";
 import query from "@utils/prisma";
 
 export default class UsernameService {

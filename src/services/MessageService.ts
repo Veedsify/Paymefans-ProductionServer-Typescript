@@ -1,5 +1,5 @@
 import query from "@utils/prisma";
-import { MessageSeenByReceiverProps, MessageSeenByReceiverResponse } from "types/socket";
+import type { MessageSeenByReceiverProps, MessageSeenByReceiverResponse } from "types/socket";
 
 export default class MessageService {
       // Messages seen by receiver
@@ -8,7 +8,7 @@ export default class MessageService {
             if (!conversationId || !lastMessageId) {
                   return {
                         success: false,
-                        data: null,
+                        data: undefined,
                         message: 'No conversation id or message id provided',
                   }
             }
@@ -48,10 +48,10 @@ export default class MessageService {
                         query.$disconnect();
                         return { success: true, data: updateMessages.messages[0], message: 'Message seen successfully' };
                   } else {
-                        return { success: false, message: 'No message id provided', data: null }
+                        return { success: false, message: 'No message id provided', data: undefined }
                   }
             } catch (error: any) {
-                  return { success: false, message: error.message, data: null }
+                  return { success: false, message: error.message, data: undefined }
             }
       }
 }

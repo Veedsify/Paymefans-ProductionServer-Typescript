@@ -1,5 +1,6 @@
 export type SocketUser = {
       userId: string;
+      socketId: string;
       username: string;
 }
 
@@ -22,7 +23,7 @@ export type MessageSeenByReceiverResponse = {
       data: {
             message_id: string;
             seen: boolean;
-      } | null;
+      } | undefined;
 }
 export type HandleFollowUserDataProps = {
       user_id: number; 

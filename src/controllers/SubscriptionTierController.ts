@@ -1,6 +1,6 @@
 import SubscriptionTierService from "@services/SubscriptionTiers";
-import { Request, Response } from "express";
-import { AuthUser } from "types/user";
+import type { Request, Response } from "express";
+import type { AuthUser } from "types/user";
 
 
 export default class SubscriptionTierController {
@@ -22,7 +22,7 @@ export default class SubscriptionTierController {
     // Fetch user subscription tiers
     static async FetchUserSubscription(req: Request, res: Response): Promise<any> {
         try {
-            const subscription_tiers = await SubscriptionTierService.UserSubscriptions(req.params.userId)
+            const subscription_tiers = await SubscriptionTierService.UserSubscriptions(req.params.userId as string)
 
             if (subscription_tiers.error) {
                 return res.status(401).json(subscription_tiers)

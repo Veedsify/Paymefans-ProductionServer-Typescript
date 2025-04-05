@@ -1,7 +1,7 @@
 import StoryService from "@services/StoryService";
-import { Request, Response } from "express";
-import { StoryType } from "types/story";
-import { AuthUser } from "types/user";
+import type { Request, Response } from "express";
+import type { StoryType } from "types/story";
+import type { AuthUser } from "types/user";
 
 export default class StoryController {
   //Get Stories from the database

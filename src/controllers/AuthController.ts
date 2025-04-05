@@ -1,5 +1,5 @@
 import RegisterService from "@services/RegisterService";
-import { Request, Response } from "express";
+import type { Request, Response } from "express";
 import UsernameService from "@services/UsernameService";
 import LoginService from "@services/LoginService";
 import PointService from "@services/PointService";

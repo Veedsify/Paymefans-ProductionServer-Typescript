@@ -1,8 +1,8 @@
 import { UploadImageToS3 } from "@libs/UploadImageToS3";
 import { GenerateUniqueId } from "@utils/GenerateUniqueId";
 import query from "@utils/prisma";
-import { LikeCommentResponse, NewCommentResponse } from "types/comments";
-import { AuthUser } from "types/user";
+import type { LikeCommentResponse, NewCommentResponse } from "types/comments";
+import type { AuthUser } from "types/user";
 export default class CommentsService {
   // New Comment
   // This is for creating a new comment on a post

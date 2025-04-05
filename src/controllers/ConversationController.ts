@@ -1,6 +1,6 @@
-import {Request, Response} from "express";
+import type {Request, Response} from "express";
 import ConversationService from "@services/ConversationService";
-import {AuthUser} from "../types/user";
+import type {AuthUser} from "../types/user";
 
 export default class ConversationController {
     // Fetch Conversations
@@ -8,7 +8,7 @@ export default class ConversationController {
         try {
             const conversations = await ConversationService.AllConversations({
                 user: req.user as AuthUser,
-                conversationId: req.params.conversationId,
+                conversationId: req.params.conversationId as string,
             });
             if (conversations.error) {
                 res.status(401).json({...conversations});
@@ -58,17 +58,17 @@ export default class ConversationController {
     }
 
     // Upload Attachments
-    static async UploadAttachments(req: Request, res: Response) {
+    static async UploadAttachments(req: Request, res: Response): Promise<any> {
         try {
             const {conversationId} = req.body;
             const attachments = await ConversationService.UploadAttachments({
                 conversationId,
-                file: req.file as Express.Multer.File,
+                files: req.files as { 'attachments[]': Express.Multer.File[] },
             });
             if (attachments.error) {
-                res.status(401).json({...attachments});
+                return res.status(401).json({...attachments});
             }
-            res.status(200).json({...attachments});
+            res.status(200).json(attachments);
         } catch (error) {
             console.log(error);
             res.status(500).json({message: `Internal Server Error: ${error}`});
@@ -80,7 +80,7 @@ export default class ConversationController {
         try {
             const searchmessage = await ConversationService.SearchMessages({
                 q: req.query.q as string,
-                conversationId: req.params.conversationId,
+                conversationId: req.params.conversationId as string,
             });
             if (searchmessage.error) {
                 res.status(401).json({...searchmessage});

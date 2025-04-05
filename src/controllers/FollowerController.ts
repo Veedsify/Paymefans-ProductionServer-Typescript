@@ -1,6 +1,6 @@
-import {Request, Response} from "express";
+import type {Request, Response} from "express";
 import FollowerService from "@services/FollowerService";
-import { AuthUser } from "types/user";
+import type { AuthUser } from "types/user";
 
 export default class FollowerController {
     // Check Follower

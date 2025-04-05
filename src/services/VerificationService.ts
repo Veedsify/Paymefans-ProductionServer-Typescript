@@ -1,6 +1,6 @@
 import query from "@utils/prisma";
-import { AuthUser } from "types/user";
-import { StartModelVerificationResponse } from "types/verification";
+import type { AuthUser } from "types/user";
+import type { StartModelVerificationResponse } from "types/verification";
 
 export default class VerificationService {
   static async Startmodelverificationservice({

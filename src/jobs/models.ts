@@ -1,6 +1,6 @@
 import { redis } from "@libs/RedisStore";
 import ModelService from "@services/ModelService";
-import { AuthUser } from "types/user";
+import type { AuthUser } from "types/user";
 import _ from "lodash";
 
 async function TriggerModels(id: number) {

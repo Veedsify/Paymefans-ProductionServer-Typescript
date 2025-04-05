@@ -1,6 +1,6 @@
-import { Request, Response } from "express";
+import type { Request, Response } from "express";
 import SettingsService from "@services/SettingsService";
-import { AuthUser } from "types/user";
+import type { AuthUser } from "types/user";
 export default class SettingsController {
       static async SettingsProfileChange(req: Request, res: Response): Promise<any> {
             try {

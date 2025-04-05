@@ -1,5 +1,5 @@
-import { RemoveCloudflareMediaResponse } from "../types/cloudflare";
-import { RemovedMedia } from "../types/post";
+import type { RemoveCloudflareMediaResponse } from "../types/cloudflare";
+import type { RemovedMedia } from "../types/post";
 
 const getUrl = (file: RemovedMedia): string => {
       const { CLOUDFLARE_ACCOUNT_ID } = process.env;

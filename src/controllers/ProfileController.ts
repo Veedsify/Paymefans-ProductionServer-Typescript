@@ -1,4 +1,4 @@
-import { Request, Response } from 'express'
+import type { Request, Response } from 'express'
 import ProfileService from '@services/ProfileService'
 class ProfileController {
       // Load Profile

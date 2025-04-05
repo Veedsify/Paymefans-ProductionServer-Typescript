@@ -1,4 +1,4 @@
-import { RetrieveUserResponse } from "../types/user";
+import type { RetrieveUserResponse } from "../types/user";
 import query from "@utils/prisma";
 
 export default class UserService {

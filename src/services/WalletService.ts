@@ -1,5 +1,5 @@
 import query from "@utils/prisma";
-import {
+import type {
     AddBankProps,
     AddBankResponse,
     DeleteBankProp,
@@ -7,7 +7,7 @@ import {
     GetBanksResponse, GetTransactionsResponse, OtherTransactionResponse,
     RetrieveWalletResponse
 } from "../types/wallet";
-import {AuthUser} from "../types/user";
+import type {AuthUser} from "../types/user";
 
 export default class WalletService {
     static async RetrieveWallet(userid: number): Promise<RetrieveWalletResponse> {

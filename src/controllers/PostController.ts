@@ -1,4 +1,4 @@
-import { Request, Response } from "express";
+import type { Request, Response } from "express";
 import PostService from "@services/PostService";
 export default class PostController {
       // Create Post
@@ -39,7 +39,7 @@ export default class PostController {
       // Get Reposts
       static async GetReposts(req: Request, res: Response): Promise<any> {
             try {
-                  const Reposts = await PostService.Reposts({ userId: req.params.userId, page: req.query.page as string, limit: req.query.limit as string })
+                  const Reposts = await PostService.Reposts({ userId: req.params.userId as string, page: req.query.page as string, limit: req.query.limit as string })
                   return res.status(200).json({ status: true, message: 'Reposts Retreived Successfully', data: Reposts.data, total: Reposts.total })
             } catch (err: any) {
                   console.error(err.message)
@@ -59,7 +59,7 @@ export default class PostController {
       //Get Other Media
       static async GetOtherMedia(req: Request, res: Response): Promise<any> {
             try {
-                  const Media = await PostService.GetOtherMedia({ userId: req.params.userId, page: req.query.page as string, limit: req.query.limit as string })
+                  const Media = await PostService.GetOtherMedia({ userId: req.params.userId as string, page: req.query.page as string, limit: req.query.limit as string })
                   return res.status(200).json({ status: true, message: 'Media Retreived Successfully', data: Media.data, total: Media.total })
             } catch (err: any) {
                   console.error(err.message)
@@ -69,7 +69,7 @@ export default class PostController {
       // Get User Post By User ID
       static async GetUserPostByID(req: Request, res: Response): Promise<any> {
             try {
-                  const UserPost = await PostService.GetUserPostByID({ userId: req.params.userId, page: req.query.page as string, limit: req.query.limit as string })
+                  const UserPost = await PostService.GetUserPostByID({ userId: req.params.userId as string, page: req.query.page as string, limit: req.query.limit as string })
                   return res.status(200).json({ ...UserPost })
             } catch (err: any) {
                   console.error(err.message)
@@ -79,7 +79,7 @@ export default class PostController {
       // Get Post By Post ID
       static async GetSinglePost(req: Request, res: Response): Promise<any> {
             try {
-                  const SinglePost = await PostService.GetSinglePost({ postId: req.params.postId })
+                  const SinglePost = await PostService.GetSinglePost({ postId: req.params.postId as string })
                   if(SinglePost.error) {
                         return res.status(401).json({...SinglePost})
                   }
@@ -102,7 +102,7 @@ export default class PostController {
       // Update Post Audience
       static async UpdatePostAudience(req: Request, res: Response): Promise<any> {
             try {
-                  const UpdateAudience = await PostService.UpdatePostAudience({ postId: req.params.postId, userId: req.user?.id!, visibility: req.body.visibility })
+                  const UpdateAudience = await PostService.UpdatePostAudience({ postId: req.params.postId as string, userId: req.user?.id!, visibility: req.body.visibility })
                   return res.status(200).json({ ...UpdateAudience })
             } catch (error: any) {
                   console.log(error.message)
@@ -115,7 +115,7 @@ export default class PostController {
       // Create Repost
       static async CreateRepost(req: Request, res: Response): Promise<any> {
             try {
-                  const Repost = await PostService.CreateRepost({ postId: req.params.postId, userId: req.user?.id! })
+                  const Repost = await PostService.CreateRepost({ postId: req.params.postId as string, userId: req.user?.id! })
                   return res.status(200).json({ ...Repost })
             } catch (error: any) {
                   console.log(error.message)
@@ -129,7 +129,7 @@ export default class PostController {
       static async GetPostComments(req: Request, res: Response): Promise<any> {
             try {
                   const options = {
-                        postId: req.params.postId,
+                        postId: req.params.postId as string,
                         userId: req.user?.id!,
                         page: req.query.page as string,
                         limit: req.query.limit as string
@@ -147,7 +147,7 @@ export default class PostController {
       // Like a Post
       static async LikePost(req: Request, res: Response): Promise<any> {
             try {
-                  const options = { postId: req.params.postId, userId: req.user?.id! }
+                  const options = { postId: req.params.postId as string, userId: req.user?.id! }
                   const Like = await PostService.LikePost(options)
                   return res.status(200).json({ ...Like })
             } catch (error: any) {
@@ -161,7 +161,7 @@ export default class PostController {
       // Delete Post
       static async DeletePost(req: Request, res: Response): Promise<any> {
             try {
-                  const options = { postId: req.params.postId, userId: req.user?.id! }
+                  const options = { postId: req.params.postId as string, userId: req.user?.id! }
                   const Delete = await PostService.DeletePost(options)
                   return res.status(200).json({ ...Delete })
             } catch (error: any) {

@@ -1,5 +1,5 @@
 import query from '@utils/prisma';
-import {
+import type {
     CheckSubscriberResponse,
     GetSubscriptionDataResponse,
     CreateNewSubscriptionResponse,

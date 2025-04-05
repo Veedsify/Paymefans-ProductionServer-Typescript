@@ -68,7 +68,7 @@ export class WebhookService {
         const existingRetry = await redis.get(`retry:media:${uid}`);
         if (existingRetry) return;
 
-        const delay = RETRY_DELAYS[attempt];
+        const delay = RETRY_DELAYS[attempt] as number; 
         const executeAt = Date.now() + delay; // timestamp when the retry should execute.
         console.log(`Scheduling retry for media ID ${uid} in ${delay / 1000} seconds. Attempt ${attempt + 1}`);
 

@@ -1,4 +1,4 @@
-import {Request, Response} from "express";
+import type {Request, Response} from "express";
 import SocketService from "@services/SocketService";
 
 export default class LogOutController {

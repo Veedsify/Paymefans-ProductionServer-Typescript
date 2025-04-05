@@ -9,7 +9,7 @@ generator client {
 }
 
 datasource db {
-  provider = "mysql"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
@@ -33,7 +33,7 @@ model User {
   phone                     String                      @unique
   profile_image             String?                     @default("/site/avatar.png")
   profile_banner            String?                     @default("/site/banner.png")
-  bio                       String?                     @db.Text
+  bio                       String?
   location                  String?
   website                   String?
   country                   String?
@@ -65,7 +65,6 @@ model User {
   UserPoints                UserPoints?
   UserRepost                UserRepost[]
   UserStory                 UserStory[]
-  UserSubscriptionCurrent   UserSubscriptionCurrent[]
   UserTransaction           UserTransaction[]
   UserWallet                UserWallet[]
   UserWithdrawalBankAccount UserWithdrawalBankAccount[]
@@ -87,6 +86,12 @@ model User {
   CommentImpression         CommentImpression[]
   sentMessages              Messages[]                  @relation("MessageSender")
   receivedMessages          Messages[]                  @relation("MessageReceiver")
+  UserSubscription          UserSubscriptionHistory[]   @relation("UserSubscription")
+  UserSubscriptionHistory   UserSubscriptionHistory[]   @relation("UserSubscriptionHistory")
+  UserSubscriptionCurrent   UserSubscriptionCurrent[]   @relation("UserCurrentSubscription")
+  ModelSubscriptionCurrent  UserSubscriptionCurrent[]   @relation("ModelCurrentSubscriptions")
+  ActivityLog               ActivityLog[]
+  LoginHistory              LoginHistory[]
 }
 
 model Participants {
@@ -113,16 +118,18 @@ model Messages {
   sender_id       String
   receiver_id     String
   seen            Boolean         @default(false)
-  message         String          @db.LongText
-  attachment      Json?           @db.Json
+  message         String
+  attachment      Json?
   created_at      DateTime        @default(now())
   updated_at      DateTime        @updatedAt
-  sender          User            @relation("MessageSender", fields: [sender_id], references: [user_id], onDelete: Cascade, onUpdate: Cascade)
-  receiver        User            @relation("MessageReceiver", fields: [receiver_id], references: [user_id], onDelete: Cascade, onUpdate: Cascade)
+  sender          User            @relation("MessageSender", fields: [sender_id], references: [user_id], onDelete: Cascade)
+  receiver        User            @relation("MessageReceiver", fields: [receiver_id], references: [user_id], onDelete: Cascade)
   ReportMessage   ReportMessage[]
-  Conversations   Conversations?  @relation(fields: [conversationsId], references: [conversation_id], onDelete: SetNull, onUpdate: Cascade)
+  Conversations   Conversations?  @relation(fields: [conversationsId], references: [conversation_id], onDelete: SetNull)
   conversationsId String?
-  @@index([sender_id], map: "Messages_sender_id_fkey")
+
+  @@index([sender_id])
+  @@index([receiver_id])
 }
 
 model Model {
@@ -134,13 +141,13 @@ model Model {
   dob                 DateTime
   country             String
   hookup              Boolean               @default(false)
-  verification_video  String?               @db.LongText
-  verification_image  String?               @db.LongText
+  verification_video  String?
+  verification_image  String?
   verification_status Boolean               @default(false)
   verification_state  VerificationStateEnum @default(not_started)
-  token               String?               @unique @db.VarChar(255)
+  token               String?               @unique
 
-  user User @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
 
   created_at DateTime @default(now())
 }
@@ -152,16 +159,16 @@ model UserMedia {
   media_type    String
   media_state   MediaState @default(processing)
   duration      String?    @default("")
-  url           String     @db.LongText
-  blur          String     @db.LongText
-  poster        String     @db.LongText
+  url           String
+  blur          String
+  poster        String
   locked        Boolean    @default(false)
   accessible_to String
   created_at    DateTime   @default(now())
   updated_at    DateTime   @updatedAt
-  post          Post       @relation(fields: [post_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  post          Post       @relation(fields: [post_id], references: [id], onDelete: Cascade)
 
-  @@index([post_id], map: "UserMedia_user_id_fkey")
+  @@index([post_id])
 }
 
 model UserRepost {
@@ -171,11 +178,11 @@ model UserRepost {
   post_id    Int
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
-  post       Post     @relation(fields: [post_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
-  user       User     @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  post       Post     @relation(fields: [post_id], references: [id], onDelete: Cascade)
+  user       User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
 
-  @@index([post_id], map: "UserRepost_post_id_fkey")
-  @@index([user_id], map: "UserRepost_user_id_fkey")
+  @@index([post_id])
+  @@index([user_id])
 }
 
 model UserStory {
@@ -184,10 +191,10 @@ model UserStory {
   user_id    Int
   created_at DateTime     @default(now())
   updated_at DateTime     @updatedAt
-  user       User         @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  user       User         @relation(fields: [user_id], references: [id], onDelete: Cascade)
   StoryMedia StoryMedia[]
 
-  @@index([user_id], map: "UserStory_user_id_fkey")
+  @@index([user_id])
 }
 
 model StoryMedia {
@@ -195,11 +202,11 @@ model StoryMedia {
   media_id      String
   media_type    String
   filename      String
-  captionStyle  Json?     @db.Json
-  story_content String?   @db.LongText
-  url           String    @db.LongText
+  captionStyle  Json?
+  story_content String?
+  url           String
   duration      Int?
-  story         UserStory @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  story         UserStory @relation(fields: [user_id], references: [id], onDelete: Cascade)
   user_id       Int
   created_at    DateTime  @default(now())
   updated_at    DateTime  @updatedAt
@@ -212,7 +219,7 @@ model Post {
   repost_username  String?          @default("")
   repost_id        String?          @default("")
   user_id          Int
-  content          String?          @db.LongText
+  content          String?
   media            Json?
   post_status      PostStatus       @default(pending)
   post_audience    PostAudience
@@ -231,7 +238,7 @@ model Post {
   PostImpression   PostImpression[]
   UserMedia        UserMedia[]
 
-  user User @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
 }
 
 model PostImpression {
@@ -240,11 +247,11 @@ model PostImpression {
   user_id    Int
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
-  post       Post     @relation(fields: [post_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
-  user       User     @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  post       Post     @relation(fields: [post_id], references: [id], onDelete: Cascade)
+  user       User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
 
-  @@index([post_id], map: "PostImpression_post_id_fkey")
-  @@index([user_id], map: "PostImpression_user_id_fkey")
+  @@index([post_id])
+  @@index([user_id])
 }
 
 model PostComment {
@@ -256,14 +263,14 @@ model PostComment {
   comment_impressions    Int                      @default(0)
   created_at             DateTime                 @default(now())
   updated_at             DateTime                 @updatedAt
-  post                   Post                     @relation(fields: [post_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  post                   Post                     @relation(fields: [post_id], references: [id], onDelete: Cascade)
   ReportComment          ReportComment[]
   PostCommentAttachments PostCommentAttachments[]
-  user                   User                     @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  user                   User                     @relation(fields: [user_id], references: [id], onDelete: Cascade)
   PostCommentLikes       PostCommentLikes[]
   CommentImpression      CommentImpression[]
 
-  @@index([post_id], map: "PostComment_post_id_fkey")
+  @@index([post_id])
 }
 
 model CommentImpression {
@@ -272,12 +279,12 @@ model CommentImpression {
   user_id    Int
   created_at DateTime    @default(now())
   updated_at DateTime    @updatedAt
-  comment    PostComment @relation(fields: [comment_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
-  user       User        @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  comment    PostComment @relation(fields: [comment_id], references: [id], onDelete: Cascade)
+  user       User        @relation(fields: [user_id], references: [id], onDelete: Cascade)
   postId     Int?
 
-  @@index([comment_id], map: "CommentImpression_comment_id_fkey")
-  @@index([user_id], map: "CommentImpression_user_id_fkey")
+  @@index([comment_id])
+  @@index([user_id])
 }
 
 model PostCommentAttachments {
@@ -289,21 +296,21 @@ model PostCommentAttachments {
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
 
-  Comment PostComment @relation(fields: [comment_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  Comment PostComment @relation(fields: [comment_id], references: [id], onDelete: Cascade)
 }
 
 model PostCommentLikes {
   id         Int         @id @default(autoincrement())
-  like_id    String      @default(cuid()) @db.VarChar(255)
+  like_id    String      @default(cuid())
   user_id    Int
   comment_id Int
   created_at DateTime    @default(now())
   updated_at DateTime    @updatedAt
-  comment    PostComment @relation(fields: [comment_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
-  user       User        @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  comment    PostComment @relation(fields: [comment_id], references: [id], onDelete: Cascade)
+  user       User        @relation(fields: [user_id], references: [id], onDelete: Cascade)
 
-  @@index([comment_id], map: "PostCommentLikes_comment_id_fkey")
-  @@index([user_id], map: "PostCommentLikes_user_id_fkey")
+  @@index([comment_id])
+  @@index([user_id])
 }
 
 model PostLike {
@@ -313,11 +320,11 @@ model PostLike {
   post_id    Int
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
-  post       Post     @relation(fields: [post_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
-  user       User     @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  post       Post     @relation(fields: [post_id], references: [id], onDelete: Cascade)
+  user       User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
 
-  @@index([post_id], map: "PostLike_post_id_fkey")
-  @@index([user_id], map: "PostLike_user_id_fkey")
+  @@index([post_id])
+  @@index([user_id])
 }
 
 model PostShared {
@@ -327,11 +334,11 @@ model PostShared {
   post_id    Int
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
-  post       Post     @relation(fields: [post_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
-  user       User?    @relation(fields: [user_id], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  post       Post     @relation(fields: [post_id], references: [id], onDelete: Cascade)
+  user       User?    @relation(fields: [user_id], references: [id], onDelete: SetNull)
 
-  @@index([post_id], map: "PostShared_post_id_fkey")
-  @@index([user_id], map: "PostShared_user_id_fkey")
+  @@index([post_id])
+  @@index([user_id])
 }
 
 model Follow {
@@ -341,9 +348,9 @@ model Follow {
   follower_id Int
   created_at  DateTime @default(now())
   updated_at  DateTime @updatedAt
-  users       User     @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  users       User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
 
-  @@index([user_id], map: "Follow_user_id_fkey")
+  @@index([user_id])
 }
 
 model Subscribers {
@@ -353,9 +360,9 @@ model Subscribers {
   subscriber_id Int
   created_at    DateTime @default(now())
   updated_at    DateTime @updatedAt
-  user          User     @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  user          User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
 
-  @@index([user_id], map: "Subscribers_user_id_fkey")
+  @@index([user_id])
 }
 
 model LiveStream {
@@ -363,32 +370,32 @@ model LiveStream {
   user_id           String
   username          String
   stream_id         String                   @unique
-  stream_token      String                   @db.LongText
+  stream_token      String
   user_stream_id    String
   title             String
   stream_call_id    String
   stream_status     String                   @default("offline")
   created_at        DateTime                 @default(now())
   updated_at        DateTime                 @updatedAt
-  user              User                     @relation(fields: [user_id], references: [user_id], onDelete: Cascade, onUpdate: Cascade)
+  user              User                     @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
   participants      LiveStreamParticipants[]
   LiveStreamComment LiveStreamComment[]
   LiveStreamLike    LiveStreamLike[]
   ReportLive        ReportLive[]
   LiveStreamView    LiveStreamView[]
 
-  @@index([user_id], map: "LiveStream_user_id_fkey")
+  @@index([user_id])
 }
 
 model LiveStreamParticipants {
   id             Int      @id @default(autoincrement())
-  stream_id      String   @db.LongText
+  stream_id      String
   host_id        String
   participant_id String
   created_at     DateTime @default(now())
   updated_at     DateTime @updatedAt
 
-  LiveStream   LiveStream? @relation(fields: [liveStreamId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  LiveStream   LiveStream? @relation(fields: [liveStreamId], references: [id], onDelete: SetNull)
   liveStreamId Int?
 }
 
@@ -400,11 +407,11 @@ model LiveStreamComment {
   comment         String
   created_at      DateTime   @default(now())
   updated_at      DateTime   @updatedAt
-  live            LiveStream @relation(fields: [live_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
-  user            User       @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  live            LiveStream @relation(fields: [live_id], references: [id], onDelete: Cascade)
+  user            User       @relation(fields: [user_id], references: [id], onDelete: Cascade)
 
-  @@index([live_id], map: "LiveStreamComment_live_id_fkey")
-  @@index([user_id], map: "LiveStreamComment_user_id_fkey")
+  @@index([live_id])
+  @@index([user_id])
 }
 
 model LiveStreamLike {
@@ -414,11 +421,11 @@ model LiveStreamLike {
   live_id      Int
   created_at   DateTime   @default(now())
   updated_at   DateTime   @updatedAt
-  live         LiveStream @relation(fields: [live_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
-  user         User       @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  live         LiveStream @relation(fields: [live_id], references: [id], onDelete: Cascade)
+  user         User       @relation(fields: [user_id], references: [id], onDelete: Cascade)
 
-  @@index([live_id], map: "LiveStreamLike_live_id_fkey")
-  @@index([user_id], map: "LiveStreamLike_user_id_fkey")
+  @@index([live_id])
+  @@index([user_id])
 }
 
 model LiveStreamView {
@@ -427,10 +434,10 @@ model LiveStreamView {
   live_id    Int
   created_at DateTime   @default(now())
   updated_at DateTime   @updatedAt
-  live       LiveStream @relation(fields: [live_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
-  user       User       @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  live       LiveStream @relation(fields: [live_id], references: [id], onDelete: Cascade)
+  user       User       @relation(fields: [user_id], references: [id], onDelete: Cascade)
 
-  @@index([user_id], map: "LiveStreamView_user_id_fkey")
+  @@index([user_id])
 }
 
 model Settings {
@@ -444,24 +451,24 @@ model Settings {
   subscription_duration String
   created_at            DateTime @default(now())
   updated_at            DateTime @updatedAt
-  user                  User     @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  user                  User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
 
-  @@index([user_id], map: "Settings_user_id_fkey")
+  @@index([user_id])
 }
 
 model Notifications {
   id              Int               @id @default(autoincrement())
   notification_id String
   user_id         Int
-  message         String            @db.LongText
+  message         String
   action          NotificationTypes
   url             String
   read            Boolean           @default(false)
   created_at      DateTime          @default(now())
   updated_at      DateTime          @updatedAt
-  user            User              @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  user            User              @relation(fields: [user_id], references: [id], onDelete: Cascade)
 
-  @@index([user_id], map: "Notifications_user_id_fkey")
+  @@index([user_id])
 }
 
 model ReportUser {
@@ -473,9 +480,9 @@ model ReportUser {
   report      String
   created_at  DateTime @default(now())
   updated_at  DateTime @updatedAt
-  reportUser  User     @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  reportUser  User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
 
-  @@index([user_id], map: "ReportUser_user_id_fkey")
+  @@index([user_id])
 }
 
 model ReportPost {
@@ -487,11 +494,11 @@ model ReportPost {
   report      String
   created_at  DateTime @default(now())
   updated_at  DateTime @updatedAt
-  post        Post     @relation(fields: [post_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
-  user        User     @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  post        Post     @relation(fields: [post_id], references: [id], onDelete: Cascade)
+  user        User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
 
-  @@index([post_id], map: "ReportPost_post_id_fkey")
-  @@index([user_id], map: "ReportPost_user_id_fkey")
+  @@index([post_id])
+  @@index([user_id])
 }
 
 model ReportComment {
@@ -503,11 +510,11 @@ model ReportComment {
   report      String
   created_at  DateTime    @default(now())
   updated_at  DateTime    @updatedAt
-  comment     PostComment @relation(fields: [comment_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
-  user        User        @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  comment     PostComment @relation(fields: [comment_id], references: [id], onDelete: Cascade)
+  user        User        @relation(fields: [user_id], references: [id], onDelete: Cascade)
 
-  @@index([comment_id], map: "ReportComment_comment_id_fkey")
-  @@index([user_id], map: "ReportComment_user_id_fkey")
+  @@index([comment_id])
+  @@index([user_id])
 }
 
 model ReportLive {
@@ -519,11 +526,11 @@ model ReportLive {
   report      String
   created_at  DateTime   @default(now())
   updated_at  DateTime   @updatedAt
-  comment     LiveStream @relation(fields: [live_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
-  user        User       @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  comment     LiveStream @relation(fields: [live_id], references: [id], onDelete: Cascade)
+  user        User       @relation(fields: [user_id], references: [id], onDelete: Cascade)
 
-  @@index([live_id], map: "ReportLive_live_id_fkey")
-  @@index([user_id], map: "ReportLive_user_id_fkey")
+  @@index([live_id])
+  @@index([user_id])
 }
 
 model ReportMessage {
@@ -535,27 +542,27 @@ model ReportMessage {
   report      String
   created_at  DateTime @default(now())
   updated_at  DateTime @updatedAt
-  message     Messages @relation(fields: [message_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
-  user        User     @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  message     Messages @relation(fields: [message_id], references: [id], onDelete: Cascade)
+  user        User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
 
-  @@index([message_id], map: "ReportMessage_message_id_fkey")
-  @@index([user_id], map: "ReportMessage_user_id_fkey")
+  @@index([message_id])
+  @@index([user_id])
 }
 
 model UserPoints {
   id                 Int                  @id @default(autoincrement())
   user_id            Int                  @unique
-  points             Int                  @db.Int
+  points             Int
   conversion_rate    Float
   created_at         DateTime             @default(now())
   updated_at         DateTime             @updatedAt
-  user               User                 @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  user               User                 @relation(fields: [user_id], references: [id], onDelete: Cascade)
   UserPointsPurchase UserPointsPurchase[]
 }
 
 model PointConversionRateUsers {
   id                    Int                  @id @default(autoincrement())
-  user                  User                 @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  user                  User                 @relation(fields: [user_id], references: [id], onDelete: Cascade)
   user_id               Int
   PointConversionRate   PointConversionRate? @relation(fields: [pointConversionRateId], references: [id])
   pointConversionRateId Int?
@@ -576,9 +583,9 @@ model UserWallet {
   created_at      DateTime          @default(now())
   updated_at      DateTime          @updatedAt
   UserTransaction UserTransaction[]
-  user            User              @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  user            User              @relation(fields: [user_id], references: [id], onDelete: Cascade)
 
-  @@index([user_id], map: "UserWallet_user_id_fkey")
+  @@index([user_id])
 }
 
 model UserTransaction {
@@ -587,29 +594,16 @@ model UserTransaction {
   user_id             Int
   wallet_id           Int
   amount              Float
-  transaction_message String          @db.LongText
+  transaction_message String
   transaction         String
   created_at          DateTime        @default(now())
   transaction_type    TransactionType
   updated_at          DateTime        @updatedAt
-  user                User            @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
-  UserWallet          UserWallet      @relation(fields: [wallet_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  user                User            @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  UserWallet          UserWallet      @relation(fields: [wallet_id], references: [id], onDelete: Cascade)
 
-  @@index([user_id], map: "UserTransaction_user_id_fkey")
-  @@index([wallet_id], map: "UserTransaction_wallet_id_fkey")
-}
-
-model UserSubscriptionCurrent {
-  id                      Int                       @id @default(autoincrement())
-  subscription_id         String
-  user_id                 Int
-  subscription            String
-  created_at              DateTime                  @default(now())
-  updated_at              DateTime                  @updatedAt
-  user                    User                      @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
-  UserSubscriptionHistory UserSubscriptionHistory[]
-
-  @@index([user_id], map: "UserSubscriptionCurrent_user_id_fkey")
+  @@index([user_id])
+  @@index([wallet_id])
 }
 
 model ModelSubscriptionPack {
@@ -618,7 +612,7 @@ model ModelSubscriptionPack {
   created_at            DateTime                @default(now())
   updated_at            DateTime                @updatedAt
   user_id               Int                     @unique
-  user                  User                    @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  user                  User                    @relation(fields: [user_id], references: [id], onDelete: Cascade)
   ModelSubscriptionTier ModelSubscriptionTier[]
 }
 
@@ -632,20 +626,34 @@ model ModelSubscriptionTier {
   created_at       DateTime @default(now())
   updated_at       DateTime @updatedAt
 
-  model_subscription_pack ModelSubscriptionPack @relation(fields: [subscription_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  model_subscription_pack ModelSubscriptionPack @relation(fields: [subscription_id], references: [id], onDelete: Cascade)
+}
+
+model UserSubscriptionCurrent {
+  id              Int      @id @default(autoincrement())
+  subscription_id String
+  user_id         Int
+  model_id        Int
+  subscription    String
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
+  user            User     @relation("UserCurrentSubscription", fields: [user_id], references: [id], onDelete: Cascade)
+  model           User     @relation("ModelCurrentSubscriptions", fields: [model_id], references: [id], onDelete: Cascade)
+  userId          Int?
+
+  @@index([user_id])
 }
 
 model UserSubscriptionHistory {
-  id                        Int                      @id @default(autoincrement())
-  subscription_id           String
-  user_id                   String
-  subscription              String
-  created_at                DateTime                 @default(now())
-  updated_at                DateTime                 @updatedAt
-  userSubscriptionCurrentId Int?
-  UserSubscriptionCurrent   UserSubscriptionCurrent? @relation(fields: [userSubscriptionCurrentId], references: [id], onDelete: SetNull, onUpdate: Cascade)
-
-  @@index([userSubscriptionCurrentId], map: "UserSubscriptionHistory_userSubscriptionCurrentId_fkey")
+  id              Int      @id @default(autoincrement())
+  subscription_id String
+  user_id         Int
+  model_id        Int
+  subscription    String
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
+  user            User     @relation("UserSubscription", fields: [user_id], references: [id], onDelete: Cascade)
+  model           User     @relation("UserSubscriptionHistory", fields: [model_id], references: [id], onDelete: Cascade)
 }
 
 model GlobalPointsBuy {
@@ -670,9 +678,9 @@ model UserWithdrawalBankAccount {
   bank_country    String
   created_at      DateTime @default(now())
   updated_at      DateTime @updatedAt
-  user            User     @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  user            User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
 
-  @@index([user_id], map: "UserWithdrawalBankAccount_user_id_fkey")
+  @@index([user_id])
 }
 
 model UserPointsPurchase {
@@ -685,9 +693,9 @@ model UserPointsPurchase {
   created_at   DateTime    @default(now())
   updated_at   DateTime    @updatedAt
   userPointsId Int?
-  UserPoints   UserPoints? @relation(fields: [userPointsId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  UserPoints   UserPoints? @relation(fields: [userPointsId], references: [id], onDelete: SetNull)
 
-  @@index([userPointsId], map: "UserPointsPurchase_userPointsId_fkey")
+  @@index([userPointsId])
 }
 
 model UserAttachments {
@@ -700,7 +708,7 @@ model UserAttachments {
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
 
-  user    User @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  user    User @relation(fields: [user_id], references: [id], onDelete: Cascade)
   user_id Int
 }
 
@@ -716,9 +724,9 @@ model UserBanks {
   bank_country   String
   created_at     DateTime @default(now())
   updated_at     DateTime @updatedAt
-  user           User     @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  user           User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
 
-  @@index([user_id], map: "UserBanks_user_id_fkey")
+  @@index([user_id])
 }
 
 // Products Models
@@ -726,14 +734,14 @@ model ProductCategory {
   id          Int       @id @default(autoincrement())
   name        String
   product     Product[]
-  description String?   @db.LongText
+  description String?
   created_at  DateTime  @default(now())
 }
 
 model ProductSize {
   id                 Int                @id @default(autoincrement())
   name               String
-  description        String?            @db.LongText
+  description        String?
   product_size_links ProductSizePivot[]
   created_at         DateTime           @default(now())
   Cart               Cart[]
@@ -744,14 +752,14 @@ model Product {
   product_id  String  @unique
   user_id     Int
   name        String
-  description String? @db.LongText
+  description String?
   price       Float
   category_id Int
   instock     Int
 
   images       ProductImages[]
   sizes        ProductSizePivot[]
-  category     ProductCategory    @relation(fields: [category_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  category     ProductCategory    @relation(fields: [category_id], references: [id], onDelete: Cascade)
   WishList     WishList[]
   OrderProduct OrderProduct[]
   Cart         Cart[]
@@ -763,15 +771,15 @@ model ProductSizePivot {
   size_id    Int
   created_at DateTime    @default(now())
   updated_at DateTime    @updatedAt
-  product    Product     @relation(fields: [product_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
-  size       ProductSize @relation(fields: [size_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  product    Product     @relation(fields: [product_id], references: [id], onDelete: Cascade)
+  size       ProductSize @relation(fields: [size_id], references: [id], onDelete: Cascade)
 }
 
 model ProductImages {
   id         Int      @id @default(autoincrement())
   product_id Int
   image_url  String
-  product    Product  @relation(fields: [product_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  product    Product  @relation(fields: [product_id], references: [id], onDelete: Cascade)
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
 }
@@ -784,8 +792,8 @@ model Cart {
   size_id    Int
   created_at DateTime    @default(now())
   updated_at DateTime    @updatedAt
-  user       User        @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
-  product    Product     @relation(fields: [product_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  user       User        @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  product    Product     @relation(fields: [product_id], references: [id], onDelete: Cascade)
   size       ProductSize @relation(fields: [size_id], references: [id])
 }
 
@@ -795,8 +803,8 @@ model WishList {
   product_id Int
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
-  user       User     @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
-  product    Product  @relation(fields: [product_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  user       User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  product    Product  @relation(fields: [product_id], references: [id], onDelete: Cascade)
 }
 
 model Order {
@@ -808,7 +816,7 @@ model Order {
   paid_status    Boolean        @default(false)
   created_at     DateTime       @default(now())
   updated_at     DateTime       @updatedAt
-  user           User           @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  user           User           @relation(fields: [user_id], references: [id], onDelete: Cascade)
   OrderProduct   OrderProduct[]
 }
 
@@ -820,14 +828,14 @@ model OrderProduct {
   status     OrderStatus
   created_at DateTime    @default(now())
   updated_at DateTime    @updatedAt
-  order      Order       @relation(fields: [order_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
-  product    Product     @relation(fields: [product_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  order      Order       @relation(fields: [order_id], references: [id], onDelete: Cascade)
+  product    Product     @relation(fields: [product_id], references: [id], onDelete: Cascade)
 }
 
 model HelpCategory {
   id           Int            @id @default(autoincrement())
   name         String
-  description  String?        @db.LongText
+  description  String?
   created_at   DateTime       @default(now())
   HelpArticles HelpArticles[]
 }
@@ -837,20 +845,20 @@ model HelpArticles {
   article_id   String       @unique
   category_id  Int
   title        String
-  content      String       @db.LongText
+  content      String
   created_at   DateTime     @default(now())
   updated_at   DateTime     @updatedAt
-  HelpCategory HelpCategory @relation(fields: [category_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  HelpCategory HelpCategory @relation(fields: [category_id], references: [id], onDelete: Cascade)
 }
 
 model HelpContact {
   id         Int      @id @default(autoincrement())
   user_id    Int
-  subject    String   @db.VarChar(255)
-  message    String   @db.LongText
+  subject    String
+  message    String
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
-  user       User     @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  user       User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
 }
 
 model FAQ {
@@ -866,7 +874,7 @@ model FAQAnswers {
   answer     String
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
-  FAQ        FAQ      @relation(fields: [faq_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  FAQ        FAQ      @relation(fields: [faq_id], references: [id], onDelete: Cascade)
 }
 
 model GroupParticipants {
@@ -875,13 +883,13 @@ model GroupParticipants {
   group_id   Int
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
-  user       User     @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
-  group      Groups   @relation(fields: [group_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  user       User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  group      Groups   @relation(fields: [group_id], references: [id], onDelete: Cascade)
 }
 
 model Groups {
   id                      Int                       @id @default(autoincrement())
-  group_id                String                    @db.Char(255)
+  group_id                String
   created_at              DateTime                  @default(now())
   updated_at              DateTime                  @updatedAt
   partitcipants           GroupParticipants[]
@@ -893,11 +901,11 @@ model GroupSettings {
   id          Int      @id @default(autoincrement())
   group_id    Int      @unique
   name        String
-  description String   @db.LongText
+  description String
   group_icon  String
   created_at  DateTime @default(now())
   updated_at  DateTime @updatedAt
-  group       Groups   @relation(fields: [group_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  group       Groups   @relation(fields: [group_id], references: [id], onDelete: Cascade)
 }
 
 model BlockedGroupParticipant {
@@ -906,8 +914,36 @@ model BlockedGroupParticipant {
   group_id   Int
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
-  user       User     @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
-  group      Groups   @relation(fields: [group_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  user       User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  group      Groups   @relation(fields: [group_id], references: [id], onDelete: Cascade)
+}
+
+model ActivityLog {
+  id         Int      @id @default(autoincrement())
+  user_id    Int
+  action     String
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+  user       User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+}
+
+model LoginHistory {
+  id          Int      @id @default(autoincrement())
+  user_id     Int
+  ip_address  String
+  device      String
+  city        String
+  state       String
+  capital     String
+  country     String
+  countryCode String
+  continent   String
+  longitude   Int
+  latitude    Int
+  location    String
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+  user        User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
 }
 
 // ENUMS DECLARATION

@@ -1,4 +1,4 @@
-import { Request, Response } from "express";
+import type { Request, Response } from "express";
 import NotificationService from "@services/NotificationService";
 
 export default class NotificationController {
@@ -6,7 +6,7 @@ export default class NotificationController {
       // This function is used to get the notifications of the user
       static async GetMyNotifications(req: Request, res: Response): Promise<void> {
             try {
-                  const notifications = await NotificationService.MyNotifications({ page: req.params.page, userId: req.user!.id as number })
+                  const notifications = await NotificationService.MyNotifications({ page: req.params.page as string, userId: req.user!.id as number })
                   if (notifications.error) {
                         res.status(401).json(notifications)
                   }

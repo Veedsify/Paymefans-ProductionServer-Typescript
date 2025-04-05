@@ -1,4 +1,4 @@
-import { Post } from "@prisma/client";
+import type { Post } from "@prisma/client";
 import query from "@utils/prisma";
 
 class FeedService {

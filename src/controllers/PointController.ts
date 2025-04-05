@@ -1,5 +1,5 @@
 import PointService from "@services/PointService";
-import { Request, Response } from "express";
+import type { Request, Response } from "express";
 
 export default class PointController {
       // Get points

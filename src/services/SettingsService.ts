@@ -1,7 +1,7 @@
 import ComparePasswordHash from "@libs/ComparePassordHash";
 import query from "@utils/prisma";
-import { ChangePassWordProps, ChangePasswordResponse, HookupStatusChangeResponse, HookUpStatusProps, SetMessagePriceProps, SetMessagePriceResponse, SettingProfileProps, SettingsProfileChangeResponse } from "types/settings"
-import { AuthUser } from "types/user";
+import type { ChangePassWordProps, ChangePasswordResponse, HookupStatusChangeResponse, HookUpStatusProps, SetMessagePriceProps, SetMessagePriceResponse, SettingProfileProps, SettingsProfileChangeResponse } from "types/settings"
+import type { AuthUser } from "types/user";
 import { passwordStrength } from 'check-password-strength'
 import { CreateHashedPassword } from "@libs/HashPassword";
 import { redis } from "@libs/RedisStore";

@@ -1,5 +1,5 @@
 import StoreService from "@services/StoreService";
-import { Request, Response } from "express";
+import type { Request, Response } from "express";
 
 export default class StoreController {
   static async GetProducts(req: Request, res: Response) {
@@ -23,7 +23,7 @@ export default class StoreController {
   static async GetSingleProduct(req: Request, res: Response) {
     try {
       const { product_id } = req.params;
-      const productDetails = await StoreService.SingleProduct(product_id);
+      const productDetails = await StoreService.SingleProduct(product_id as string);
       if (productDetails.error) {
         res.status(404).json({
           status: false,

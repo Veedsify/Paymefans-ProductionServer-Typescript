@@ -1,5 +1,5 @@
 import HelpService from "@services/HelpServices";
-import { Request, Response } from "express";
+import type { Request, Response } from "express";
 export default class HelpController {
   static async GetHelpCategories(_: Request, res: Response): Promise<any> {
     try {

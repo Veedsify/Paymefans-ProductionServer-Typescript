@@ -1,9 +1,10 @@
 import TriggerModels from '@jobs/models';
-import { LoginUserProps, LoginUserResponse } from '../types/auth';
+import type { LoginUserProps, LoginUserResponse } from '../types/auth';
 import ComparePasswordHash from '@libs/ComparePassordHash';
 import { Authenticate } from '@libs/jwt';
 import query from '@utils/prisma';
 import TriggerHookups from '@jobs/hookup';
+import LoginHistoryService from "@services/LoginHistory";
 export default class LoginService {
       // Login User
       static async LoginUser(data: LoginUserProps): Promise<LoginUserResponse> {
@@ -29,6 +30,7 @@ export default class LoginService {
                   const token = await Authenticate(rest);
                   await TriggerModels(user.id);
                   await TriggerHookups(user.id);
+                  await LoginHistoryService.SaveLoginHistory(rest.id, '102.89.34.248')
                   return { token, error: false, message: "Login Successful", user: rest };
             }
             catch (error) {

@@ -1,5 +1,6 @@
 import * as fs from 'fs/promises';
-import sharp, { ResizeOptions } from "sharp";
+import sharp from "sharp";
+import type { ResizeOptions } from "sharp";
 import { PutObjectCommand } from "@aws-sdk/client-s3";
 import path from "path";
 import s3 from "@utils/s3";

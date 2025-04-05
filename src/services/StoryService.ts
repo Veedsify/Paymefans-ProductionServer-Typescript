@@ -1,10 +1,10 @@
 import { getDuration } from "@libs/GetVideoDuration";
 import { UploadImageToS3 } from "@libs/UploadImageToS3";
 import UploadVideoToS3 from "@libs/UploadVideoToS3";
-import { UserStory } from "@prisma/client";
+import type { UserStory } from "@prisma/client";
 import { GenerateUniqueId } from "@utils/GenerateUniqueId";
 import query from "@utils/prisma";
-import {
+import type {
   GetStoriesResponse,
   GetStoryMediaProps,
   GetStoryMediaResponse,

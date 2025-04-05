@@ -2,7 +2,7 @@ import fs from 'fs';
 import tus from 'tus-js-client';
 import dotenv from "dotenv";
 dotenv.config();
-import { TusUploader, TusUploaderResponse } from "../types/cloudflare";
+import type { TusUploader, TusUploaderResponse } from "../types/cloudflare";
 
 import IoInstance from "./io";
 const { CLOUDFLARE_ACCOUNT_TOKEN, CLOUDFLARE_ACCOUNT_ID } = process.env;

@@ -1,9 +1,9 @@
-import { Request, Response } from 'express';
+import type { Request, Response } from 'express';
 import * as fs from 'fs';
 import UploadImageCloudflare from '@libs/UploadImageCloudflare';
 import tusUploader from '@libs/tus';
 import socketserver from '@libs/io';
-import { UploadFileType } from '../types/cloudflare';
+import type { UploadFileType } from '../types/cloudflare';
 
 interface UploadedFile {
       path: string;

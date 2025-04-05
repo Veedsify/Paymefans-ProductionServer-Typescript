@@ -1,7 +1,0 @@
-{
-      "exec": "nodemon --exec tsx src/app.ts",
-      "ext": "ts",
-      "watch": [
-            "src"
-      ]
-}

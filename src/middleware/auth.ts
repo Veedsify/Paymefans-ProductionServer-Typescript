@@ -1,7 +1,7 @@
-import { NextFunction, Request } from "express";
-import { Response } from "express";
+import type { NextFunction, Request } from "express";
+import type { Response } from "express";
 import jwt from "jsonwebtoken";
-import { AuthUser } from "../types/user";
+import type { AuthUser } from "../types/user";
 
 export default async function Auth(req: Request, res: Response, next: NextFunction): Promise<any> {
     try {

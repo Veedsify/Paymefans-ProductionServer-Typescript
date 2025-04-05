@@ -1,5 +1,5 @@
 import query from "@utils/prisma"
-import { CheckFollowerProps, CheckFollowerResponse, CheckUserIsFollowingResponse, FollowUserResponse, GetAllFollowersProps, GetAllFollowersResponse } from "../types/follower";
+import type { CheckFollowerProps, CheckFollowerResponse, CheckUserIsFollowingResponse, FollowUserResponse, GetAllFollowersProps, GetAllFollowersResponse } from "../types/follower";
 import { GenerateUniqueId } from "@utils/GenerateUniqueId";
 
 export default class FollowerService {
@@ -67,7 +67,7 @@ export default class FollowerService {
             for (let i = 0; i < myFollowers.length; i++) {
                 const user = await query.user.findUnique({
                     where: {
-                        id: myFollowers[i].follower_id
+                        id: myFollowers[i]?.follower_id
                     },
                     select: {
                         id: true,

@@ -1,6 +1,6 @@
-import { User } from '@prisma/client';
+import type { User } from '@prisma/client';
 import * as jwt from 'jsonwebtoken';
-import { SignOptions } from 'jsonwebtoken';
+import type { SignOptions } from 'jsonwebtoken';
 
 // Environment variables
 const JWT_SECRET = process.env.JWT_SECRET || 'your-fallback-secret';

@@ -1,6 +1,6 @@
 import ModelService from "@services/ModelService"
-import {Request, Response} from "express"
-import {AuthUser} from "types/user"
+import type {Request, Response} from "express"
+import type {AuthUser} from "types/user"
 
 export default class ModelController {
     static async GetModels(req: Request, res: Response): Promise<any> {

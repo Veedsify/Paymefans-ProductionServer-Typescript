@@ -1,5 +1,5 @@
 import query from "@utils/prisma";
-import { HelpCategoriesRespons } from "types/help";
+import type { HelpCategoriesRespons } from "types/help";
 
 class HelpService {
   static async GetHelpCategories(): Promise<HelpCategoriesRespons> {

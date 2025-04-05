@@ -1,11 +1,11 @@
-import { RegisteredUser } from "../types/user";
+import type { RegisteredUser } from "../types/user";
 import query from "@utils/prisma";
 import { GenerateUniqueId } from "@utils/GenerateUniqueId";
 import { CreateHashedPassword } from "@libs/HashPassword";
-import { CheckForAdminResponse } from "../types/admin";
+import type { CheckForAdminResponse } from "../types/admin";
 import EmailService from "./EmailService";
-import { EmailServiceProp } from "../types/email";
-import { RegisterServiceProp, RegisterServiceResponse } from "../types/auth";
+import type { EmailServiceProp } from "../types/email";
+import type { RegisterServiceProp, RegisterServiceResponse } from "../types/auth";
 
 export default class RegisterService {
     static async RegisterNewUser(data: RegisterServiceProp): Promise<RegisterServiceResponse> {

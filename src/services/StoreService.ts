@@ -1,6 +1,6 @@
 import { redis } from "@libs/RedisStore";
 import query from "@utils/prisma";
-import {
+import type{
   AllProductProps,
   StoreAllProductsResponse,
   StoreSingleProductResponse,

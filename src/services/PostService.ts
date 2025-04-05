@@ -1,4 +1,4 @@
-import { CreatePostProps, CreatePostResponse, CreateRepostProps, DeletePostResponse, EditPostProps, EditPostResponse, GetMyMediaProps, GetMyMediaResponse, GetMyPostProps, GetMyPostResponse, GetOtherMediaProps, GetOtherMediaResponse, GetPostCommentsProps, GetPostCommentsResponse, GetSinglePostResponse, GetUserPostByIdProps, GetUserPostByIdResponse, LikePostProps, LikePostResponse, RepostProps, RepostResponse } from "../types/post";
+import type { CreatePostProps, CreatePostResponse, CreateRepostProps, DeletePostResponse, EditPostProps, EditPostResponse, GetMyMediaProps, GetMyMediaResponse, GetMyPostProps, GetMyPostResponse, GetOtherMediaProps, GetOtherMediaResponse, GetPostCommentsProps, GetPostCommentsResponse, GetSinglePostResponse, GetUserPostByIdProps, GetUserPostByIdResponse, LikePostProps, LikePostResponse, RepostProps, RepostResponse } from "../types/post";
 import { v4 as uuid } from "uuid";
 import query from "@utils/prisma";
 import { PostAudience } from "@prisma/client";

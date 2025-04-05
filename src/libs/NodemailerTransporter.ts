@@ -1,11 +1,11 @@
 import nodemailer from 'nodemailer';
-import hbs from 'nodemailer-express-handlebars';
-import { create } from 'express-handlebars';
-import path from 'path';
+// import hbs from 'nodemailer-express-handlebars';
+// import { create } from 'express-handlebars';
+// import path from 'path';
 
-const hbsEngine = create({
-  extname: '.hbs',
-});
+// const hbsEngine = create({
+//   extname: '.hbs',
+// });
 
 const { MAIL_USER, MAIL_HOST, MAIL_PORT, MAIL_PASS } = process.env;
 
@@ -19,11 +19,12 @@ const transporter = nodemailer.createTransport({
       }
 });
 
+
 // 2. Set the template engine
-transporter.use('compile', hbs({
-      viewEngine: hbsEngine,
-      viewPath: path.join("../", "views", "emails"),
-      extName: '.hbs',
-}));
+// transporter.use('compile', hbs({
+//       viewEngine: hbsEngine,
+//       viewPath: path.join("views/emails/"),
+//       extName: '.hbs',
+// }));
 
 export default transporter;

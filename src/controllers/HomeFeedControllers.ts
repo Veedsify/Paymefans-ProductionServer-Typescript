@@ -1,4 +1,4 @@
-import { Request, Response } from "express";
+import type { Request, Response } from "express";
 import FeedService from "@services/HomeFeedService";
 
 const feedService = new FeedService()
@@ -17,7 +17,7 @@ class HomeFeedController {
 
       async GetUserPersonalPosts(req: Request, res: Response) {
             try {
-                  const targetUserId = parseInt(req.params.userId);
+                  const targetUserId = parseInt(req.params.userId as string);
                   const page = parseInt(req.query.page as string) || 1;
                   const result = await feedService.getUserPosts(Number(req.user?.id), targetUserId, page);
                   res.json(result);

@@ -1,5 +1,5 @@
 import { WebhookService } from "@services/WebhookService";
-import { Request, Response } from "express";
+import type { Request, Response } from "express";
 
 class WebhookController {
   static async ProcessedMedia(req: Request, res: Response) {

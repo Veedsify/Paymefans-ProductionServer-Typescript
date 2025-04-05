@@ -1,6 +1,6 @@
 import SubscriberService from "@services/SubscriberService"
-import {Request, Response} from "express";
-import {AuthUser} from "types/user";
+import type {Request, Response} from "express";
+import type {AuthUser} from "types/user";
 
 export default class SubscriberController {
     static async CheckSubscriber(req: Request, res: Response): Promise<void> {
@@ -18,7 +18,7 @@ export default class SubscriberController {
 
     static async GetSubscriptionData(req: Request, res: Response): Promise<void> {
         try {
-            const getsubscriptiondata = await SubscriberService.GetSubscriptionData(req.params.userId);
+            const getsubscriptiondata = await SubscriberService.GetSubscriptionData(req.params.userId as string);
             if (getsubscriptiondata.error) {
                 res.status(401).json({...getsubscriptiondata})
             }
@@ -32,8 +32,8 @@ export default class SubscriberController {
     static async CreateNewSubscription(req: Request, res: Response): Promise<void> {
         try {
             const options = {
-                profileId: req.params.profileId,
-                tier_id: req.body.tier_id,
+                profileId: req.params.profileId as string,
+                tier_id: req.body.tier_id as string,
                 user: req.user as AuthUser,
             }
             const createNewSubscription = await SubscriberService.CreateNewSubscription(options);

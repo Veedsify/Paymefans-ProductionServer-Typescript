@@ -45,13 +45,14 @@ export interface MyConversationResponse {
   error: boolean;
   status: boolean;
   conversations: Conversations[];
+  unreadCount: number;
   hasMore: boolean;
   message?: string;
 }
 
 export interface UploadAttachmentsProps {
   conversationId: string;
-  file: Express.Multer.File;
+  files: { "attachments[]": Express.Multer.File[] };
 }
 
 export interface UploadAttachmentsResponse {
@@ -64,21 +65,21 @@ export interface UploadAttachmentsResponse {
 export type SearchMessagesProp = {
   q: string;
   conversationId: string;
-}
+};
 
 export type SearchMessageResponse = {
   error: boolean;
-  messages: Messages[]
-}
+  messages: Messages[];
+};
 
-export type GetUserConversationsReponse = {
-  conversations: {
+interface GetUserConversationsReponse {
+  conversations: Array<{
     conversation: {
       user_id: string;
       name: string;
       username: string;
       profile_image: string | null;
-    }
+    };
     conversation_id: string;
     lastMessage: Messages;
     receiver: {
@@ -86,7 +87,18 @@ export type GetUserConversationsReponse = {
       name: string;
       username: string;
       profile_image: string | null;
-    }
-  }[];
-  status: true;
+    };
+  }>;
+  status: boolean;
+}
+
+interface SaveMessageToDBProps {
+  message_id: string;
+  sender_id: string;
+  receiver_id: string;
+  conversationId: string;
+  message: string;
+  seen: boolean;
+  receiver: string;
+  attachment?: string[];
 }

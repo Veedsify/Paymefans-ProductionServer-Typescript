@@ -1,6 +1,6 @@
 import VerificationService from "@services/VerificationService";
-import { Request, Response } from "express";
-import { AuthUser } from "types/user";
+import type { Request, Response } from "express";
+import type { AuthUser } from "types/user";
 import fs from "fs";
 
 export default class VerificationController {

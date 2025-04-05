@@ -1,5 +1,5 @@
-import {AuthUser} from "types/user"
-import {
+import type{AuthUser} from "types/user"
+import type {
     ModelsSearchResponse,
     GetModelAvailableForHookupResponse,
     SignupModelResponse,
