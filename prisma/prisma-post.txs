@@ -1,0 +1,972 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                        Int                         @id @default(autoincrement())
+  email                     String                      @unique
+  name                      String
+  password                  String
+  fullname                  String
+  user_id                   String                      @unique
+  username                  String                      @unique
+  admin                     Boolean                     @default(false)
+  role                      UserRole                    @default(fan)
+  is_active                 Boolean                     @default(true)
+  is_verified               Boolean                     @default(false)
+  is_email_verified         Boolean                     @default(false)
+  is_model                  Boolean                     @default(false)
+  email_verify_code         String?
+  email_verify_time         DateTime?
+  is_phone_verified         Boolean                     @default(false)
+  phone                     String                      @unique
+  profile_image             String?                     @default("/site/avatar.png")
+  profile_banner            String?                     @default("/site/banner.png")
+  bio                       String?
+  location                  String?
+  website                   String?
+  country                   String?
+  state                     String?
+  city                      String?
+  zip                       String?
+  post_watermark            String?
+  total_followers           Int                         @default(0)
+  total_following           Int                         @default(0)
+  total_subscribers         Int                         @default(0)
+  admin_status              Boolean                     @default(true)
+  created_at                DateTime                    @default(now())
+  updated_at                DateTime                    @updatedAt
+  Follow                    Follow[]
+  LiveStream                LiveStream[]
+  LiveStreamComment         LiveStreamComment[]
+  LiveStreamLike            LiveStreamLike[]
+  LiveStreamView            LiveStreamView[]
+  Notifications             Notifications[]
+  PostLike                  PostLike[]
+  PostShared                PostShared[]
+  ReportComment             ReportComment[]
+  ReportLive                ReportLive[]
+  ReportMessage             ReportMessage[]
+  ReportPost                ReportPost[]
+  ReportUser                ReportUser[]
+  Settings                  Settings?
+  Subscribers               Subscribers[]
+  UserPoints                UserPoints?
+  UserRepost                UserRepost[]
+  UserStory                 UserStory[]
+  UserSubscriptionCurrent   UserSubscriptionCurrent[]
+  UserTransaction           UserTransaction[]
+  UserWallet                UserWallet[]
+  UserWithdrawalBankAccount UserWithdrawalBankAccount[]
+  Model                     Model?
+  UserAttachments           UserAttachments[]
+  Post                      Post[]
+  UserBanks                 UserBanks[]
+  PostComment               PostComment[]
+  ModelSubscriptionPack     ModelSubscriptionPack?
+  WishList                  WishList[]
+  Order                     Order[]
+  Cart                      Cart[]
+  HelpContact               HelpContact[]
+  PostCommentLikes          PostCommentLikes[]
+  PointConversionRateUsers  PointConversionRateUsers[]
+  GroupParticipants         GroupParticipants[]
+  BlockedGroupParticipant   BlockedGroupParticipant[]
+  PostImpression            PostImpression[]
+  CommentImpression         CommentImpression[]
+  sentMessages              Messages[]                  @relation("MessageSender")
+  receivedMessages          Messages[]                  @relation("MessageReceiver")
+}
+
+model Participants {
+  id            Int             @id @default(autoincrement())
+  user_1        String
+  user_2        String
+  created_at    DateTime        @default(now())
+  updated_at    DateTime        @updatedAt
+  Conversations Conversations[]
+}
+
+model Conversations {
+  id              Int            @id @default(autoincrement())
+  conversation_id String         @unique
+  participants    Participants[]
+  messages        Messages[]
+  created_at      DateTime       @default(now())
+  updated_at      DateTime       @updatedAt
+}
+
+model Messages {
+  id              Int             @id @default(autoincrement())
+  message_id      String          @unique
+  sender_id       String
+  receiver_id     String
+  seen            Boolean         @default(false)
+  message         String
+  attachment      Json?
+  created_at      DateTime        @default(now())
+  updated_at      DateTime        @updatedAt
+  sender          User            @relation("MessageSender", fields: [sender_id], references: [user_id], onDelete: Cascade)
+  receiver        User            @relation("MessageReceiver", fields: [receiver_id], references: [user_id], onDelete: Cascade)
+  ReportMessage   ReportMessage[]
+  Conversations   Conversations?  @relation(fields: [conversationsId], references: [conversation_id], onDelete: SetNull)
+  conversationsId String?
+  @@index([sender_id])
+  @@index([receiver_id])
+}
+
+model Model {
+  id                  Int                   @id @default(autoincrement())
+  firstname           String
+  lastname            String
+  user_id             Int                   @unique
+  gender              String
+  dob                 DateTime
+  country             String
+  hookup              Boolean               @default(false)
+  verification_video  String?
+  verification_image  String?
+  verification_status Boolean               @default(false)
+  verification_state  VerificationStateEnum @default(not_started)
+  token               String?               @unique
+
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  created_at DateTime @default(now())
+}
+
+model UserMedia {
+  id            Int        @id @default(autoincrement())
+  media_id      String     @unique
+  post_id       Int
+  media_type    String
+  media_state   MediaState @default(processing)
+  duration      String?    @default("")
+  url           String
+  blur          String
+  poster        String
+  locked        Boolean    @default(false)
+  accessible_to String
+  created_at    DateTime   @default(now())
+  updated_at    DateTime   @updatedAt
+  post          Post       @relation(fields: [post_id], references: [id], onDelete: Cascade)
+
+  @@index([post_id])
+}
+
+model UserRepost {
+  id         Int      @id @default(autoincrement())
+  repost_id  String
+  user_id    Int
+  post_id    Int
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+  post       Post     @relation(fields: [post_id], references: [id], onDelete: Cascade)
+  user       User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([post_id])
+  @@index([user_id])
+}
+
+model UserStory {
+  id         Int          @id @default(autoincrement())
+  story_id   String
+  user_id    Int
+  created_at DateTime     @default(now())
+  updated_at DateTime     @updatedAt
+  user       User         @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  StoryMedia StoryMedia[]
+
+  @@index([user_id])
+}
+
+model StoryMedia {
+  id            Int       @id @default(autoincrement())
+  media_id      String
+  media_type    String
+  filename      String
+  captionStyle  Json?
+  story_content String?
+  url           String
+  duration      Int?
+  story         UserStory @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  user_id       Int
+  created_at    DateTime  @default(now())
+  updated_at    DateTime  @updatedAt
+}
+
+model Post {
+  id               Int              @id @default(autoincrement())
+  post_id          String
+  was_repost       Boolean          @default(false)
+  repost_username  String?          @default("")
+  repost_id        String?          @default("")
+  user_id          Int
+  content          String?
+  media            Json?
+  post_status      PostStatus       @default(pending)
+  post_audience    PostAudience
+  post_is_visible  Boolean          @default(true)
+  post_likes       Int              @default(0)
+  post_comments    Int              @default(0)
+  post_reposts     Int              @default(0)
+  post_impressions Int              @default(0)
+  created_at       DateTime         @default(now())
+  updated_at       DateTime         @updatedAt
+  PostComment      PostComment[]
+  PostLike         PostLike[]
+  PostShared       PostShared[]
+  ReportPost       ReportPost[]
+  UserRepost       UserRepost[]
+  PostImpression   PostImpression[]
+  UserMedia        UserMedia[]
+
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+}
+
+model PostImpression {
+  id         Int      @id @default(autoincrement())
+  post_id    Int
+  user_id    Int
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+  post       Post     @relation(fields: [post_id], references: [id], onDelete: Cascade)
+  user       User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([post_id])
+  @@index([user_id])
+}
+
+model PostComment {
+  id                     Int                      @id @default(autoincrement())
+  comment_id             String
+  user_id                Int
+  post_id                Int
+  comment                String
+  comment_impressions    Int                      @default(0)
+  created_at             DateTime                 @default(now())
+  updated_at             DateTime                 @updatedAt
+  post                   Post                     @relation(fields: [post_id], references: [id], onDelete: Cascade)
+  ReportComment          ReportComment[]
+  PostCommentAttachments PostCommentAttachments[]
+  user                   User                     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  PostCommentLikes       PostCommentLikes[]
+  CommentImpression      CommentImpression[]
+
+  @@index([post_id])
+}
+
+model CommentImpression {
+  id         Int         @id @default(autoincrement())
+  comment_id Int
+  user_id    Int
+  created_at DateTime    @default(now())
+  updated_at DateTime    @updatedAt
+  comment    PostComment @relation(fields: [comment_id], references: [id], onDelete: Cascade)
+  user       User        @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  postId     Int?
+
+  @@index([comment_id])
+  @@index([user_id])
+}
+
+model PostCommentAttachments {
+  id         Int      @id @default(autoincrement())
+  comment_id Int
+  path       String
+  type       String
+  name       String
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  Comment PostComment @relation(fields: [comment_id], references: [id], onDelete: Cascade)
+}
+
+model PostCommentLikes {
+  id         Int         @id @default(autoincrement())
+  like_id    String      @default(cuid())
+  user_id    Int
+  comment_id Int
+  created_at DateTime    @default(now())
+  updated_at DateTime    @updatedAt
+  comment    PostComment @relation(fields: [comment_id], references: [id], onDelete: Cascade)
+  user       User        @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([comment_id])
+  @@index([user_id])
+}
+
+model PostLike {
+  id         Int      @id @default(autoincrement())
+  like_id    Int
+  user_id    Int
+  post_id    Int
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+  post       Post     @relation(fields: [post_id], references: [id], onDelete: Cascade)
+  user       User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([post_id])
+  @@index([user_id])
+}
+
+model PostShared {
+  id         Int      @id @default(autoincrement())
+  shared_id  String
+  user_id    Int?
+  post_id    Int
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+  post       Post     @relation(fields: [post_id], references: [id], onDelete: Cascade)
+  user       User?    @relation(fields: [user_id], references: [id], onDelete: SetNull)
+
+  @@index([post_id])
+  @@index([user_id])
+}
+
+model Follow {
+  id          Int      @id @default(autoincrement())
+  follow_id   String   @unique
+  user_id     Int
+  follower_id Int
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+  users       User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id])
+}
+
+model Subscribers {
+  id            Int      @id @default(autoincrement())
+  sub_id        String
+  user_id       Int
+  subscriber_id Int
+  created_at    DateTime @default(now())
+  updated_at    DateTime @updatedAt
+  user          User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id])
+}
+
+model LiveStream {
+  id                Int                      @id @default(autoincrement())
+  user_id           String
+  username          String
+  stream_id         String                   @unique
+  stream_token      String
+  user_stream_id    String
+  title             String
+  stream_call_id    String
+  stream_status     String                   @default("offline")
+  created_at        DateTime                 @default(now())
+  updated_at        DateTime                 @updatedAt
+  user              User                     @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
+  participants      LiveStreamParticipants[]
+  LiveStreamComment LiveStreamComment[]
+  LiveStreamLike    LiveStreamLike[]
+  ReportLive        ReportLive[]
+  LiveStreamView    LiveStreamView[]
+
+  @@index([user_id])
+}
+
+model LiveStreamParticipants {
+  id             Int      @id @default(autoincrement())
+  stream_id      String
+  host_id        String
+  participant_id String
+  created_at     DateTime @default(now())
+  updated_at     DateTime @updatedAt
+
+  LiveStream   LiveStream? @relation(fields: [liveStreamId], references: [id], onDelete: SetNull)
+  liveStreamId Int?
+}
+
+model LiveStreamComment {
+  id              Int        @id @default(autoincrement())
+  live_comment_id String
+  user_id         Int
+  live_id         Int
+  comment         String
+  created_at      DateTime   @default(now())
+  updated_at      DateTime   @updatedAt
+  live            LiveStream @relation(fields: [live_id], references: [id], onDelete: Cascade)
+  user            User       @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([live_id])
+  @@index([user_id])
+}
+
+model LiveStreamLike {
+  id           Int        @id @default(autoincrement())
+  live_like_id String
+  user_id      Int
+  live_id      Int
+  created_at   DateTime   @default(now())
+  updated_at   DateTime   @updatedAt
+  live         LiveStream @relation(fields: [live_id], references: [id], onDelete: Cascade)
+  user         User       @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([live_id])
+  @@index([user_id])
+}
+
+model LiveStreamView {
+  id         Int        @id @default(autoincrement())
+  user_id    Int
+  live_id    Int
+  created_at DateTime   @default(now())
+  updated_at DateTime   @updatedAt
+  live       LiveStream @relation(fields: [live_id], references: [id], onDelete: Cascade)
+  user       User       @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id])
+}
+
+model Settings {
+  id                    Int      @id @default(autoincrement())
+  user_id               Int      @unique
+  price_per_message     Float
+  subscription_active   Boolean  @default(false)
+  enable_free_message   Boolean
+  subscription_price    Float
+  subscription_type     String
+  subscription_duration String
+  created_at            DateTime @default(now())
+  updated_at            DateTime @updatedAt
+  user                  User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id])
+}
+
+model Notifications {
+  id              Int               @id @default(autoincrement())
+  notification_id String
+  user_id         Int
+  message         String
+  action          NotificationTypes
+  url             String
+  read            Boolean           @default(false)
+  created_at      DateTime          @default(now())
+  updated_at      DateTime          @updatedAt
+  user            User              @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id])
+}
+
+model ReportUser {
+  id          Int      @id @default(autoincrement())
+  report_id   String
+  user_id     Int
+  reported_id String
+  report_type String
+  report      String
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+  reportUser  User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id])
+}
+
+model ReportPost {
+  id          Int      @id @default(autoincrement())
+  report_id   String
+  user_id     Int
+  post_id     Int
+  report_type String
+  report      String
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+  post        Post     @relation(fields: [post_id], references: [id], onDelete: Cascade)
+  user        User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([post_id])
+  @@index([user_id])
+}
+
+model ReportComment {
+  id          Int         @id @default(autoincrement())
+  report_id   String
+  user_id     Int
+  comment_id  Int
+  report_type String
+  report      String
+  created_at  DateTime    @default(now())
+  updated_at  DateTime    @updatedAt
+  comment     PostComment @relation(fields: [comment_id], references: [id], onDelete: Cascade)
+  user        User        @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([comment_id])
+  @@index([user_id])
+}
+
+model ReportLive {
+  id          Int        @id @default(autoincrement())
+  report_id   String
+  user_id     Int
+  live_id     Int
+  report_type String
+  report      String
+  created_at  DateTime   @default(now())
+  updated_at  DateTime   @updatedAt
+  comment     LiveStream @relation(fields: [live_id], references: [id], onDelete: Cascade)
+  user        User       @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([live_id])
+  @@index([user_id])
+}
+
+model ReportMessage {
+  id          Int      @id @default(autoincrement())
+  report_id   String
+  user_id     Int
+  message_id  Int
+  report_type String
+  report      String
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+  message     Messages @relation(fields: [message_id], references: [id], onDelete: Cascade)
+  user        User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([message_id])
+  @@index([user_id])
+}
+
+model UserPoints {
+  id                 Int                  @id @default(autoincrement())
+  user_id            Int                  @unique
+  points             Int
+  conversion_rate    Float
+  created_at         DateTime             @default(now())
+  updated_at         DateTime             @updatedAt
+  user               User                 @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  UserPointsPurchase UserPointsPurchase[]
+}
+
+model PointConversionRateUsers {
+  id                    Int                  @id @default(autoincrement())
+  user                  User                 @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  user_id               Int
+  PointConversionRate   PointConversionRate? @relation(fields: [pointConversionRateId], references: [id])
+  pointConversionRateId Int?
+}
+
+model PointConversionRate {
+  id                       Int                        @id @default(autoincrement())
+  amount                   Int?
+  points                   Int?
+  pointConversionRateUsers PointConversionRateUsers[]
+}
+
+model UserWallet {
+  id              Int               @id @default(autoincrement())
+  user_id         Int
+  wallet_id       String
+  balance         Float
+  created_at      DateTime          @default(now())
+  updated_at      DateTime          @updatedAt
+  UserTransaction UserTransaction[]
+  user            User              @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id])
+}
+
+model UserTransaction {
+  id                  Int             @id @default(autoincrement())
+  transaction_id      String
+  user_id             Int
+  wallet_id           Int
+  amount              Float
+  transaction_message String
+  transaction         String
+  created_at          DateTime        @default(now())
+  transaction_type    TransactionType
+  updated_at          DateTime        @updatedAt
+  user                User            @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  UserWallet          UserWallet      @relation(fields: [wallet_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id])
+  @@index([wallet_id])
+}
+
+model UserSubscriptionCurrent {
+  id                      Int                       @id @default(autoincrement())
+  subscription_id         String
+  user_id                 Int
+  subscription            String
+  created_at              DateTime                  @default(now())
+  updated_at              DateTime                  @updatedAt
+  user                    User                      @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  UserSubscriptionHistory UserSubscriptionHistory[]
+
+  @@index([user_id])
+}
+
+model ModelSubscriptionPack {
+  id                    Int                     @id @default(autoincrement())
+  subscription_id       String
+  created_at            DateTime                @default(now())
+  updated_at            DateTime                @updatedAt
+  user_id               Int                     @unique
+  user                  User                    @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  ModelSubscriptionTier ModelSubscriptionTier[]
+}
+
+model ModelSubscriptionTier {
+  id               Int      @id @default(autoincrement())
+  subscription_id  Int
+  tier_name        String
+  tier_price       Float
+  tier_description String
+  tier_duration    String
+  created_at       DateTime @default(now())
+  updated_at       DateTime @updatedAt
+
+  model_subscription_pack ModelSubscriptionPack @relation(fields: [subscription_id], references: [id], onDelete: Cascade)
+}
+
+model UserSubscriptionHistory {
+  id                        Int                      @id @default(autoincrement())
+  subscription_id           String
+  user_id                   String
+  subscription              String
+  created_at                DateTime                 @default(now())
+  updated_at                DateTime                 @updatedAt
+  userSubscriptionCurrentId Int?
+  UserSubscriptionCurrent   UserSubscriptionCurrent? @relation(fields: [userSubscriptionCurrentId], references: [id], onDelete: SetNull)
+
+  @@index([userSubscriptionCurrentId])
+}
+
+model GlobalPointsBuy {
+  id              Int      @id @default(autoincrement())
+  points_buy_id   String
+  points          Int
+  amount          Float
+  conversion_rate Float
+  currency        String
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
+}
+
+model UserWithdrawalBankAccount {
+  id              Int      @id @default(autoincrement())
+  user_id         Int
+  bank_account_id String
+  bank_name       String
+  account_name    String
+  account_number  String
+  routing_number  String
+  bank_country    String
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
+  user            User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id])
+}
+
+model UserPointsPurchase {
+  id           Int         @id @default(autoincrement())
+  purchase_id  String      @unique
+  user_id      Int
+  points       Int
+  amount       Float
+  success      Boolean
+  created_at   DateTime    @default(now())
+  updated_at   DateTime    @updatedAt
+  userPointsId Int?
+  UserPoints   UserPoints? @relation(fields: [userPointsId], references: [id], onDelete: SetNull)
+
+  @@index([userPointsId])
+}
+
+model UserAttachments {
+  id         Int      @id @default(autoincrement())
+  path       String
+  type       String
+  name       String
+  size       Int
+  extension  String
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  user    User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  user_id Int
+}
+
+model UserBanks {
+  id             Int      @id @default(autoincrement())
+  user_id        Int
+  bank_id        String
+  bank_name      String
+  account_name   String
+  account_number String   @unique
+  routing_number String?
+  swift_code     String?
+  bank_country   String
+  created_at     DateTime @default(now())
+  updated_at     DateTime @updatedAt
+  user           User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id])
+}
+
+// Products Models
+model ProductCategory {
+  id          Int       @id @default(autoincrement())
+  name        String
+  product     Product[]
+  description String?
+  created_at  DateTime  @default(now())
+}
+
+model ProductSize {
+  id                 Int                @id @default(autoincrement())
+  name               String
+  description        String?
+  product_size_links ProductSizePivot[]
+  created_at         DateTime           @default(now())
+  Cart               Cart[]
+}
+
+model Product {
+  id          Int     @id @default(autoincrement())
+  product_id  String  @unique
+  user_id     Int
+  name        String
+  description String?
+  price       Float
+  category_id Int
+  instock     Int
+
+  images       ProductImages[]
+  sizes        ProductSizePivot[]
+  category     ProductCategory    @relation(fields: [category_id], references: [id], onDelete: Cascade)
+  WishList     WishList[]
+  OrderProduct OrderProduct[]
+  Cart         Cart[]
+}
+
+model ProductSizePivot {
+  id         Int         @id @default(autoincrement())
+  product_id Int
+  size_id    Int
+  created_at DateTime    @default(now())
+  updated_at DateTime    @updatedAt
+  product    Product     @relation(fields: [product_id], references: [id], onDelete: Cascade)
+  size       ProductSize @relation(fields: [size_id], references: [id], onDelete: Cascade)
+}
+
+model ProductImages {
+  id         Int      @id @default(autoincrement())
+  product_id Int
+  image_url  String
+  product    Product  @relation(fields: [product_id], references: [id], onDelete: Cascade)
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+}
+
+model Cart {
+  id         Int         @id @default(autoincrement())
+  user_id    Int
+  product_id Int
+  quantity   Int
+  size_id    Int
+  created_at DateTime    @default(now())
+  updated_at DateTime    @updatedAt
+  user       User        @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  product    Product     @relation(fields: [product_id], references: [id], onDelete: Cascade)
+  size       ProductSize @relation(fields: [size_id], references: [id])
+}
+
+model WishList {
+  id         Int      @id @default(autoincrement())
+  user_id    Int
+  product_id Int
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+  user       User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  product    Product  @relation(fields: [product_id], references: [id], onDelete: Cascade)
+}
+
+model Order {
+  id             Int            @id @default(autoincrement())
+  order_id       String         @unique
+  transaction_id String         @unique
+  user_id        Int
+  total_amount   Float
+  paid_status    Boolean        @default(false)
+  created_at     DateTime       @default(now())
+  updated_at     DateTime       @updatedAt
+  user           User           @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  OrderProduct   OrderProduct[]
+}
+
+model OrderProduct {
+  id         Int         @id @default(autoincrement())
+  order_id   Int
+  product_id Int
+  quantity   Int
+  status     OrderStatus
+  created_at DateTime    @default(now())
+  updated_at DateTime    @updatedAt
+  order      Order       @relation(fields: [order_id], references: [id], onDelete: Cascade)
+  product    Product     @relation(fields: [product_id], references: [id], onDelete: Cascade)
+}
+
+model HelpCategory {
+  id           Int            @id @default(autoincrement())
+  name         String
+  description  String?
+  created_at   DateTime       @default(now())
+  HelpArticles HelpArticles[]
+}
+
+model HelpArticles {
+  id           Int          @id @default(autoincrement())
+  article_id   String       @unique
+  category_id  Int
+  title        String
+  content      String
+  created_at   DateTime     @default(now())
+  updated_at   DateTime     @updatedAt
+  HelpCategory HelpCategory @relation(fields: [category_id], references: [id], onDelete: Cascade)
+}
+
+model HelpContact {
+  id         Int      @id @default(autoincrement())
+  user_id    Int
+  subject    String
+  message    String
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+  user       User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+}
+
+model FAQ {
+  id         Int          @id @default(autoincrement())
+  question   String
+  created_at DateTime     @default(now())
+  FAQAnswers FAQAnswers[]
+}
+
+model FAQAnswers {
+  id         Int      @id @default(autoincrement())
+  faq_id     Int
+  answer     String
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+  FAQ        FAQ      @relation(fields: [faq_id], references: [id], onDelete: Cascade)
+}
+
+model GroupParticipants {
+  id         Int      @id @default(autoincrement())
+  user_id    Int
+  group_id   Int
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+  user       User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  group      Groups   @relation(fields: [group_id], references: [id], onDelete: Cascade)
+}
+
+model Groups {
+  id                      Int                       @id @default(autoincrement())
+  group_id                String
+  created_at              DateTime                  @default(now())
+  updated_at              DateTime                  @updatedAt
+  partitcipants           GroupParticipants[]
+  BlockedGroupParticipant BlockedGroupParticipant[]
+  GroupSettings           GroupSettings?
+}
+
+model GroupSettings {
+  id          Int      @id @default(autoincrement())
+  group_id    Int      @unique
+  name        String
+  description String
+  group_icon  String
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+  group       Groups   @relation(fields: [group_id], references: [id], onDelete: Cascade)
+}
+
+model BlockedGroupParticipant {
+  id         Int      @id @default(autoincrement())
+  user_id    Int
+  group_id   Int
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+  user       User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  group      Groups   @relation(fields: [group_id], references: [id], onDelete: Cascade)
+}
+
+// ENUMS DECLARATION
+
+enum OrderStatus {
+  pending
+  processing
+  shipped
+  delivered
+  cancelled
+}
+
+enum UserRole {
+  fan
+  model
+  admin
+}
+
+enum PostAudience {
+  public
+  private
+  price
+  followers
+  subscribers
+}
+
+enum PostStatus {
+  pending
+  approved
+  rejected
+}
+
+enum TransactionType {
+  credit
+  debit
+  pending
+}
+
+enum NotificationTypes {
+  follow
+  like
+  purchase
+  comment
+  repost
+  message
+  live
+  sparkle
+}
+
+enum VerificationStateEnum {
+  not_started
+  started
+  pending
+  approved
+  rejected
+}
+
+enum MediaState {
+  processing
+  completed
+}
