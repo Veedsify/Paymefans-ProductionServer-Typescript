@@ -5,20 +5,14 @@ import { Redis } from "ioredis";
 const redis = new Redis({
     host: '127.0.0.1',
     port: 6379,
-    maxRetriesPerRequest: 50,
-    retryStrategy(times: number) {
-        return Math.min(times * 50, 1000);
-    }
+    maxRetriesPerRequest: null
 });
 
 // Dedicated client ONLY for subscribing
 const redisSub = new Redis({
     host: '127.0.0.1',
     port: 6379,
-    maxRetriesPerRequest: 50,
-    retryStrategy(times: number) {
-        return Math.min(times * 50, 1000);
-    }
+    maxRetriesPerRequest: null
 });
 
 export { redis, redisSub };

@@ -31,14 +31,13 @@ export default class ModelService {
             if (!models) {
                 return await query.$transaction(async (tx) => {
                     const models: Models = await tx.$queryRaw`
-                        SELECT *
-                        FROM User
-                                 INNER JOIN Model ON User.id = Model.user_id
-                        WHERE User.is_model = true
-                          AND User.id != ${user.id}
-                          AND Model.verification_status = true
-                        ORDER BY RAND()
-                            LIMIT ${limit};
+                        SELECT * FROM "User"
+                        INNER JOIN "Model" ON "User"."id" = "Model"."user_id"
+                        WHERE "User"."is_model" = true
+                        AND "User"."id" != ${user.id}
+                        AND "Model"."verification_status" = true
+                        ORDER BY RANDOM()
+                        LIMIT ${limit};
                     `;
 
                     const modelsWithoutPassword = models.map(({password, ...rest}: { password: string }) => rest);
