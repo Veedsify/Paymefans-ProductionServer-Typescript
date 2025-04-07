@@ -26,5 +26,6 @@ export function RegisterCloudflareStreamWebhook(): void {
         register()
     } catch (error) {
         console.error("Failed to register webhook", error)
+        throw new Error("Failed to register webhook")
     }
 }

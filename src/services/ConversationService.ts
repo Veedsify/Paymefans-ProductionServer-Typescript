@@ -232,6 +232,29 @@ export default class ConversationService {
     try {
       const skip = (Number(page) - 1) * Number(limit);
 
+      // Unread Count Of Messages
+      const unreadCount = await query.messages.findMany({
+        orderBy: {
+          created_at: 'desc', 
+        },
+        take: 1,
+        where: {
+          sender:{
+            id: {not: authUser.id}
+          },  
+          Conversations: {
+            participants: {
+              some: {
+                OR: [{ user_1: authUser.user_id }, { user_2: authUser.user_id }],
+              },
+            },
+          },
+          seen: false,
+        },
+      });
+      
+      console.log(unreadCount); 
+
       // Fetch conversations
       const conversationsByParticipants = await query.conversations.findMany({
         where: {
@@ -256,7 +279,7 @@ export default class ConversationService {
           status: true,
           conversations: [],
           hasMore: false,
-          unreadCount: 0,
+          unreadCount: unreadCount.length,
         };
       }
 
@@ -338,23 +361,11 @@ export default class ConversationService {
           return [];
         });
 
-      // Calculate unread count, checking for undefined lastMessage
-      const unreadCount = _.reduce(
-        filteredConversations,
-        (acc, conversation) =>
-          acc +
-          (!conversation?.lastMessage.seen &&
-          conversation?.lastMessage.sender_id !== authUser.user_id
-            ? 1
-            : 0),
-        0
-      );
-
       return {
         error: false,
         status: true,
         conversations: filteredConversations as Conversations[],
-        unreadCount,
+        unreadCount: unreadCount.length,
         hasMore,
       };
     } catch (error) {
@@ -480,7 +491,7 @@ export default class ConversationService {
                               CodecSettings: {
                                 Codec: VideoCodec.H_264,
                                 H264Settings: {
-                                  RateControlMode: "QVBR",  // Explicitly set rate control mode
+                                  RateControlMode: "QVBR", // Explicitly set rate control mode
                                   MaxBitrate: 1000000,
                                   QvbrQualityLevel: 8,
                                   // Remove any Bitrate setting if present
@@ -507,7 +518,7 @@ export default class ConversationService {
                               CodecSettings: {
                                 Codec: VideoCodec.H_264,
                                 H264Settings: {
-                                  RateControlMode: "QVBR",  // Explicitly set rate control mode
+                                  RateControlMode: "QVBR", // Explicitly set rate control mode
                                   MaxBitrate: 2000000,
                                   QvbrQualityLevel: 8,
                                   // Remove any Bitrate setting if present
@@ -534,7 +545,7 @@ export default class ConversationService {
                               CodecSettings: {
                                 Codec: VideoCodec.H_264,
                                 H264Settings: {
-                                  RateControlMode: "QVBR",  // Explicitly set rate control mode
+                                  RateControlMode: "QVBR", // Explicitly set rate control mode
                                   MaxBitrate: 4000000,
                                   QvbrQualityLevel: 8,
                                 },
@@ -573,13 +584,12 @@ export default class ConversationService {
 
                 await fs.promises.unlink(file.path);
                 processedPath = {
-                    url: `processed/${conversationId}/${file.filename}/master.m3u8`,
-                    name: file.filename,
-                    size: file.size,
-                    type: file.mimetype,
-                    extension: path.extname(file.originalname)
-                }
-               
+                  url: `processed/${conversationId}/${file.filename}/master.m3u8`,
+                  name: file.filename,
+                  size: file.size,
+                  type: file.mimetype,
+                  extension: path.extname(file.originalname),
+                };
               } catch (error) {
                 console.error(
                   `Error processing video file ${file.filename}:`,
@@ -605,8 +615,8 @@ export default class ConversationService {
                     name: file.filename,
                     size: file.size,
                     type: file.mimetype,
-                    extension: path.extname(file.originalname)
-                }
+                    extension: path.extname(file.originalname),
+                  };
                 },
                 resize: {
                   height: null,
@@ -620,7 +630,7 @@ export default class ConversationService {
 
             if (processedPath) {
               processedPaths.push(processedPath);
-              console.log(processedPaths)
+              console.log(processedPaths);
             }
           } catch (error) {
             console.error(`Error processing file ${file.filename}:`, error);
@@ -628,7 +638,7 @@ export default class ConversationService {
         })
       );
 
-      return {  
+      return {
         message:
           processedPaths.length > 0
             ? "Attachments uploaded successfully"

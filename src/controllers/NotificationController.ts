@@ -26,9 +26,9 @@ export default class NotificationController {
             try {
                   const notification = await NotificationService.ReadNotification(req.params.id as string, req.user!.id as number)
                   if (notification.error) {
-                        res.status(401).json(notification)
+                        res.status(401).json(notification);
                   }
-                  res.status(200).json(notification)
+                  res.status(200).json(notification);
             }
             catch (err: any) {
                   console.log(err);

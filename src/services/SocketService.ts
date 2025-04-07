@@ -209,7 +209,6 @@ export default class SocketService {
     socket.join(`notifications-${userId}`);
     const unreadNotifications =
       await NotificationService.GetUnreadNotifications(userId);
-    console.log("Unread Notifications", unreadNotifications);
     socket.emit(`notifications-${userId}`, unreadNotifications);
   }
 
@@ -217,12 +216,11 @@ export default class SocketService {
   // Join conversations room for user conversations
   static async HandleConversationsOpened(
     conversationId: string,
-    socket: Socket,
+    socket: Socket
   ) {
     socket.emit("prefetch-conversations", conversationId);
   }
   // Save message to database
-
 
   // Handle New Message
   static async HandleMessage(
@@ -230,7 +228,7 @@ export default class SocketService {
     socket: Socket,
     userRoom: string,
     user: SocketUser,
-    io: any,
+    _: any
   ) {
     try {
       const message = await SaveMessageToDb.SaveMessage(data);
@@ -246,7 +244,7 @@ export default class SocketService {
         await redis.del(receiverMessageKey);
         await redis.del(`conversations:${user.userId}`);
         await redis.del(`conversations:${data.receiver_id}`);
-        io.to(userRoom).emit("prefetch-conversations", "conversations");
+        socket.broadcast.to(userRoom).emit("prefetch-conversations", "conversations");
       }
     } catch (e) {
       socket.emit("message-error", {
@@ -268,5 +266,28 @@ export default class SocketService {
       userId: data.userId,
     };
     socket.emit("prefetch-conversations", "conversations");
+  }
+
+  // Handle Reconnect To Rooms
+  static async HandleReconnectToRooms(socket: Socket, userId: string) {
+    const roomId = await redis.get(`user:${userId}:room`);
+    if (roomId) {
+      socket.join(roomId);
+      const user = {
+        socketId: socket.id,
+        userId,
+        username: "", // Optional: can pull from redis if needed
+      };
+      await redis.hset(`room:${roomId}`, userId, JSON.stringify(user));
+    }
+  }
+
+  // Handle Restore Notifications
+  static async HandleRestoreNotifications(socket: Socket, userId: string) {
+    const notifications = await NotificationService.GetUnreadNotifications(
+      userId
+    );
+    socket.join(`notifications-${userId}`);
+    socket.emit(`notifications-${userId}`, notifications);
   }
 }

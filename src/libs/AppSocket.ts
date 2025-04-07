@@ -12,8 +12,12 @@ async function AppSocket(io: any) {
       username: "",
     };
 
-    const AddToUserRoom = (data: any) => {
+    const AddToUserRoom = async (data: any) => {
       userRoom = data;
+
+      // Store mapping in Redis
+      await redis.hset(`room:${data}`, user.userId, JSON.stringify(user));
+      await redis.set(`user:${user.userId}:room`, data);
     };
 
     // Socket Actions
@@ -51,8 +55,15 @@ async function AppSocket(io: any) {
       SocketService.HandleUserConnected(socket, user, data)
     );
     socket.on("new-message", (data: any) => {
-      SocketService.HandleMessage(data, socket, userRoom, user,io);
+      SocketService.HandleMessage(data, socket, userRoom, user, io);
     });
+    socket.on("restoreRoom", (data: { userId: string }) => {
+      SocketService.HandleReconnectToRooms(socket, data.userId);
+    });
+    socket.on("restoreNotifications", (data: { userId: string }) => {
+      SocketService.HandleRestoreNotifications(socket, data.userId);
+    });
+
     // socket.on("new-message", handleMessage);
     socket.on("disconnect", async () => {
       // invalidate conversations cache

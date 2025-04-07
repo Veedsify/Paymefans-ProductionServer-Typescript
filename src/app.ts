@@ -11,8 +11,6 @@ import logger from "morgan";
 import cron from "node-cron";
 import ModelsRedisPubSub from "@libs/ModelsRedisPubSub";
 import IoInstance from "@libs/io";
-import TriggerModels from "@jobs/models";
-import TriggerHookups from "@jobs/hookup";
 import HookupRedisPubSub from "@libs/HookupRedisPubSub";
 import type {Request, Response} from "express";
 import EmitActiveUsers from "@jobs/EmitActiveUsers";
@@ -94,10 +92,6 @@ app.use((err: any, _: Request, res: Response, next: NextFunction) => {
 // Graceful shutdown
 process.on("SIGINT", () => {
         console.log("Shutting down gracefully...");
-        if (cronJob) {
-            cronJob.stop();
-            console.log("Cron job stopped.");
-        }
         if (activeUsersCron) {
             activeUsersCron.stop();
             console.log("Active Cron Stopped");
