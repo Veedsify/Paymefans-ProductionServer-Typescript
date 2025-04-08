@@ -75,6 +75,9 @@ app.use("/api", api);
 ModelsJobs()
 
 
+//Bullmq For Emails,
+
+
 // Custom error-handling middleware
 app.use((err: any, _: Request, res: Response, next: NextFunction) => {
     console.error(`Error occurred: ${err.message}`);

@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Welcome to PayMeFans</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap');
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: "Inter", sans-serif;
+            line-height: 1.6;
+            color: #4a4a4a;
+            background-color: #ffff;
+        }
+        .container {
+            width: 100%;
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: #fff;
+            /* box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05); */
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .header {
+            text-align: center;
+            padding: 20px;
+            background-color: #fafafa;
+            border-bottom: 1px solid #eaeaea;
+        }
+
+
+        .logo {
+               height: 40px;
+               margin-bottom: 5px;
+               color: #a94296;
+               float: left;
+          }
+
+        .navigation-button {
+            float: right;
+            padding: 8px 15px;
+            background-color: #a94296;
+            color: #fff;
+            text-decoration: none;
+            font-size: 14px;
+            border-radius: 5px;
+            transition: background-color 0.3s ease;
+        }
+
+        .navigation-button:hover {
+            background-color: #8d357c;
+        }
+
+        /* HERO IMAGE FIX */
+        .hero-image {
+    position: relative;
+    width: 100%;
+    height: 200px;
+    overflow: hidden;
+}
+
+.hero-image img {
+    width: 100%;
+    height: 100%; 
+    object-fit: cover;
+    display: block;
+}
+
+.hero-text {
+    position: absolute;
+    bottom: 20px;
+    left: 50%; 
+    transform: translateX(-50%);
+    font-size: 28px;
+    color: #fff; 
+    text-align: center;
+    background-color: rgba(0, 0, 0, 0.6); 
+    padding: 10px 20px;
+    border-radius: 5px; 
+}
+
+        .content {
+            padding: 30px 20px;
+            text-align: left;
+            box-shadow: rgba(0, 0, 0, 0.02) 0px 1px 3px 0px, rgba(27, 31, 35, 0.15) 0px 0px 0px 1px;
+            /* border: 2px solid red; */
+        }
+
+        h1 {
+            font-size: 24px;
+            margin-bottom: 15px;
+            color: #9d3d8c;
+            text-align: center;
+        }
+
+        p {
+            font-size: 16px;
+            line-height: 1.6;
+            margin-bottom: 20px;
+            color: #555;
+        }
+
+        ul {
+            margin-left: 20px;
+            margin-bottom: 40px;
+            /* border: 2px solid red; */
+            /* box-shadow: rgba(0, 0, 0, 0.02) 0px 1px 3px 0px, rgba(27, 31, 35, 0.15) 0px 0px 0px 1px; */
+            
+        }
+
+        ul li, ol li {
+            position: relative;
+            padding-left: 25px;
+            margin-bottom: 10px;
+            
+        }
+
+
+        .resources {
+            margin-top: 30px;
+            margin-bottom: 10px;
+        }
+
+        .resource {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .resource img {
+            width: 100px;
+            height: 100px;
+            margin-right: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        .resource h3 {
+            font-size: 20px;
+            margin: 0;
+            color: #333;
+        }
+
+        .resource p {
+            font-size: 16px;
+            margin-top: 5px;
+            color: #555;
+        }
+
+
+
+         /* Button Section */
+         .button {
+            text-align: center;
+            padding: 20px 0;
+        }
+
+        .button a {
+            display: inline-block;
+            padding: 12px 25px;
+            text-decoration: none;
+            border-radius: 25px;
+            font-size: 16px;
+            margin: 0 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            transition: background-color 0.3s ease;
+        }
+
+        .button a.primary {
+            background-color: #a94296;
+            color: #fff;
+        }
+
+        .button a.secondary {
+            background-color: #f0f0f0;
+            color: #4a4a4a;
+        }
+
+        .button a:hover {
+            filter: brightness(0.9);
+        }
+
+        /* Footer */
+        .footer {
+            background-color: #fafafa;
+            border-top: 1px solid #eaeaea;
+            text-align: center;
+            padding: 20px;
+        }
+
+        .footer p {
+            font-size: 14px;
+            color: #777;
+            margin-bottom: 10px;
+        }
+
+        .footer a {
+            font-size: 12px;
+            color: #aaa;
+            text-decoration: none;
+            margin: 0 10px;
+        }
+
+        .footer a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <table width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                    <td width="50%">
+                        <svg class="logo" viewBox="0 0 24 24">
+                            <!-- Simple placeholder logo - replace with actual logo -->
+                            <path fill="currentColor" d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
+                       </svg>
+                    </td>
+                    <td width="50%" style="text-align: right;">
+                        <a href="#" class="navigation-button">Navigate to Dashboard</a>
+                    </td>
+                </tr>
+            </table>
+        </div>
+
+        <!-- Hero Image -->
+        <div class="hero-image">
+            <img src="/PayMe Fans/Art 07.png" alt="Welcome Illustration">
+            <h1 class="hero-text">You're in 🎊</h1>
+        </div>
+
+        <!-- Content -->
+        <div class="content">
+            <h1>A Warm Welcome to Model/Creators</h1>
+            <p>Dear Tavel,</p>
+            <p>We're thrilled to have you on board as a PayMeFans Model. We're beyond excited to have you join our community! PayMeFans is a platform designed specifically for content creators like you to share your amazing content with the world. By joining, you've taken the first step towards monetizing your content and connecting with fans who appreciate your unique style.</p>
+
+            <p><strong>Here's what you can expect from us:</strong></p>
+            <ul>
+                <li>A platform to share your exclusive content with your fans</li>
+                <li>Opportunities to earn money through subscriptions and tips</li>
+                <li>A community of like-minded creators and fans who support and appreciate your work</li>
+                <li>Connect with other content creators in our group chat</li>
+                <li>Earn 100% of the revenue</li>
+                <li>A 25% withdrawal fee will be charged as a PayMeFans Creator/Model</li>
+                <li>You must add a valid payout method to receive payments</li>
+            </ul>
+
+            <p><strong>To get started, simply:</strong></p>
+            <!-- <ol>
+                <li>Complete your profile to showcase your brand and style</li>
+                <li>Upload your exclusive content and set your subscription price</li>
+                <li>Share your PayMeFans link with your fans and social media networks</li>
+            </ol> -->
+
+             <!-- Resources -->
+        <div class="resources">
+            <table width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                    <td>
+                        <div class="resource">
+                            <img src="/PayMe Fans/Art 03.png" alt="Prototype">
+                            <div>
+                                <h3>⭐Step 1</h3>
+                                <p>Complete your profile to showcase your brand and style</p>
+                            </div>
+                        </div>
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        <div class="resource">
+                            <img src="/PayMe Fans/Art 04.png" alt="Wireframe">
+                            <div>
+                                <h3>✨ Step 2</h3>
+                                <p>Upload your exclusive content and set your subscription price</p>
+                            </div>
+                        </div>
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        <div class="resource">
+                            <img src="/PayMe Fans/Art 05.png" alt="Comments">
+                            <div>
+                                <h3>👪 Step 3</h3>
+                                <p>Share your PayMeFans link with your fans and social media networks</p>
+                            </div>
+                        </div>
+                    </td>
+                </tr>
+            </table>
+        </div>
+
+            <p>Our team is always here to support you. If you have any questions or need help, just reach out to us at <a href="mailto:support@paymefans.com" style="color: #007bff;">support@paymefans.com</a>.</p>
+
+            <p>Thank you for choosing PayMeFans! We're honored to be a part of your creative journey.</p>
+            <p>Best regards,<br>The PayMeFans Team</p>
+        </div>
+
+        <!-- Button Section -->
+        <table class="button" cellpadding="0" cellspacing="0" width="100%">
+            <tr>
+                <td>
+                    <a href="#" class="primary">Get Started Now</a>
+                    <a href="#" class="secondary">View Guidelines</a>
+                </td>
+            </tr>
+        </table>
+
+        <!-- Footer -->
+        <table class="footer" cellpadding="0" cellspacing="0" width="100%">
+            <tr>
+                <td>
+                    <p>PayMeFans Ltd. &copy; <script>document.write(new Date().getFullYear());</script></p>
+                    <p>
+                        <a href="#">Privacy Policy</a> |
+                        <a href="#">Terms of Service</a>
+                    </p>
+                    <p>
+                        <a href="#">Unsubscribe</a> · 
+                        <a href="#">Notification Settings</a>
+                    </p>
+                </td>
+            </tr>
+        </table>
+    </div>
+</body>
+</html>

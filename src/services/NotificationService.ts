@@ -76,26 +76,24 @@ export default class NotificationService {
   // All Unread Notifications
   // This function is used to get all unread notifications
   static async GetUnreadNotifications(userId: string) {
-    return await query.$transaction(async (prisma) => {
-      const user = await prisma.user.findFirst({
-        where: {
-          user_id: userId,
-        },
-        select: {
-          id: true,
-        },
-      });
-      const notifications = await prisma.notifications.count({
-        where: {
-          user_id: user?.id,
-          read: false,
-        },
-      });
-
-      return {
-        error: false,
-        data: notifications,
-      };
+    const user = await query.user.findFirst({
+      where: {
+        user_id: userId,
+      },
+      select: {
+        id: true,
+      },
     });
+    const notifications = await query.notifications.count({
+      where: {
+        user_id: user?.id,
+        read: false,
+      },
+    });
+
+    return {
+      error: false,
+      data: notifications,
+    };
   }
 }

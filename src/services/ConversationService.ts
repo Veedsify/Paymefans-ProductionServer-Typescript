@@ -80,7 +80,7 @@ export default class ConversationService {
       const data = await query.conversations.findFirst({
         where: { conversation_id: conversationId },
         select: {
-          messages: { orderBy: { created_at: "asc" } },
+          messages: { orderBy: { id: "asc" } },
           participants: true,
         },
       });
@@ -235,25 +235,26 @@ export default class ConversationService {
       // Unread Count Of Messages
       const unreadCount = await query.messages.findMany({
         orderBy: {
-          created_at: 'desc', 
+          created_at: "desc",
         },
         take: 1,
         where: {
-          sender:{
-            id: {not: authUser.id}
-          },  
+          sender: {
+            id: { not: authUser.id },
+          },
           Conversations: {
             participants: {
               some: {
-                OR: [{ user_1: authUser.user_id }, { user_2: authUser.user_id }],
+                OR: [
+                  { user_1: authUser.user_id },
+                  { user_2: authUser.user_id },
+                ],
               },
             },
           },
           seen: false,
         },
       });
-      
-      console.log(unreadCount); 
 
       // Fetch conversations
       const conversationsByParticipants = await query.conversations.findMany({

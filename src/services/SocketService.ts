@@ -13,6 +13,7 @@ import FollowerService from "./FollowerService";
 import query from "@utils/prisma";
 import NotificationService from "./NotificationService";
 import SaveMessageToDb from "./SaveMessageToDb";
+import EmailService from "./EmailService";
 
 export default class SocketService {
   // Emit active users
@@ -228,7 +229,7 @@ export default class SocketService {
     socket: Socket,
     userRoom: string,
     user: SocketUser,
-    _: any
+    io: any
   ) {
     try {
       const message = await SaveMessageToDb.SaveMessage(data);
@@ -237,6 +238,7 @@ export default class SocketService {
           ...data,
           message_id: message.message_id,
         });
+
         //clear cached conversations
         const userMessageKey = `user:${user.userId}:conversations:${userRoom}`;
         const receiverMessageKey = `user:${data.receiver_id}:conversations:${userRoom}`;
@@ -244,7 +246,43 @@ export default class SocketService {
         await redis.del(receiverMessageKey);
         await redis.del(`conversations:${user.userId}`);
         await redis.del(`conversations:${data.receiver_id}`);
-        socket.broadcast.to(userRoom).emit("prefetch-conversations", "conversations");
+        io.to(userRoom).emit("prefetch-conversations", "conversations");
+
+        // Check If Receiver Is Active
+        const allActiveUsers = await redis.hgetall("activeUsers");
+        const targetUsername = message.receiver.username;
+
+        const foundStr = Object.values(allActiveUsers).find((str) => {
+          const obj = JSON.parse(str);
+          return obj.username === targetUsername;
+        });
+
+        const found = foundStr
+          ? (JSON.parse(foundStr) as { username: string; socket_id: string })
+          : undefined;
+
+        // Send New Message If Receiver Is Not Active
+        if (!found) {
+          const name =
+            message.receiver.name.split(" ")[0] ?? message.receiver.name;
+          const subject = `You've received a new message on PayMeFans!`;
+          const link = `${process.env.APP_URL}/chats/${message.conversationsId}`;
+          await EmailService.SendNewMessageEmail({
+            email: message.receiver.email,
+            name: name,
+            subject,
+            link,
+          });
+        } else {
+          io.to(found.socket_id).emit(
+            "prefetch-conversations",
+            "conversations"
+          );
+        }
+      } else {
+        socket.emit("message-error", {
+          message: "An error occurred while sending this message",
+        });
       }
     } catch (e) {
       socket.emit("message-error", {
@@ -266,6 +304,7 @@ export default class SocketService {
       userId: data.userId,
     };
     socket.emit("prefetch-conversations", "conversations");
+    return user;
   }
 
   // Handle Reconnect To Rooms

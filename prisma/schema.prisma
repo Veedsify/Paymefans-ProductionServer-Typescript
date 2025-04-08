@@ -946,6 +946,13 @@ model LoginHistory {
   user        User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
 }
 
+model BatchProcessLogs {
+  id       Int    @id @default(autoincrement())
+  job_id   String
+  job_name String @default("Undefined Jobs")
+  job_data String @db.Text
+}
+
 // ENUMS DECLARATION
 
 enum OrderStatus {

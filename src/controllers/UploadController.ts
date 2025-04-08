@@ -25,6 +25,7 @@ class UploadController {
                         const image = {
                               buffer: fileBuffer,
                               originalname: file.originalname,
+                              mimetype: file.mimetype
                         };
 
                         // requires buffer

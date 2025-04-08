@@ -1,11 +1,12 @@
-import { SendPointPurchaseEmailTemplate } from "../emails/SendPointPurchase";
 import type {
   EmailServiceProp,
   EmailServiceResponse,
   SendEmailResponse,
   SendEmailServiceProp,
+  SendNewMessageEmailProps,
 } from "../types/email";
 import transporter from "@libs/NodemailerTransporter";
+import { EmailQueue } from "@jobs/emails/EmailQueueHandler";
 
 const { APP_NAME, MAIL_USER } = process.env;
 
@@ -58,21 +59,70 @@ export default class EmailService {
     if (!email || !subject || !name || !points || !transactionId) {
       return { message: "Invalid Email Request", error: true };
     }
-    // Send Email
     try {
-      const mailOptions = {
-        from: `${APP_NAME}`,
-        to: email,
-        subject: subject, 
-        html: SendPointPurchaseEmailTemplate({ name, points, transactionId }), // Name of the Handlebars template
+      const options = {
+        emailData: {
+          email,
+          subject,
+        },
+        template: "pointpurchase.ejs",
+        templateData: { name, points, transactionId },
       };
-      const result = await transporter.sendMail(mailOptions);
-      console.log(result);
-      return { message: "Email sent successfully", error: false };
+
+      const sendEmail = await EmailQueue.add("pointPurchasEmail", options, {
+        attempts: 3,
+        backoff: 5000,
+      });
+
+      console.log("Email Queue", JSON.stringify(sendEmail));
+
+      if (sendEmail) {
+        return { message: "Email sent successfully", error: false };
+      }
+      return { message: "Email Not Sent", error: true };
     } catch (error: any) {
       throw new Error(error);
     }
   }
 
+  // Send New Message Email
+  static async SendNewMessageEmail({
+    name,
+    email,
+    subject,
+    link,
+  }: SendNewMessageEmailProps): Promise<{
+    message: string;
+    error: boolean;
+  }> {
+    try {
+      if (!email || !subject || !name || !link) {
+        return { message: "Invalid Email Request", error: true };
+      }
 
+      const options = {
+        emailData: {
+          email,
+          subject,
+        },
+        template: "newMessage.ejs",
+        templateData: { name, link },
+      };
+
+      const sendEmail = await EmailQueue.add("newMessageEmail", options, {
+        attempts: 3,
+        backoff: 5000,
+      });
+
+      console.log("Email Queue", JSON.stringify(sendEmail));
+
+      if (sendEmail) {
+        return { message: "Email sent successfully", error: false };
+      }
+
+      return { message: `Email Sent Successfully`, error: false };
+    } catch (err: any) {
+      throw new Error(err.message);
+    }
+  }
 }
