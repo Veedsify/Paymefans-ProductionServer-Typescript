@@ -28,7 +28,8 @@ export type LoginUserProps = {
 export type LoginUserResponse = {
       error: boolean;
       message: string;
-      token?: string;
+      token?: string | null;
+      tfa?: boolean;
       user?: Omit<User, "password">;
 }  
 

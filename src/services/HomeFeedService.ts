@@ -1,15 +1,18 @@
 import type { Post } from "@prisma/client";
 import query from "@utils/prisma";
+import type { PostWithLike } from "../types/feed";
 
 class FeedService {
-  private static readonly POSTS_PER_HOME_PAGE = Number(process.env.POSTS_PER_HOME_PAGE) || 10;
+  private static readonly POSTS_PER_HOME_PAGE =
+    Number(process.env.POSTS_PER_HOME_PAGE) || 10;
   private static readonly ENGAGEMENT_WEIGHT = 0.4;
   private static readonly RECENCY_WEIGHT = 0.3;
   private static readonly RELEVANCE_WEIGHT = 0.3;
   private static readonly TIME_DECAY_FACTOR = 0.1;
 
   private calculateEngagementScore(post: Post): number {
-    const totalInteractions = post.post_likes + post.post_comments + post.post_reposts;
+    const totalInteractions =
+      post.post_likes + post.post_comments + post.post_reposts;
     return (
       (post.post_likes * 1 + post.post_comments * 1.5 + post.post_reposts * 2) /
       (totalInteractions || 1)
@@ -21,7 +24,10 @@ class FeedService {
     return Math.exp(-FeedService.TIME_DECAY_FACTOR * ageInHours);
   }
 
-  private async calculateRelevanceScore(post: Post, userId: number): Promise<number> {
+  private async calculateRelevanceScore(
+    post: Post,
+    userId: number
+  ): Promise<number> {
     const [userInteractions, followsCreator, isSubscribed] = await Promise.all([
       query.postLike.findMany({
         where: { user_id: userId },
@@ -47,8 +53,11 @@ class FeedService {
     return Math.min(relevanceScore, 1);
   }
 
-  public async getHomeFeed(userId: number, page: number): Promise<{
-    posts: Array<Post & { score: number }>;
+  public async getHomeFeed(
+    userId: number,
+    page: number
+  ): Promise<{
+    posts: Array<Post & { score: number, likedByme: boolean }>;
     page: number;
     hasMore: boolean;
   }> {
@@ -91,16 +100,29 @@ class FeedService {
           },
         },
         UserMedia: true,
-        PostLike: true,
-        UserRepost: true,
       },
       skip,
       take: FeedService.POSTS_PER_HOME_PAGE,
       orderBy: { created_at: "desc" },
     });
 
+    const postsChecked = posts.map(async (post) => {
+      const postLike = await query.postLike.findFirst({
+        where: {
+          user_id: post.user.id,
+          post_id: post.id,
+        },
+      });
+      return {
+        ...post,
+        likedByme: (postLike) ? true : false,
+      };
+    });
+
+    const resolvedPosts = await Promise.all(postsChecked);
+
     const scoredPosts = await Promise.all(
-      posts.map(async (post) => {
+      resolvedPosts.map(async (post) => {
         const engagementScore = this.calculateEngagementScore(post);
         const recencyScore = this.calculateRecencyScore(post.created_at);
         const relevanceScore = await this.calculateRelevanceScore(post, userId);
@@ -125,7 +147,7 @@ class FeedService {
     viewerId: number,
     targetUserId: number,
     page: number
-  ): Promise<{ posts: Post[]; page: number; hasMore: boolean }> {
+  ): Promise<{ posts: PostWithLike; page: number; hasMore: boolean }> {
     const skip = (page - 1) * FeedService.POSTS_PER_HOME_PAGE;
 
     const [isFollowing, isSubscribed] = await Promise.all([

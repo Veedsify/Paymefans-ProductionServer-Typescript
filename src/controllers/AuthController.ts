@@ -30,10 +30,11 @@ export default class AuthController {
         });
 
         if (!CheckForUsername.status) {
-            return res.status(401).json({ message: CheckForUsername.message, status: false });
+            console.log(CheckForUsername)
+            return res.status(401).json(CheckForUsername);
         }
 
-        return res.status(200).json({ message: CheckForUsername.message, status: true });
+        return res.status(200).json(CheckForUsername);
     }
 
     // Login Service
@@ -43,10 +44,10 @@ export default class AuthController {
 
             if (LoginAccount.error) {
                 console.log(LoginAccount.message)
-                return res.status(401).json({ message: LoginAccount.message, status: false });
+                return res.status(401).json(LoginAccount);
             }
 
-            return res.status(200).json({ message: "Login successful", status: true, token: LoginAccount.token, user: LoginAccount.user });
+            return res.status(200).json(LoginAccount);
         } catch (error) {
             return res.status(500).json({ message: "Internal server error", status: false });
         }
@@ -76,5 +77,37 @@ export default class AuthController {
     static async Retrieve(req: Request, res: Response): Promise<any> {
         const user = await UserService.RetrieveUser(req?.user?.id as number)
         return res.status(200).json(user);
+    }
+
+    // Two Factor Authentication
+    static async TwoFactorAuth(req: Request, res: Response): Promise<any> {
+        try {
+            const { two_factor_auth } = req.body;
+            const user = await UserService.UpdateTwoFactorAuth(req?.user?.id as number, two_factor_auth);
+
+            if (user.error) {
+                return res.status(401).json(user);
+            }
+
+            return res.status(200).json(user);
+        } catch (error) {
+            return res.status(500).json({ message: "Internal server error", status: false });
+        }
+    }
+
+    // Verify Two Factor Authentication
+    static async VerifyTwoFactorAuth(req: Request, res: Response): Promise<any> {
+        try {
+            const { code } = req.body;
+            const user = await UserService.VerifyTwoFactorAuth(code);
+
+            if (user.error) {
+                return res.status(401).json(user);
+            }
+
+            return res.status(200).json(user);
+        } catch (error) {
+            return res.status(500).json({ message: "Internal server error", status: false });
+        }
     }
 }

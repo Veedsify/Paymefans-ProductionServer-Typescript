@@ -125,10 +125,7 @@ export interface MyPost {
     repost_id: string | null;
     repost_username: string | null;
     UserMedia?: UserMedia[];
-    PostLike: {
-        post_id: number;
-        user_id: number;
-    }[];
+    likedByme: boolean;
     user: {
         username: string;
         profile_image: string | null;
@@ -186,10 +183,7 @@ interface GetSinglePost {
     repost_id: string | null;
     repost_username: string | null;
     UserMedia?: UserMedia[];
-    PostLike: {
-        post_id: number;
-        user_id: number;
-    }[];
+    likedByme: boolean;
     user: {
         username: string;
         profile_image: string | null;
@@ -315,28 +309,6 @@ export interface GetPostCommentsResponse {
     error: boolean;
     hasMore: boolean;
     message: string;
-    data: {
-        id: number;
-        comment: string;
-        created_at: Date;
-        user: {
-            username: string;
-            profile_image: string | null;
-            name: string;
-        }
-        PostCommentAttachments: {
-            id: number,
-            comment_id: number,
-            path: string,
-            type: string,
-            created_at: Date,
-        }[];
-        PostCommentLikes: {
-            id: number;
-            comment_id: number;
-            user_id: number;
-            created_at: Date;
-        }[];
-    }[];
+    data: Comments;
     total: number;
 }

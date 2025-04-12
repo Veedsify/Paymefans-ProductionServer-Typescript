@@ -11,7 +11,7 @@
     "bun-build": "bun build",
     "start": "node -r tsconfig-paths/register dist/app.js",
     "dev": "nodemon --exec tsx -r tsconfig-paths/register src/app.ts",
-    "dev2": "bun --hot src/app.ts"
+    "dev2": "bun run --hot src/app.ts"
   },
   "keywords": [],
   "author": "",

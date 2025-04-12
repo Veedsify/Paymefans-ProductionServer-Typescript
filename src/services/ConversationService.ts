@@ -17,16 +17,16 @@ import type { AuthUser } from "types/user";
 import fs from "fs";
 import s3 from "@utils/s3";
 import path from "path";
-import {
-  CreateJobCommand,
-  OutputGroupType,
-  AacCodingMode,
-  MediaConvertClient,
-  VideoCodec,
-  AudioCodec,
-  ContainerType,
-} from "@aws-sdk/client-mediaconvert";
-const { AWS_ACCESS_KEY, AWS_REGION, AWS_SECRET_KEY } = process.env;
+// import {
+//   CreateJobCommand,
+//   OutputGroupType,
+//   AacCodingMode,
+//   MediaConvertClient,
+//   VideoCodec,
+//   AudioCodec,
+//   ContainerType,
+// } from "@aws-sdk/client-mediaconvert";
+// const { AWS_ACCESS_KEY, AWS_REGION, AWS_SECRET_KEY } = process.env;
 import { Upload } from "@aws-sdk/lib-storage";
 import _ from "lodash";
 import type { Messages } from "@prisma/client";
@@ -461,127 +461,127 @@ export default class ConversationService {
                 await uploadPromise;
                 console.log(`Successfully uploaded ${file.filename} to S3`);
 
-                const jobSettings = {
-                  Queue: process.env.AWS_MEDIACONVERT_QUEUE_ARN,
-                  Role: process.env.AWS_MEDIACONVERT_ROLE_ARN,
-                  Settings: {
-                    Inputs: [
-                      {
-                        FileInput: `s3://${process.env.S3_BUCKET_NAME}/${s3Key}`,
-                        ContainerSettings: {
-                          Container: ContainerType.MP4,
-                        },
-                      },
-                    ],
-                    OutputGroups: [
-                      {
-                        Name: "HLS Output",
-                        OutputGroupSettings: {
-                          Type: OutputGroupType.HLS_GROUP_SETTINGS,
-                          HlsGroupSettings: {
-                            SegmentLength: 6,
-                            MinSegmentLength: 0,
-                            Destination: `s3://${process.env.S3_BUCKET_NAME}/processed/${conversationId}/${file.filename}/`,
-                          },
-                        },
-                        Outputs: [
-                          {
-                            NameModifier: "360p",
-                            VideoDescription: {
-                              Height: 360,
-                              CodecSettings: {
-                                Codec: VideoCodec.H_264,
-                                H264Settings: {
-                                  RateControlMode: "QVBR", // Explicitly set rate control mode
-                                  MaxBitrate: 1000000,
-                                  QvbrQualityLevel: 8,
-                                  // Remove any Bitrate setting if present
-                                },
-                              },
-                            },
-                            AudioDescriptions: [
-                              {
-                                CodecSettings: {
-                                  Codec: AudioCodec.AAC,
-                                  AacSettings: {
-                                    Bitrate: 128000,
-                                    CodingMode: AacCodingMode.CODING_MODE_2_0,
-                                    SampleRate: 48000,
-                                  },
-                                },
-                              },
-                            ],
-                          },
-                          {
-                            NameModifier: "720p",
-                            VideoDescription: {
-                              Height: 720,
-                              CodecSettings: {
-                                Codec: VideoCodec.H_264,
-                                H264Settings: {
-                                  RateControlMode: "QVBR", // Explicitly set rate control mode
-                                  MaxBitrate: 2000000,
-                                  QvbrQualityLevel: 8,
-                                  // Remove any Bitrate setting if present
-                                },
-                              },
-                            },
-                            AudioDescriptions: [
-                              {
-                                CodecSettings: {
-                                  Codec: AudioCodec.AAC,
-                                  AacSettings: {
-                                    Bitrate: 128000,
-                                    CodingMode: AacCodingMode.CODING_MODE_2_0,
-                                    SampleRate: 48000,
-                                  },
-                                },
-                              },
-                            ],
-                          },
-                          {
-                            NameModifier: "1080p",
-                            VideoDescription: {
-                              Height: 1080,
-                              CodecSettings: {
-                                Codec: VideoCodec.H_264,
-                                H264Settings: {
-                                  RateControlMode: "QVBR", // Explicitly set rate control mode
-                                  MaxBitrate: 4000000,
-                                  QvbrQualityLevel: 8,
-                                },
-                              },
-                            },
-                            AudioDescriptions: [
-                              {
-                                CodecSettings: {
-                                  Codec: AudioCodec.AAC,
-                                  AacSettings: {
-                                    Bitrate: 128000,
-                                    CodingMode: AacCodingMode.CODING_MODE_2_0,
-                                    SampleRate: 48000,
-                                  },
-                                },
-                              },
-                            ],
-                          },
-                        ],
-                      },
-                    ],
-                  },
-                };
+                // const jobSettings = {
+                //   Queue: process.env.AWS_MEDIACONVERT_QUEUE_ARN,
+                //   Role: process.env.AWS_MEDIACONVERT_ROLE_ARN,
+                //   Settings: {
+                //     Inputs: [
+                //       {
+                //         FileInput: `s3://${process.env.S3_BUCKET_NAME}/${s3Key}`,
+                //         ContainerSettings: {
+                //           Container: ContainerType.MP4,
+                //         },
+                //       },
+                //     ],
+                //     OutputGroups: [
+                //       {
+                //         Name: "HLS Output",
+                //         OutputGroupSettings: {
+                //           Type: OutputGroupType.HLS_GROUP_SETTINGS,
+                //           HlsGroupSettings: {
+                //             SegmentLength: 6,
+                //             MinSegmentLength: 0,
+                //             Destination: `s3://${process.env.S3_BUCKET_NAME}/processed/${conversationId}/${file.filename}/`,
+                //           },
+                //         },
+                //         Outputs: [
+                //           {
+                //             NameModifier: "360p",
+                //             VideoDescription: {
+                //               Height: 360,
+                //               CodecSettings: {
+                //                 Codec: VideoCodec.H_264,
+                //                 H264Settings: {
+                //                   RateControlMode: "QVBR", // Explicitly set rate control mode
+                //                   MaxBitrate: 1000000,
+                //                   QvbrQualityLevel: 8,
+                //                   // Remove any Bitrate setting if present
+                //                 },
+                //               },
+                //             },
+                //             AudioDescriptions: [
+                //               {
+                //                 CodecSettings: {
+                //                   Codec: AudioCodec.AAC,
+                //                   AacSettings: {
+                //                     Bitrate: 128000,
+                //                     CodingMode: AacCodingMode.CODING_MODE_2_0,
+                //                     SampleRate: 48000,
+                //                   },
+                //                 },
+                //               },
+                //             ],
+                //           },
+                //           {
+                //             NameModifier: "720p",
+                //             VideoDescription: {
+                //               Height: 720,
+                //               CodecSettings: {
+                //                 Codec: VideoCodec.H_264,
+                //                 H264Settings: {
+                //                   RateControlMode: "QVBR", // Explicitly set rate control mode
+                //                   MaxBitrate: 2000000,
+                //                   QvbrQualityLevel: 8,
+                //                   // Remove any Bitrate setting if present
+                //                 },
+                //               },
+                //             },
+                //             AudioDescriptions: [
+                //               {
+                //                 CodecSettings: {
+                //                   Codec: AudioCodec.AAC,
+                //                   AacSettings: {
+                //                     Bitrate: 128000,
+                //                     CodingMode: AacCodingMode.CODING_MODE_2_0,
+                //                     SampleRate: 48000,
+                //                   },
+                //                 },
+                //               },
+                //             ],
+                //           },
+                //           {
+                //             NameModifier: "1080p",
+                //             VideoDescription: {
+                //               Height: 1080,
+                //               CodecSettings: {
+                //                 Codec: VideoCodec.H_264,
+                //                 H264Settings: {
+                //                   RateControlMode: "QVBR", // Explicitly set rate control mode
+                //                   MaxBitrate: 4000000,
+                //                   QvbrQualityLevel: 8,
+                //                 },
+                //               },
+                //             },
+                //             AudioDescriptions: [
+                //               {
+                //                 CodecSettings: {
+                //                   Codec: AudioCodec.AAC,
+                //                   AacSettings: {
+                //                     Bitrate: 128000,
+                //                     CodingMode: AacCodingMode.CODING_MODE_2_0,
+                //                     SampleRate: 48000,
+                //                   },
+                //                 },
+                //               },
+                //             ],
+                //           },
+                //         ],
+                //       },
+                //     ],
+                //   },
+                // };
 
-                const processCommand = new CreateJobCommand(jobSettings);
-                const client = new MediaConvertClient({
-                  region: AWS_REGION as string,
-                  credentials: {
-                    accessKeyId: AWS_ACCESS_KEY as string,
-                    secretAccessKey: AWS_SECRET_KEY as string,
-                  },
-                });
+                // // const processCommand = new CreateJobCommand(jobSettings);
+                // const client = new MediaConvertClient({
+                //   region: AWS_REGION as string,
+                //   credentials: {
+                //     accessKeyId: AWS_ACCESS_KEY as string,
+                //     secretAccessKey: AWS_SECRET_KEY as string,
+                //   },
+                // });
 
-                const data = await client.send(processCommand);
-                console.log("MediaConvert Job created:", data);
+                // const data = await client.send(processCommand);
+                // console.log("MediaConvert Job created:", data);
 
                 await fs.promises.unlink(file.path);
                 processedPath = {

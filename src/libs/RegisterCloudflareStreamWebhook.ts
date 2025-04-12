@@ -19,8 +19,8 @@ export function RegisterCloudflareStreamWebhook(): void {
             if (!res.ok) {
                 console.error("Failed to register webhook", res)
             }
-            const response = await res.json()
-            console.log("Webhook registered", response)
+            await res.json()
+            console.log("Webhook registered")
         }
 
         register()

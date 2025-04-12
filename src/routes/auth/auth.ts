@@ -12,5 +12,7 @@ auth.post("/login", AuthController.Login);
 auth.post("/points", Auth, AuthController.Points);
 auth.post("/wallet", Auth, AuthController.Wallet);
 auth.get("/retrieve", Auth, AuthController.Retrieve);
+auth.post("/two-factor-authentication", Auth, AuthController.TwoFactorAuth);
+auth.post("/verify/authentication", AuthController.VerifyTwoFactorAuth);
 
 export default auth

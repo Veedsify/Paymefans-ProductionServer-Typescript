@@ -1,5 +1,6 @@
 import { UploadImageToS3 } from "@libs/UploadImageToS3";
 import { GenerateUniqueId } from "@utils/GenerateUniqueId";
+import { Comments } from "@utils/mongoSchema";
 import query from "@utils/prisma";
 import type { LikeCommentResponse, NewCommentResponse } from "types/comments";
 import type { AuthUser } from "types/user";
@@ -63,47 +64,29 @@ export default class CommentsService {
         }
       }
 
-      // Now execute the transaction
-      const newComment = await query.$transaction(async (prisma) => {
-        // Create the comment
-        const createdComment = await prisma.postComment.create({
-          data: {
-            comment: comment,
-            comment_id: comment_id,
-            post_id: Number(postId),
-            user_id: user.id,
+      const newComment = await Comments.insertOne({
+        name: user.name,
+        comment_id: comment_id,
+        username: user.username,
+        userId: user.id,
+        profile_image: user.profile_image,
+        postId: Number(postId),
+        parentId: null,
+        comment: comment,
+        attachment: commentAttachments,
+        likes: 0,
+        impressions: 0,
+      });
+
+      await query.post.update({
+        where: {
+          id: Number(postId),
+        },
+        data: {
+          post_comments: {
+            increment: 1,
           },
-        });
-
-        // Update post comment count
-        await prisma.post.update({
-          where: { id: parseInt(postId) },
-          data: { post_comments: { increment: 1 } },
-        });
-
-        // Insert attachments after the comment is created
-        if (commentAttachments.length > 0) {
-          await prisma.postCommentAttachments.createMany({
-            data: commentAttachments.map((attachment) => ({
-              comment_id: createdComment.id,
-              ...attachment,
-            })),
-          });
-        }
-
-        return await prisma.postComment.findUnique({
-          where: { id: createdComment.id },
-          select: {
-            id: true,
-            comment: true,
-            comment_id: true,
-            post_id: true,
-            user_id: true,
-            created_at: true,
-            updated_at: true,
-            PostCommentAttachments: true,
-          },
-        });
+        },
       });
 
       return {

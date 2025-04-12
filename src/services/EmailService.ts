@@ -5,12 +5,11 @@ import type {
   SendEmailServiceProp,
   SendNewMessageEmailProps,
 } from "../types/email";
-import transporter from "@libs/NodemailerTransporter";
 import { EmailQueue } from "@jobs/emails/EmailQueueHandler";
 
-const { APP_NAME, MAIL_USER } = process.env;
 
 export default class EmailService {
+  // Send Welcome Email
   static async SendWelcomeEmail(
     data: EmailServiceProp
   ): Promise<EmailServiceResponse> {
@@ -34,21 +33,35 @@ export default class EmailService {
         error: true,
       };
     }
-    const { email, subject, message } = data;
-    const mailOptions = {
-      from: `${APP_NAME} <${MAIL_USER}>`,
-      to: email,
-      subject: subject,
-      template: "welcome", // Name of the Handlebars template
-      context: { message, name: "Wisdom Dike" }, // Dynamic data
-    };
+
+    const options = {
+      emailData: {
+        email: data.email,
+        subject: data.subject,
+      },
+      template: "welcome.ejs",
+      templateData: {
+        message: data.message,
+      },
+    }
 
     try {
-      await transporter.sendMail(mailOptions);
-      return { message: "Email sent successfully", error: false };
+      const sendEmail = await EmailQueue.add("welcomeEmail", options, {
+        attempts: 3,
+        backoff: 5000,
+      });
+
+      console.log("Email Queue", JSON.stringify(sendEmail));
+
+      if (sendEmail) {
+        return { message: "Email sent successfully", error: false };
+      }
+
+      return { message: "Email Not Sent", error: true };
     } catch (error: any) {
-      return { message: error.message, error: true };
+      throw new Error(error);
     }
+    
   }
   // Send Point Purchase Email
   static async SendPointPurchaseEmail(
@@ -121,6 +134,50 @@ export default class EmailService {
       }
 
       return { message: `Email Sent Successfully`, error: false };
+    } catch (err: any) {
+      throw new Error(err.message);
+    }
+  }
+
+  // Send Two Factor Authentication Email
+  static async SendTwoFactorAuthEmail({
+    email,
+    subject,
+    code,
+    name,
+  }: {
+    email: string;
+    subject: string;
+    code: number;
+    name: string;
+  }): Promise<{
+    message: string;
+    error: boolean;
+  }> {
+    try {
+      if (!email || !subject || !code || !name) {
+        return { message: "Invalid Email Request", error: true };
+      }
+
+      const options = {
+        emailData: {
+          email,
+          subject,
+        },
+        template: "verificationCode.ejs",
+        templateData: { code, name },
+      };
+
+      const sendEmail = await EmailQueue.add("twoFactorAuthEmail", options, {
+        attempts: 3,
+        backoff: 5000,
+      });
+
+      if (sendEmail) {
+        return { message: "Email sent successfully", error: false };
+      }
+
+      return { message: `Email Not Sent`, error: true };
     } catch (err: any) {
       throw new Error(err.message);
     }

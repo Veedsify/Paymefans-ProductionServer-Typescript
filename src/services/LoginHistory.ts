@@ -1,7 +1,7 @@
 // import query from "@utils/prisma";
 
 export default class LoginHistoryService {
-    static async SaveLoginHistory(userId: number, ip: string) {
+    static async SaveLoginHistory(_: number, __: string) {
         try {
 
             // const location = await ipLocation(ip) as Location

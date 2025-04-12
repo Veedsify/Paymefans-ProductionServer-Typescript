@@ -29,7 +29,7 @@ export default class UsernameService {
         username: `@${cleanusername}`,
       },
     });
-    if (user) {
+    if (user && user.username) {
       return { message: "Username already exists", status: false };
     }
     return { message: "Username available", status: true };

@@ -20,7 +20,7 @@ async function main() {
       location: "Nigeria",
       role: "admin",
       profile_image: SERVER_ORIGINAL_URL + "/site/avatar.png",
-      user_id: uniqueUserId,
+      user_id: "paymefans",
       username: "@paymefans",
       UserWallet: {
         create: {

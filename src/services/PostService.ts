@@ -25,6 +25,7 @@ import { v4 as uuid } from "uuid";
 import query from "@utils/prisma";
 import { PostAudience } from "@prisma/client";
 import RemoveCloudflareMedia from "@libs/RemoveCloudflareMedia";
+import { Comments } from "@utils/mongoSchema";
 export default class PostService {
   // Create Post
   static async CreatePost(data: CreatePostProps): Promise<CreatePostResponse> {
@@ -167,12 +168,6 @@ export default class PostService {
               updated_at: true,
             },
           },
-          PostLike: {
-            select: {
-              post_id: true,
-              user_id: true,
-            },
-          },
           user: {
             select: {
               username: true,
@@ -190,10 +185,26 @@ export default class PostService {
           created_at: "desc",
         },
       });
+
+      const postsChecked = posts.map(async (post) => {
+        const postLike = await query.postLike.findFirst({
+          where: {
+            user_id: post.user.id,
+            post_id: post.id,
+          },
+        });
+        return {
+          ...post,
+          likedByme: postLike ? true : false,
+        };
+      });
+
+      const resolvedPosts = await Promise.all(postsChecked);
+
       return {
         status: true,
         message: "Posts retrieved successfully",
-        data: posts,
+        data: resolvedPosts,
         total: postCount,
       };
     } catch (error: any) {
@@ -295,10 +306,26 @@ export default class PostService {
       }
 
       const reposts = userReposts.map((repost) => repost.post);
+
+      const postsChecked = reposts.map(async (post) => {
+        const postLike = await query.postLike.findFirst({
+          where: {
+            user_id: post.user.id,
+            post_id: post.id,
+          },
+        });
+        return {
+          ...post,
+          likedByme: postLike ? true : false,
+        };
+      });
+
+      const resolvedPosts = await Promise.all(postsChecked);
+
       return {
         status: true,
         message: "Reposts retrieved successfully",
-        data: reposts,
+        data: resolvedPosts,
         hasMore,
         total: userRepostCount,
       };
@@ -373,12 +400,6 @@ export default class PostService {
                   updated_at: true,
                 },
               },
-              PostLike: {
-                select: {
-                  post_id: true,
-                  user_id: true,
-                },
-              },
               user: {
                 select: {
                   username: true,
@@ -398,10 +419,25 @@ export default class PostService {
         },
       });
       const reposts = userReposts.map((repost) => repost.post);
+
+      const postsChecked = reposts.map(async (post) => {
+        const postLike = await query.postLike.findFirst({
+          where: {
+            user_id: post.user.id,
+            post_id: post.id,
+          },
+        });
+        return {
+          ...post,
+          likedByme: postLike ? true : false,
+        };
+      });
+
+      const resolvedPosts = await Promise.all(postsChecked);
       return {
         status: true,
         message: "Reposts retrieved successfully",
-        data: reposts,
+        data: resolvedPosts,
         total: userRepostCount,
       };
     } catch (error: any) {
@@ -562,7 +598,7 @@ export default class PostService {
           },
         },
       });
-      const posts = await query.post.findMany({
+      let posts = await query.post.findMany({
         where: {
           user_id: Number(userId),
           post_status: "approved",
@@ -602,12 +638,6 @@ export default class PostService {
               updated_at: true,
             },
           },
-          PostLike: {
-            select: {
-              post_id: true,
-              user_id: true,
-            },
-          },
           user: {
             select: {
               username: true,
@@ -625,10 +655,26 @@ export default class PostService {
         skip: (validPage - 1) * validLimit,
         take: validLimit,
       });
+
+      const postsChecked = posts.map(async (post) => {
+        const postLike = await query.postLike.findFirst({
+          where: {
+            user_id: post.user.id,
+            post_id: post.id,
+          },
+        });
+        return {
+          ...post,
+          likedByme: postLike ? true : false,
+        };
+      });
+
+      const resolvedPosts = await Promise.all(postsChecked);
+
       return {
         status: true,
         message: "Posts retrieved successfully",
-        data: posts,
+        data: resolvedPosts,
         total: postCount,
       };
     } catch (error: any) {
@@ -676,7 +722,6 @@ export default class PostService {
           media: true,
           post_comments: true,
           post_reposts: true,
-          PostLike: true,
           UserMedia: true,
           was_repost: true,
           repost_id: true,
@@ -700,11 +745,21 @@ export default class PostService {
           message: "Post not Private",
         };
       }
+
+      const postLike = await query.postLike.findFirst({
+        where: {
+          post_id: post.id,
+          user_id: post.user_id,
+        },
+      });
+
+      const likedByme = postLike ? true : false;
+
       return {
         error: false,
         status: true,
         message: "Post retrieved successfully",
-        data: post,
+        data: { ...post, likedByme },
       };
     } catch (error: any) {
       console.log(error);
@@ -893,52 +948,15 @@ export default class PostService {
     page = "1",
     limit = "10",
   }: GetPostCommentsProps): Promise<GetPostCommentsResponse> {
-    const countComments = await query.postComment.count({
-      where: {
-        post_id: Number(postId),
-      },
+    const countComments = await Comments.countDocuments({
+      postId: Number(postId),
     });
-    const comments = await query.postComment.findMany({
-      where: {
-        post_id: Number(postId),
-      },
-      orderBy: {
-        created_at: "desc",
-      },
-      select: {
-        id: true,
-        comment: true,
-        created_at: true,
-        user: {
-          select: {
-            id: true,
-            user_id: true,
-            name: true,
-            username: true,
-            profile_image: true,
-          },
-        },
-        PostCommentAttachments: {
-          select: {
-            id: true,
-            comment_id: true,
-            path: true,
-            type: true,
-            created_at: true,
-          },
-        },
-        PostCommentLikes: {
-          select: {
-            id: true,
-            comment_id: true,
-            user_id: true,
-            created_at: true,
-          },
-        },
-      },
-      skip: (parseInt(page) - 1) * parseInt(limit),
-      take: parseInt(limit) + 1,
-    });
+    const comments = await Comments.find({
+      postId: Number(postId),
+    })
+      .sort({ date: -1 })
+      .skip((parseInt(page) - 1) * parseInt(limit))
+      .limit(parseInt(limit) + 1); // Fetch one extra for pagination check
 
     const hasMore = comments.length > parseInt(limit);
     if (hasMore) {
