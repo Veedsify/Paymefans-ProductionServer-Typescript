@@ -42,3 +42,9 @@ export interface SetMessagePriceProps {
       subscription_price: string;
       subscription_duration: string;
 }
+export interface CheckUserNameResponse {
+      status: boolean;
+      error: boolean;
+      username: string;
+      message: string;
+}

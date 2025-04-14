@@ -229,7 +229,6 @@ export default class PostController {
         limit: req.query.limit as string,
       };
       const Comments = await PostService.GetPostComments(options);
-      console.log(Comments);
       return res.status(200).json({ ...Comments });
     } catch (error: any) {
       console.log(error.message);

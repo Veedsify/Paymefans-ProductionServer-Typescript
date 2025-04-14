@@ -1,11 +1,10 @@
-const { CLOUDFLARE_WEBHOOK_URL, CLOUDFLARE_ACCOUNT_TOKEN } = process.env
-const TEST_WEBHOOK_URL = `https://abd1-102-88-109-233.ngrok-free.app`
+const { CLOUDFLARE_WEBHOOK_URL, CLOUDFLARE_ACCOUNT_TOKEN, CLOUDFLARE_WEBHOOK_CALLBACK } = process.env
 
 export function RegisterCloudflareStreamWebhook(): void {
     try {
         async function register(): Promise<void> {
             const data = {
-                notificationUrl: `${TEST_WEBHOOK_URL}/api/webhooks/cloudflare/processed-post-media`,
+                notificationUrl: `${CLOUDFLARE_WEBHOOK_CALLBACK}/api/webhooks/cloudflare/processed-post-media`,
             }
             const res = await fetch(CLOUDFLARE_WEBHOOK_URL as string, {
                 method: "PUT",

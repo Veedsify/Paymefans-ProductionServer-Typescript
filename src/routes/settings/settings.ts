@@ -7,5 +7,5 @@ settings.post("/update", Auth, SettingsController.SettingsProfileChange);
 settings.post("/update/hookup-status", Auth, SettingsController.HookupStatusChange);
 settings.patch("/update/password", Auth, SettingsController.ChangePassword);
 settings.post("/billings/message-price", Auth, SettingsController.SetMessagePrice);
-
+settings.post("/check-username", Auth, SettingsController.CheckUserName)
 export default settings;

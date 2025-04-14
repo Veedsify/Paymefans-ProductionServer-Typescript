@@ -452,6 +452,9 @@ model Settings {
   subscription_type     String
   subscription_duration String
   two_factor_auth       Boolean  @default(false)
+  instagram_url         String?
+  twitter_url           String?
+  facebook_url          String?
   created_at            DateTime @default(now())
   updated_at            DateTime @updatedAt
   user                  User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
