@@ -123,20 +123,17 @@ export default class VerificationController {
         },
         {
           attempts: 3,
-          backoff: {
-            type: "exponential",
-            delay: 1000,
-          },
         }
       );
 
-      if ( !processVerification || !ProcessVerification.id) {
+      if (!processVerification || !ProcessVerification.id) {
         return res.status(401).json({
           error: true,
           token: token,
           message: "An Error occurred while processing the verification",
         });
       }
+
       res.status(200).json({
         error: false,
         message: "Verification Processed",

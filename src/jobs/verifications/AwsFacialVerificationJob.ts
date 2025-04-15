@@ -83,35 +83,48 @@ const UpdateVerificationStatus = async (
 const AwsVerificationWorker = new Worker(
   "aws-verification",
   async (job) => {
-    const { verification } = job.data;
-    const { front, faceVideo, token, back } = verification;
-    const match = await ProcessFaceComparison(front, faceVideo);
-    //  perform strict id chech here
-    const result = await UpdateVerificationStatus(
-      token,
-      match,
-      front,
-      faceVideo
-    );
+    try {
+      const { front, faceVideo, token, back } = job.data;
+      const match = await ProcessFaceComparison(front, faceVideo);
+      //  perform strict id chech here
+      const result = await UpdateVerificationStatus(
+        token,
+        match,
+        front,
+        faceVideo
+      );
 
-    if (result.error) {
-      // Send Verification Failed Notification
-      // Send Verification Failed Email
-      console.log(result, back);
+      if (result.error) {
+        // Send Verification Failed Notification
+        // Send Verification Failed Email
+        console.log(result, back);
+        return {
+          error: true,
+          message: result.message,
+        };
+      }
+
+      // Send Verification Successful Notification
+      // Send Verification Successful Email
+
+      console.log(result);
+      return {
+        error: false,
+        message: "Verification successful",
+      };
+    } catch (error: any) {
+      console.log(error);
+      throw new Error(error.message);
     }
-
-    // Send Verification Successful Notification
-    // Send Verification Successful Email
-
-    console.log(result);
-    return {
-      error: false,
-      message: "Verification successful",
-    };
   },
   { connection: redis }
 );
 
+AwsVerificationWorker.on("failed", (job) =>
+  console.log(
+    `${job?.name} - with ID ${job?.id} Failed cause ${job?.failedReason}`
+  )
+);
 AwsVerificationWorker.on("completed", (job) => {
   console.log(`Job ${job.id} completed!`);
   // Handle the completion of the job

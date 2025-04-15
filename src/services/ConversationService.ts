@@ -836,7 +836,7 @@ export default class ConversationService {
       const [messages, total] = await Promise.all([
         query.messages.findMany({
           where: {
-            message: { contains: q },
+            message: { contains: q, mode: "insensitive" },
             Conversations: {
               participants: {
                 some: {
@@ -856,7 +856,7 @@ export default class ConversationService {
         }),
         query.messages.count({
           where: {
-            message: { contains: q },
+            message: { contains: q, mode: "insensitive" },
             Conversations: {
               participants: {
                 some: {

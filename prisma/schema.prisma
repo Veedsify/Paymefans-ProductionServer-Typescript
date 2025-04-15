@@ -223,6 +223,7 @@ model Post {
   user_id          Int
   content          String?
   media            Json?
+  post_price       Float?           @default(0)
   post_status      PostStatus       @default(pending)
   post_audience    PostAudience
   post_is_visible  Boolean          @default(true)
