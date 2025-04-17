@@ -1,3 +1,4 @@
+import { UserTransactionQueue } from "@jobs/notifications/UserTransactionJob";
 import { GenerateUniqueId } from "@utils/GenerateUniqueId";
 import query from "@utils/prisma";
 import sanitizeHtml from "sanitize-html";
@@ -156,28 +157,35 @@ class SaveMessageToDb {
     const purchase_id2 = `TRN${GenerateUniqueId()}`;
 
     if (receiverPrice > 0) {
-      await query.userTransaction.create({
-        data: {
-          transaction_id: purchase_id,
-          transaction: `Message to ${receiver?.username} with id ${receiver_id}`,
-          user_id: sender?.id,
-          amount: receiverPrice,
-          transaction_type: "debit",
-          transaction_message: `Message to ${receiver?.username}`,
-          wallet_id: sender?.UserWallet[0].id,
-        } as any,
-      });
-      await query.userTransaction.create({
-        data: {
-          transaction: `Message from ${sender?.username} with id ${sender_id}`,
-          transaction_id: purchase_id2,
-          user_id: receiver?.id,
-          amount: receiverPrice,
-          transaction_type: "credit",
-          transaction_message: `Message from ${sender?.username}`,
-          wallet_id: receiver?.UserWallet[0].id,
-        } as any,
-      });
+      const optionsForSender = {
+        transactionId: purchase_id,
+        transaction: `Message to ${receiver?.username} with id ${receiver_id}`,
+        userId: sender?.id,
+        amount: receiverPrice,
+        transactionType: "debit",
+        transactionMessage: `Message to ${receiver?.username}`,
+        walletId: sender?.UserWallet[0].id,
+      };
+      const optionsForReceiver = {
+        transactionId: purchase_id2,
+        transaction: `Message from ${sender?.username} with id ${sender_id}`,
+        userId: receiver?.id,
+        amount: receiverPrice,
+        transactionType: "credit",
+        transactionMessage: `Message from ${sender?.username}`,
+        walletId: receiver?.UserWallet[0].id,
+      };
+
+      await Promise.all([
+        UserTransactionQueue.add("userTransaction", optionsForSender, {
+          removeOnComplete: true,
+          attempts: 3,
+        }),
+        UserTransactionQueue.add("userTransaction", optionsForReceiver, {
+          removeOnComplete: true,
+          attempts: 3,
+        }),
+      ]);
     }
 
     return true;
