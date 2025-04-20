@@ -170,6 +170,22 @@ export default class PostController {
         .json({ status: false, message: "Internal Server Error!" });
     }
   }
+   // Get User Private User Posts By ID
+   static async GetPrivatePostByID(req: Request, res: Response): Promise<any> {
+    try {
+      const UserPost = await PostService.GetUserPrivatePostByID({
+        userId: req.params.userId as string,
+        page: req.query.page as string,
+        limit: req.query.limit as string,
+      });
+      return res.status(200).json({ ...UserPost });
+    } catch (err: any) {
+      console.error(err.message);
+      res
+        .status(500)
+        .json({ status: false, message: "Internal Server Error!" });
+    }
+  }
   // Get Post By Post ID
   static async GetSinglePost(req: Request, res: Response): Promise<any> {
     try {

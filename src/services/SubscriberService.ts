@@ -134,6 +134,7 @@ export default class SubscriberService {
                 },
                 select: {
                   tier_name: true,
+                  tier_duration: true,
                   tier_price: true,
                 },
               },

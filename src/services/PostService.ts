@@ -243,8 +243,8 @@ export default class PostService {
           OR: [
             { post_audience: "price" },
             { post_audience: "subscribers" },
-            { post_audience: "private" }
-          ]
+            { post_audience: "private" },
+          ],
         },
         select: {
           id: true,
@@ -334,7 +334,7 @@ export default class PostService {
       const validLimit =
         Number.isNaN(parsedLimit) || parsedLimit <= 0 ? 5 : parsedLimit;
 
-      const redisKey = `user-repost-${userId}-page-${page}-limit-${parsedLimit}`
+      const redisKey = `user-repost-${userId}-page-${page}-limit-${parsedLimit}`;
 
       // Parse page to an integer or default to 1 if not provided
       const userRepostCount = await query.userRepost.count({
@@ -351,16 +351,16 @@ export default class PostService {
         };
       }
 
-      const RepostRedisCache = await redis.get(redisKey)
+      const RepostRedisCache = await redis.get(redisKey);
       if (RepostRedisCache) {
-        const parsedRepost = JSON.parse(RepostRedisCache)
+        const parsedRepost = JSON.parse(RepostRedisCache);
         return {
           status: true,
           message: "Reposts retrieved successfully",
           data: parsedRepost,
           hasMore: parsedRepost.length > validLimit,
           total: userRepostCount,
-        }
+        };
       }
 
       const userReposts = await query.userRepost.findMany({
@@ -448,8 +448,7 @@ export default class PostService {
 
       const resolvedPosts = await Promise.all(postsChecked);
 
-      await redis.set(redisKey, JSON.stringify(resolvedPosts), "EX", 60)
-
+      await redis.set(redisKey, JSON.stringify(resolvedPosts), "EX", 60);
 
       return {
         status: true,
@@ -811,6 +810,118 @@ export default class PostService {
       throw new Error(error.message);
     }
   }
+
+  // Get User Post By User ID
+  static async GetUserPrivatePostByID({
+    userId,
+    page,
+    limit,
+  }: GetUserPostByIdProps): Promise<GetUserPostByIdResponse> {
+    try {
+      // Parse limit to an integer or default to 5 if not provided
+      const parsedLimit = limit ? parseInt(limit, 10) : 5;
+      const validLimit =
+        Number.isNaN(parsedLimit) || parsedLimit <= 0 ? 5 : parsedLimit;
+      // Parse page to an integer or default to 1 if not provided
+      const parsedPage = page ? parseInt(page, 10) : 1;
+      const validPage =
+        Number.isNaN(parsedPage) || parsedPage <= 0 ? 1 : parsedPage;
+      const postCount = await query.post.count({
+        where: {
+          user_id: Number(userId),
+          post_status: "approved",
+          OR: [
+            { post_audience: "price" },
+            { post_audience: "subscribers" },
+          ],
+        },
+      });
+      let posts = await query.post.findMany({
+        where: {
+          user_id: Number(userId),
+          post_status: "approved",
+          OR: [
+            { post_audience: "price" },
+            { post_audience: "subscribers" },
+          ],
+        },
+        select: {
+          id: true,
+          content: true,
+          post_id: true,
+          post_audience: true,
+          media: true,
+          created_at: true,
+          post_likes: true,
+          post_status: true,
+          post_impressions: true,
+          post_comments: true,
+          post_reposts: true,
+          was_repost: true,
+          repost_id: true,
+          repost_username: true,
+          UserMedia: {
+            select: {
+              id: true,
+              media_id: true,
+              post_id: true,
+              duration: true,
+              poster: true,
+              url: true,
+              blur: true,
+              media_state: true,
+              media_type: true,
+              locked: true,
+              accessible_to: true,
+              created_at: true,
+              updated_at: true,
+            },
+          },
+          user: {
+            select: {
+              username: true,
+              profile_image: true,
+              name: true,
+              user_id: true,
+              is_model: true,
+              id: true,
+            },
+          },
+        },
+        orderBy: {
+          created_at: "desc",
+        },
+        skip: (validPage - 1) * validLimit,
+        take: validLimit,
+      });
+
+      const postsChecked = posts.map(async (post) => {
+        const postLike = await query.postLike.findFirst({
+          where: {
+            user_id: post.user.id,
+            post_id: post.id,
+          },
+        });
+        return {
+          ...post,
+          likedByme: postLike ? true : false,
+        };
+      });
+
+      const resolvedPosts = await Promise.all(postsChecked);
+
+      return {
+        status: true,
+        message: "Posts retrieved successfully",
+        data: resolvedPosts,
+        total: postCount,
+      };
+    } catch (error: any) {
+      console.log(error);
+      throw new Error(error.message);
+    }
+  }
+
   // Get Single Post By ID:
   static async GetSinglePost({
     postId,
@@ -1220,6 +1331,11 @@ export default class PostService {
           id: post.id,
         },
       });
+
+      await Comments.deleteMany({
+        postId: Number(post.id),
+      });
+
       return {
         status: true,
         message: "Post deleted successfully",

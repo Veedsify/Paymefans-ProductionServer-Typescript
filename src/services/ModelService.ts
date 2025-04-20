@@ -48,7 +48,7 @@ export default class ModelService {
                     };
 
                     // Save to redis
-                    await redis.set(`models`, JSON.stringify(options), "EX", 1000 * 60 * 10); // 10 minutes
+                    await redis.set(`models`, JSON.stringify(options), "EX", 60); // 10 minutes
                     return options
                 });
             }

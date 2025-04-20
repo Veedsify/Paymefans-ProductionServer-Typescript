@@ -24,9 +24,13 @@ async function ModelsJobs() {
   if (queueCount === 1) return;
   const job = await queue.add(
     "broadCastModelsAndHookups",
-    { },
+    {},
     {
-      repeat: { every: 5000 }, // 5 mins (50000ms)
+      
+      repeat: {
+        every: 10000,
+        immediately: true, // Run immediately after adding the job
+      },
     }
   );
   queueCount += 1;
@@ -35,7 +39,7 @@ async function ModelsJobs() {
 }
 
 // Handle worker events
-// worker.on('completed', job => console.log(`Job ${job.name} completed`));
+worker.on('completed', job => console.log(`Job ${job.name} completed`));
 worker.on("failed", (job, err) =>
   console.error(`Job ${job?.id} failed withDirectives  error ${err}`)
 );

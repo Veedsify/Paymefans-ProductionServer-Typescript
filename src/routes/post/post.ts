@@ -10,7 +10,7 @@ post.post("/upload-post-media", Auth, postUpload.single("file"), UploadControlle
 post.post("/create", Auth, PostController.CreatePost)
 post.get("/my-posts", Auth, PostController.GetMyPosts)
 post.get("/my-private-posts", Auth, PostController.MyPrivatePosts)
-post.get("/private-posts", Auth, PostController.GetMyPosts)
+post.get("/private-posts/:userId", Auth, PostController.GetPrivatePostByID)
 post.get("/my-reposts", Auth, PostController.GetMyReposts)
 post.get("/reposts/:userId", Auth, PostController.GetReposts)
 post.get("/media", Auth, PostController.GetMedia)
