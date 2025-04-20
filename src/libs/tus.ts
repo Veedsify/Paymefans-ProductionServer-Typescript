@@ -18,8 +18,8 @@ const tusUploader = async ({ filePath, file, fileId }: TusUploader): Promise<Tus
             headers: {
                 Authorization: `Bearer ${CLOUDFLARE_ACCOUNT_TOKEN}`,
             },
-            chunkSize: 50 * 1024 * 1024, // Required a minimum chunk size of 5 MB. Here we use 50 MB.
-            retryDelays: [0, 3000, 5000, 10000, 20000], // Indicates to tus-js-client the delays after which it will retry if the upload fails.
+            chunkSize: 8388608, // 8MB,
+            retryDelays: [0, 3000, 5000, 10000, 20000],
             metadata: {
                 name: file.filename,
                 filetype: "video/mp4",
@@ -36,7 +36,7 @@ const tusUploader = async ({ filePath, file, fileId }: TusUploader): Promise<Tus
                     id: fileId,
                     percentage: percentage,
                 });
-                // console.log(bytesUploaded, bytesTotal, percentage + "%");
+                console.log(bytesUploaded, bytesTotal, percentage + "%");
             },
             onSuccess: function () {
                 console.log("Upload finished");

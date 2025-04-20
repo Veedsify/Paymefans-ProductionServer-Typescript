@@ -9,6 +9,8 @@ const postUpload = CreateUpload("post");
 post.post("/upload-post-media", Auth, postUpload.single("file"), UploadController.UploadMedia);
 post.post("/create", Auth, PostController.CreatePost)
 post.get("/my-posts", Auth, PostController.GetMyPosts)
+post.get("/my-private-posts", Auth, PostController.MyPrivatePosts)
+post.get("/private-posts", Auth, PostController.GetMyPosts)
 post.get("/my-reposts", Auth, PostController.GetMyReposts)
 post.get("/reposts/:userId", Auth, PostController.GetReposts)
 post.get("/media", Auth, PostController.GetMedia)
@@ -17,7 +19,7 @@ post.get("/user/:userId", Auth, PostController.GetUserPostByID)
 post.get("/:postId", Auth, PostController.GetSinglePost);
 post.get("/edit/:postId", Auth, PostController.EditPost)
 post.put("/update/audience/:postId", Auth, PostController.UpdatePostAudience)
-post.post("/repost/:postId", Auth, PostController.CreateRepost)   
+post.post("/repost/:postId", Auth, PostController.CreateRepost)
 post.get("/:postId/comments", Auth, PostController.GetPostComments)
 post.post("/like/:postId", Auth, PostController.LikePost)
 post.delete("/:postId", Auth, PostController.DeletePost)

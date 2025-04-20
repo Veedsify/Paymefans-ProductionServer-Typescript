@@ -1115,7 +1115,7 @@ CREATE TABLE `User` (
   `total_followers` int(11) NOT NULL DEFAULT 0,
   `total_following` int(11) NOT NULL DEFAULT 0,
   `total_subscribers` int(11) NOT NULL DEFAULT 0,
-  `admin_status` tinyint(1) NOT NULL DEFAULT 1,
+  `active_status` tinyint(1) NOT NULL DEFAULT 1,
   `created_at` datetime(3) NOT NULL DEFAULT current_timestamp(3),
   `updated_at` datetime(3) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -1124,7 +1124,7 @@ CREATE TABLE `User` (
 -- Dumping data for table `User`
 --
 
-INSERT INTO `User` (`id`, `email`, `name`, `password`, `fullname`, `user_id`, `username`, `admin`, `role`, `is_active`, `is_verified`, `is_email_verified`, `is_model`, `email_verify_code`, `email_verify_time`, `is_phone_verified`, `phone`, `profile_image`, `profile_banner`, `bio`, `location`, `website`, `country`, `state`, `city`, `zip`, `post_watermark`, `total_followers`, `total_following`, `total_subscribers`, `admin_status`, `created_at`, `updated_at`) VALUES
+INSERT INTO `User` (`id`, `email`, `name`, `password`, `fullname`, `user_id`, `username`, `admin`, `role`, `is_active`, `is_verified`, `is_email_verified`, `is_model`, `email_verify_code`, `email_verify_time`, `is_phone_verified`, `phone`, `profile_image`, `profile_banner`, `bio`, `location`, `website`, `country`, `state`, `city`, `zip`, `post_watermark`, `total_followers`, `total_following`, `total_subscribers`, `active_status`, `created_at`, `updated_at`) VALUES
 (1, 'admin@paymefans.com', 'Paymefans', '$2b$12$27PtQ1SDfFomJYW2z.JyxumciGt67NNo7DVFl3UPfQiMfr1RtUnn.', 'Paymefans', '0hhc5ms5dtti', '@paymefans', 1, 'admin', 1, 0, 0, 0, NULL, NULL, 0, '1234567890', 'https://d2389neb6gppcb.cloudfront.net/avatars/avatars-FILE0b3e95a7d57f488a99841d9732a2bcee.webp', '/site/banner.png', NULL, 'Nigeria', NULL, NULL, NULL, NULL, NULL, NULL, 3, 0, 0, 1, '2025-03-22 22:11:52.984', '2025-03-26 16:00:26.889'),
 (2, 'dikewisdom787@gmail.com', 'Dike Wisdom', '$2b$12$npfX/3Dcbo0tg4uxfNmFieKBeLEkHVroTVrvhgwjNOAfvXh.TPuii', 'Dike Wisdom', 'fbab106820c84ee69a2e02e521bcae0d', '@dikewisdom', 0, 'fan', 1, 0, 0, 1, NULL, NULL, 0, '09088227722', 'https://d2389neb6gppcb.cloudfront.net/avatars/avatars-FILE97bb250d359343558c48c419814ea5c7.webp', 'https://d2389neb6gppcb.cloudfront.net/banners/banners-FILEfe41287389074ebeaf8b3b27c8a84c4f.webp', '✨ Living life one day at a time\r\n🌍 Exploring the world\r\n📸 Capturing moments\r\n💬 DM for collabs', 'Myanmar', 'https://redis.io/pricing/', NULL, NULL, NULL, NULL, NULL, 1, 0, 0, 1, '2025-03-22 22:19:06.165', '2025-03-29 01:21:30.475'),
 (3, 'mia112@test.com', 'Mayson Monroe', '$2b$12$loRvjx83hhe1ZfML4yOIgu3vpj9sjF49hf/HbqmWWTpNHpJZWBXo2', 'Mia', '8eb2e4f175924697bbd97ce1dd036c57', '@miatest1', 0, 'fan', 1, 0, 0, 0, NULL, NULL, 0, '09022883377', 'https://d2389neb6gppcb.cloudfront.net/avatars/avatars-FILE3168cd1086b4445095ce3062d54b8d7c.webp', 'https://d2389neb6gppcb.cloudfront.net/banners/banners-FILEc13865d06e4f45c18aa4ea9faff4ceae.webp', NULL, 'Nigeria', NULL, NULL, NULL, NULL, NULL, NULL, 0, 1, 0, 1, '2025-03-23 08:24:12.807', '2025-03-29 01:21:30.491'),

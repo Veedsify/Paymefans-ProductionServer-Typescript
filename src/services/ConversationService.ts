@@ -15,22 +15,11 @@ import { GenerateUniqueId } from "@utils/GenerateUniqueId";
 import query from "@utils/prisma";
 import type { AuthUser } from "types/user";
 import fs from "fs";
-import s3 from "@utils/s3";
 import path from "path";
-// import {
-//   CreateJobCommand,
-//   OutputGroupType,
-//   AacCodingMode,
-//   MediaConvertClient,
-//   VideoCodec,
-//   AudioCodec,
-//   ContainerType,
-// } from "@aws-sdk/client-mediaconvert";
-// const { AWS_ACCESS_KEY, AWS_REGION, AWS_SECRET_KEY } = process.env;
-import { Upload } from "@aws-sdk/lib-storage";
 import _ from "lodash";
 import type { Messages } from "@prisma/client";
 import { UploadImageToS3 } from "@libs/UploadImageToS3";
+import tusUploader from "@libs/tus";
 export default class ConversationService {
   // Fetch Conversations
   // Fetch all conversations for a user
@@ -417,180 +406,25 @@ export default class ConversationService {
             // Check if it's a video file
             if (videoMimeTypes.includes(file.mimetype)) {
               try {
-                // Verify file exists and is readable
-                await fs.promises.access(file.path, fs.constants.R_OK);
+                // Upload Videos To CloudFlare Streams
+                const fileId = `video-${GenerateUniqueId()}`;
+                const filePath = file.path;
+                file.filename = `paymefans-${conversationId}-${fileId}${path.extname(
+                  file.path
+                )}`;
+                const video = await tusUploader({ filePath, file, fileId });
+                if ("error" in video) {
+                  throw new Error(video.message);
+                }
 
-                // Upload original file to S3
-                const s3Key = `uploads/videos/${conversationId}/${file.filename}`;
-
-                const uploadPromise = new Promise(async (resolve, reject) => {
-                  try {
-                    const fileStream = fs.createReadStream(file.path);
-                    fileStream.on("error", (err: Error) => {
-                      reject(new Error(`Error reading file: ${err.message}`));
-                    });
-
-                    const uploadParams = {
-                      client: s3,
-                      params: {
-                        Bucket: process.env.S3_BUCKET_NAME!,
-                        Key: s3Key,
-                        Body: fileStream,
-                        ContentLength: file.size,
-                        ContentType: file.mimetype,
-                      },
-                      queueSize: 10,
-                    };
-
-                    const parallelUpload = new Upload(uploadParams);
-                    parallelUpload.on("httpUploadProgress", (progress) => {
-                      console.log(
-                        `Uploaded ${progress.loaded} bytes out of ${progress.total} for ${file.filename}`
-                      );
-                    });
-
-                    await parallelUpload.done();
-                    fs.unlinkSync(file.path);
-                    resolve(s3Key);
-                  } catch (error: any) {
-                    fs.unlinkSync(file.path);
-                    reject(new Error(`Error uploading file: ${error.message}`));
-                  }
-                });
-
-                await uploadPromise;
-                console.log(`Successfully uploaded ${file.filename} to S3`);
-
-                // const jobSettings = {
-                //   Queue: process.env.AWS_MEDIACONVERT_QUEUE_ARN,
-                //   Role: process.env.AWS_MEDIACONVERT_ROLE_ARN,
-                //   Settings: {
-                //     Inputs: [
-                //       {
-                //         FileInput: `s3://${process.env.S3_BUCKET_NAME}/${s3Key}`,
-                //         ContainerSettings: {
-                //           Container: ContainerType.MP4,
-                //         },
-                //       },
-                //     ],
-                //     OutputGroups: [
-                //       {
-                //         Name: "HLS Output",
-                //         OutputGroupSettings: {
-                //           Type: OutputGroupType.HLS_GROUP_SETTINGS,
-                //           HlsGroupSettings: {
-                //             SegmentLength: 6,
-                //             MinSegmentLength: 0,
-                //             Destination: `s3://${process.env.S3_BUCKET_NAME}/processed/${conversationId}/${file.filename}/`,
-                //           },
-                //         },
-                //         Outputs: [
-                //           {
-                //             NameModifier: "360p",
-                //             VideoDescription: {
-                //               Height: 360,
-                //               CodecSettings: {
-                //                 Codec: VideoCodec.H_264,
-                //                 H264Settings: {
-                //                   RateControlMode: "QVBR", // Explicitly set rate control mode
-                //                   MaxBitrate: 1000000,
-                //                   QvbrQualityLevel: 8,
-                //                   // Remove any Bitrate setting if present
-                //                 },
-                //               },
-                //             },
-                //             AudioDescriptions: [
-                //               {
-                //                 CodecSettings: {
-                //                   Codec: AudioCodec.AAC,
-                //                   AacSettings: {
-                //                     Bitrate: 128000,
-                //                     CodingMode: AacCodingMode.CODING_MODE_2_0,
-                //                     SampleRate: 48000,
-                //                   },
-                //                 },
-                //               },
-                //             ],
-                //           },
-                //           {
-                //             NameModifier: "720p",
-                //             VideoDescription: {
-                //               Height: 720,
-                //               CodecSettings: {
-                //                 Codec: VideoCodec.H_264,
-                //                 H264Settings: {
-                //                   RateControlMode: "QVBR", // Explicitly set rate control mode
-                //                   MaxBitrate: 2000000,
-                //                   QvbrQualityLevel: 8,
-                //                   // Remove any Bitrate setting if present
-                //                 },
-                //               },
-                //             },
-                //             AudioDescriptions: [
-                //               {
-                //                 CodecSettings: {
-                //                   Codec: AudioCodec.AAC,
-                //                   AacSettings: {
-                //                     Bitrate: 128000,
-                //                     CodingMode: AacCodingMode.CODING_MODE_2_0,
-                //                     SampleRate: 48000,
-                //                   },
-                //                 },
-                //               },
-                //             ],
-                //           },
-                //           {
-                //             NameModifier: "1080p",
-                //             VideoDescription: {
-                //               Height: 1080,
-                //               CodecSettings: {
-                //                 Codec: VideoCodec.H_264,
-                //                 H264Settings: {
-                //                   RateControlMode: "QVBR", // Explicitly set rate control mode
-                //                   MaxBitrate: 4000000,
-                //                   QvbrQualityLevel: 8,
-                //                 },
-                //               },
-                //             },
-                //             AudioDescriptions: [
-                //               {
-                //                 CodecSettings: {
-                //                   Codec: AudioCodec.AAC,
-                //                   AacSettings: {
-                //                     Bitrate: 128000,
-                //                     CodingMode: AacCodingMode.CODING_MODE_2_0,
-                //                     SampleRate: 48000,
-                //                   },
-                //                 },
-                //               },
-                //             ],
-                //           },
-                //         ],
-                //       },
-                //     ],
-                //   },
-                // };
-
-                // // const processCommand = new CreateJobCommand(jobSettings);
-                // const client = new MediaConvertClient({
-                //   region: AWS_REGION as string,
-                //   credentials: {
-                //     accessKeyId: AWS_ACCESS_KEY as string,
-                //     secretAccessKey: AWS_SECRET_KEY as string,
-                //   },
-                // });
-
-                // const data = await client.send(processCommand);
-                // console.log("MediaConvert Job created:", data);
-
-                await fs.promises.unlink(file.path);
                 processedPath = {
-                  url: `processed/${conversationId}/${file.filename}/master.m3u8`,
+                  url: `${process.env.CLOUDFLARE_CUSTOMER_SUBDOMAIN}${video.mediaId}/manifest/video.m3u8`,
                   name: file.filename,
                   size: file.size,
                   type: file.mimetype,
                   extension: path.extname(file.originalname),
                 };
+                await fs.promises.unlink(file.path);
               } catch (error) {
                 console.error(
                   `Error processing video file ${file.filename}:`,

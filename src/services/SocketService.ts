@@ -303,7 +303,6 @@ export default class SocketService {
       username: data.username,
       userId: data.userId,
     };
-    socket.emit("prefetch-conversations", "conversations");
     return user;
   }
 

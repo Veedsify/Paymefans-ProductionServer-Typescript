@@ -26,6 +26,7 @@ import query from "@utils/prisma";
 import { PostAudience } from "@prisma/client";
 import RemoveCloudflareMedia from "@libs/RemoveCloudflareMedia";
 import { Comments } from "@utils/mongoSchema";
+import { redis } from "@libs/RedisStore";
 export default class PostService {
   // Create Post
   static async CreatePost(data: CreatePostProps): Promise<CreatePostResponse> {
@@ -64,6 +65,9 @@ export default class PostService {
           message: "Content and visibility are required",
         };
       }
+      // All Images
+      const allImages = media.every((file) => file.type === "image");
+
       // Continue with the rest of your logic
       const post = await query.post.create({
         data: {
@@ -71,7 +75,7 @@ export default class PostService {
           was_repost: false,
           content: content ? content : "",
           post_audience: visibility as PostAudience,
-          post_status: "pending",
+          post_status: allImages ? "approved" : "pending",
           post_is_visible: true,
           user_id: user.id,
           media: [],
@@ -212,6 +216,112 @@ export default class PostService {
       throw new Error(error);
     }
   }
+
+  // Get Current Private User Posts
+  static async GetMyPrivatePosts({
+    userId,
+    page,
+    limit,
+  }: GetMyPostProps): Promise<GetMyPostResponse> {
+    try {
+      // Parse limit to an integer or default to 5 if not provided
+      const parsedLimit = limit ? parseInt(limit, 10) : 5;
+      const validLimit =
+        Number.isNaN(parsedLimit) || parsedLimit <= 0 ? 5 : parsedLimit;
+      // Parse page to an integer or default to 1 if not provided
+      const parsedPage = page ? parseInt(page, 10) : 1;
+      const validPage =
+        Number.isNaN(parsedPage) || parsedPage <= 0 ? 1 : parsedPage;
+      const postCount = await query.post.count({
+        where: {
+          user_id: userId,
+        },
+      });
+      const posts = await query.post.findMany({
+        where: {
+          user_id: userId,
+          OR: [
+            { post_audience: "price" },
+            { post_audience: "subscribers" },
+            { post_audience: "private" }
+          ]
+        },
+        select: {
+          id: true,
+          content: true,
+          post_id: true,
+          post_audience: true,
+          media: true,
+          created_at: true,
+          post_status: true,
+          post_impressions: true,
+          post_likes: true,
+          post_comments: true,
+          post_reposts: true,
+          was_repost: true,
+          repost_id: true,
+          repost_username: true,
+          UserMedia: {
+            select: {
+              id: true,
+              media_id: true,
+              post_id: true,
+              duration: true,
+              media_state: true,
+              poster: true,
+              url: true,
+              blur: true,
+              media_type: true,
+              locked: true,
+              accessible_to: true,
+              created_at: true,
+              updated_at: true,
+            },
+          },
+          user: {
+            select: {
+              username: true,
+              profile_image: true,
+              name: true,
+              is_model: true,
+              user_id: true,
+              id: true,
+            },
+          },
+        },
+        skip: (validPage - 1) * validLimit,
+        take: validLimit,
+        orderBy: {
+          created_at: "desc",
+        },
+      });
+
+      const postsChecked = posts.map(async (post) => {
+        const postLike = await query.postLike.findFirst({
+          where: {
+            user_id: post.user.id,
+            post_id: post.id,
+          },
+        });
+        return {
+          ...post,
+          likedByme: postLike ? true : false,
+        };
+      });
+
+      const resolvedPosts = await Promise.all(postsChecked);
+
+      return {
+        status: true,
+        message: "Posts retrieved successfully",
+        data: resolvedPosts,
+        total: postCount,
+      };
+    } catch (error: any) {
+      console.log(error);
+      throw new Error(error);
+    }
+  }
   // Get Current User Reposts
   static async MyReposts({
     userId,
@@ -223,6 +333,9 @@ export default class PostService {
       const parsedLimit = limit ? parseInt(limit, 10) : 5;
       const validLimit =
         Number.isNaN(parsedLimit) || parsedLimit <= 0 ? 5 : parsedLimit;
+
+      const redisKey = `user-repost-${userId}-page-${page}-limit-${parsedLimit}`
+
       // Parse page to an integer or default to 1 if not provided
       const userRepostCount = await query.userRepost.count({
         where: {
@@ -237,6 +350,19 @@ export default class PostService {
           message: "No reposts found",
         };
       }
+
+      const RepostRedisCache = await redis.get(redisKey)
+      if (RepostRedisCache) {
+        const parsedRepost = JSON.parse(RepostRedisCache)
+        return {
+          status: true,
+          message: "Reposts retrieved successfully",
+          data: parsedRepost,
+          hasMore: parsedRepost.length > validLimit,
+          total: userRepostCount,
+        }
+      }
+
       const userReposts = await query.userRepost.findMany({
         where: {
           user_id: userId,
@@ -321,6 +447,9 @@ export default class PostService {
       });
 
       const resolvedPosts = await Promise.all(postsChecked);
+
+      await redis.set(redisKey, JSON.stringify(resolvedPosts), "EX", 60)
+
 
       return {
         status: true,

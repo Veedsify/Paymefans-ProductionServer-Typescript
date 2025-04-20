@@ -39,6 +39,29 @@ export default class PostController {
         .json({ status: false, message: "Internal Server Error!" });
     }
   }
+  // My Private Posts
+  static async MyPrivatePosts(req: Request, res: Response): Promise<any> {
+    try {
+      const PrivatePosts = await PostService.GetMyPrivatePosts({
+        userId: req.user?.id!,
+        page: req.query.page as string,
+        limit: req.query.limit as string,
+      });
+      return res
+        .status(200)
+        .json({
+          status: true,
+          message: "Post Retreived Successfully",
+          data: PrivatePosts.data,
+          total: PrivatePosts.total,
+        });
+    } catch (err: any) {
+      console.error(err.message);
+      res
+        .status(500)
+        .json({ status: false, message: "Internal Server Error!" });
+    }
+  }
   // My Reposts
   static async GetMyReposts(req: Request, res: Response): Promise<any> {
     try {

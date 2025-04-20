@@ -13,6 +13,9 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// do some proper use account based actions based on these model:
+
+
 model User {
   id                        Int                         @id @default(autoincrement())
   email                     String                      @unique
@@ -23,7 +26,7 @@ model User {
   username                  String                      @unique
   admin                     Boolean                     @default(false)
   role                      UserRole                    @default(fan)
-  is_active                 Boolean                     @default(true)
+  is_active                 Boolean                     @default(false)
   is_verified               Boolean                     @default(false)
   is_email_verified         Boolean                     @default(false)
   is_model                  Boolean                     @default(false)
@@ -44,7 +47,7 @@ model User {
   total_followers           Int                         @default(0)
   total_following           Int                         @default(0)
   total_subscribers         Int                         @default(0)
-  admin_status              Boolean                     @default(true)
+  active_status             Boolean                     @default(true)
   created_at                DateTime                    @default(now())
   updated_at                DateTime                    @updatedAt
   Follow                    Follow[]
