@@ -16,7 +16,7 @@ export const SendPointPurchaseEmailTemplate = ({
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Points Purchase Confirmation - PayMeFans</title>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap');
+        
         * {
             margin: 0;
             padding: 0;

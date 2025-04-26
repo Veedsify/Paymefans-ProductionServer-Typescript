@@ -27,22 +27,18 @@ export default class ConversationService {
   static async AllConversations({
     user,
     conversationId,
+    page = "1",
   }: AllConversationProps): Promise<AllConversationResponse> {
     // const redisKey = `user:${user.user_id}:conversations:${conversationId}`;
     try {
-      // Check if the conversation data is cached
-      // const cachedData = await redis.get(redisKey);
-      // if (cachedData) {
-      //   console.log(cachedData);
-      //   const parsedData = JSON.parse(cachedData);
-      //   return {
-      //     error: false,
-      //     status: true,
-      //     receiver: parsedData.receiver,
-      //     messages: parsedData.messages,
-      //   };
-      // }
-      // Use Prisma transaction for atomicity
+      const pageNum = Number(page);
+      const messagesPerPage = Number(process.env.MESSAGES_PER_PAGE);
+
+      const validSkip =
+        !isNaN(pageNum) && !isNaN(messagesPerPage)
+          ? (pageNum - 1) * messagesPerPage
+          : 0;
+
       // Validate user's participation in the conversation
       const validateUserConversation = await query.conversations.findFirst({
         where: {
@@ -61,6 +57,7 @@ export default class ConversationService {
           receiver: null,
           message: "Invalid conversation",
           status: false,
+          hasMore: false,
           invalid_conversation: true,
           error: true,
         };
@@ -69,13 +66,34 @@ export default class ConversationService {
       const data = await query.conversations.findFirst({
         where: { conversation_id: conversationId },
         select: {
-          messages: { orderBy: { id: "asc" } },
           participants: true,
         },
       });
+
+      const conversationMessages = await query.messages.findMany({
+        where: {
+          conversationsId: conversationId,
+        },
+        orderBy: { created_at: "asc" },
+        skip: validSkip,
+        take: messagesPerPage,
+      });
       if (!data) {
-        return { messages: [], receiver: null, error: false, status: true };
+        return {
+          messages: [],
+          receiver: null,
+          error: false,
+          status: true,
+          hasMore: false,
+        };
       }
+      const messages = conversationMessages.slice(
+        0,
+        Number(process.env.MESSAGES_PER_PAGE)
+      );
+      const hasMore =
+        conversationMessages.length > Number(process.env.MESSAGES_PER_PAGE);
+
       // Determine the receiver
       const participant = data.participants.find(
         (p) => p.user_1 === user.user_id || p.user_2 === user.user_id
@@ -98,8 +116,9 @@ export default class ConversationService {
           },
         });
         const result = {
-          messages: data.messages,
+          messages: messages,
           receiver: receiverData,
+          hasMore,
           error: false,
           status: true,
         } as AllConversationResponse;
@@ -107,16 +126,16 @@ export default class ConversationService {
         return result;
       }
       // Cache the result in Redis
-      return { messages: [], receiver: null, error: false, status: true };
+      return {
+        messages: [],
+        hasMore,
+        receiver: null,
+        error: false,
+        status: true,
+      };
     } catch (error) {
       console.error("Error fetching conversation:", error);
-      return {
-        message: "Internal server error",
-        error: true,
-        status: false,
-        messages: [],
-        receiver: null,
-      };
+      throw new Error();
     } finally {
       await query.$disconnect(); // Ensure connection is closed
     }
@@ -269,6 +288,7 @@ export default class ConversationService {
           status: true,
           conversations: [],
           hasMore: false,
+          page: Number(page),
           unreadCount: unreadCount.length,
         };
       }
@@ -357,17 +377,11 @@ export default class ConversationService {
         conversations: filteredConversations as Conversations[],
         unreadCount: unreadCount.length,
         hasMore,
+        page: Number(page),
       };
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error fetching conversations:", error);
-      return {
-        message: "Internal server error",
-        status: false,
-        error: true,
-        unreadCount: 0,
-        conversations: [],
-        hasMore: false,
-      };
+      throw new Error(error.message);
     }
   }
   // Upload Attachments

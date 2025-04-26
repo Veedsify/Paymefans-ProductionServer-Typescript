@@ -24,5 +24,5 @@ post.get("/:postId/comments", Auth, PostController.GetPostComments)
 post.post("/like/:postId", Auth, PostController.LikePost)
 post.delete("/:postId", Auth, PostController.DeletePost)
 post.post("/media/signed-url", Auth, UploadController.CreateMediaUploadSignedUrl)
-
+post.post("/point/gift", Auth, PostController.GiftPoints)
 export default post

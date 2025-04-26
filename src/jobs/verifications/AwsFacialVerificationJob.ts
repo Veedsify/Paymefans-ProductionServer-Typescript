@@ -1,5 +1,7 @@
 import { redis } from "@libs/RedisStore";
 import { AwsFaceVerification } from "@services/AwsRekognitionFacialVerification";
+import EmailService from "@services/EmailService";
+import GetSinglename from "@utils/GetSingleName";
 import query from "@utils/prisma";
 import { Queue, Worker } from "bullmq";
 import type { AwsRekognitionObject } from "types/verification";
@@ -61,12 +63,24 @@ const UpdateVerificationStatus = async (
     },
     select: {
       user_id: true,
+      user: {
+        select: {
+          username: true,
+          email: true,
+          name: true,
+        },
+      },
     },
   });
 
   if (!user) {
     return { error: true, message: "User not found" };
   }
+
+  // Send Verification Successful Notification
+  // Send Verification Successful Email
+  const name = GetSinglename(user?.user.name as string);
+  await EmailService.VerificationComplete(name, user.user.email);
 
   await query.user.update({
     where: {
@@ -84,7 +98,7 @@ const AwsVerificationWorker = new Worker(
   "aws-verification",
   async (job) => {
     try {
-      const { front, faceVideo, token, back } = job.data;
+      const { front, faceVideo, token } = job.data;
       const match = await ProcessFaceComparison(front, faceVideo);
       //  perform strict id chech here
       const result = await UpdateVerificationStatus(
@@ -95,18 +109,11 @@ const AwsVerificationWorker = new Worker(
       );
 
       if (result.error) {
-        // Send Verification Failed Notification
-        // Send Verification Failed Email
-        console.log(result, back);
         return {
           error: true,
           message: result.message,
         };
       }
-
-      // Send Verification Successful Notification
-      // Send Verification Successful Email
-
       console.log(result);
       return {
         error: false,

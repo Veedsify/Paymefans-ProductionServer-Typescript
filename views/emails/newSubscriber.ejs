@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>New Subscriber Notification - PayMeFans</title>
     <style>
-         @import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap');
+         
         * {
             margin: 0;
             padding: 0;
@@ -236,7 +236,7 @@
         <table class="content" cellpadding="0" cellspacing="0" width="100%">
             <tr>
                 <td>
-                    <h1>🌟 Hi Tavel, 🌟</h1>
+                    <h1>🌟 Hi <%= name %>, 🌟</h1>
                     <p>We're excited to inform you that <strong>@Dikewisdom</strong> has subscribed to your exclusive content for 1 month! ✨</p>
 
                     <p>Their subscription is now active, and they'll enjoy access to your exclusive content, updates, pictures, and videos. 🖼️🎥</p>
@@ -245,9 +245,9 @@
 
                     <div class="subscription-details">
                         <p><strong>Subscription Details:</strong></p>
-                        <p>👤 Subscriber: [Username]</p>
-                        <p>📅 Subscription Period: 1 month</p>
-                        <p>⏰ Subscription Date: [Date]</p>
+                        <p>👤 Subscriber: <%= username %></p>
+                        <p>📅 Subscription Period: <%= duration %></p>
+                        <p>⏰ Subscription Date: <%= date %></p>
                     </div>
 
                     <p>Keep creating, and we'll take care of the rest! 🚀</p>

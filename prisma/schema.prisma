@@ -15,7 +15,6 @@ datasource db {
 
 // do some proper use account based actions based on these model:
 
-
 model User {
   id                        Int                         @id @default(autoincrement())
   email                     String                      @unique
@@ -647,6 +646,7 @@ model UserSubscriptionCurrent {
   subscription    String
   created_at      DateTime @default(now())
   updated_at      DateTime @updatedAt
+  ends_at         DateTime
   user            User     @relation("UserCurrentSubscription", fields: [user_id], references: [id], onDelete: Cascade)
   model           User     @relation("ModelCurrentSubscriptions", fields: [model_id], references: [id], onDelete: Cascade)
   userId          Int?

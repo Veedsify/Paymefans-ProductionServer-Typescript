@@ -1,4 +1,3 @@
-import axios from "axios";
 import { UploadMedieDataProps, UploadResponseResponse } from "types/upload";
 import { AuthUser } from "types/user";
 const { CLOUDFLARE_ACCOUNT_ID, CLOUDFLARE_ACCOUNT_TOKEN } = process.env;
@@ -17,19 +16,31 @@ export default class UploadService {
         const response = await fetch(
           `https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/stream?direct_user=true`,
           {
-            method: 'POST',
+            method: "POST",
             headers: {
-              'Authorization': `Bearer ${CLOUDFLARE_ACCOUNT_TOKEN}`,
-              'Content-Type': 'application/json',
-              'Tus-Resumable': '1.0.0',
-              'Upload-Length': `${fileSize}`,
-              'Upload-Metadata': `maxDurationSeconds ${maxDuration}, name ${fileName}, filetype ${fileType}`,
+              Authorization: `Bearer ${CLOUDFLARE_ACCOUNT_TOKEN}`,
+              "Content-Type": "application/json",
+              "Tus-Resumable": "1.0.0",
+              "Upload-Length": `${fileSize}`,
+              "Upload-Metadata": `maxDurationSeconds ${maxDuration},name ${fileName},filetype ${fileType}`,
             },
           }
         );
 
-        const uploadUrl = response.headers.get('location');
-        const mediaId = response.headers.get('stream-media-id');
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(
+            errorData?.errors?.[0]?.message ||
+              `Failed to get upload URL: ${response.statusText}`
+          );
+        }
+
+        const uploadUrl = response.headers.get("location");
+        const mediaId = response.headers.get("stream-media-id");
+
+        if (!uploadUrl || !mediaId) {
+          throw new Error("Missing upload URL or media ID in response headers");
+        }
 
         return {
           error: false,
@@ -39,45 +50,31 @@ export default class UploadService {
           message: "Upload URL generated successfully",
         };
       }
-    } catch (error: any) {
-      console.log(error.response.data.message || error.message);
-      throw new Error(error.message);
-    }
 
-    try {
       if ("explicitImageType" in data && data.type == "image") {
         const url = `https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/images/v2/direct_upload`;
-        console.log(url);
         const imageResponse = await fetch(url, {
-          method: 'POST',
+          method: "POST",
           headers: {
-            'Authorization': `Bearer ${CLOUDFLARE_ACCOUNT_TOKEN}`,
-            'Content-Type': 'application/json'
-          }
+            Authorization: `Bearer ${CLOUDFLARE_ACCOUNT_TOKEN}`,
+            "Content-Type": "application/json",
+          },
         });
 
-        const data = await imageResponse.json();
+        const dataRes = await imageResponse.json();
 
         return {
           error: false,
-          id: data.result.id,
-          uploadUrl: data.result.uploadURL,
+          id: dataRes.result.id,
+          uploadUrl: dataRes.result.uploadURL,
           type: "image",
           message: "Upload URL generated successfully",
         };
       }
-    } catch (error: any) {
-      console.log(error.status)
-      console.log(error.response.data.message || error.message);
-      throw new Error(error.message);
-    }
 
-    return {
-      error: true,
-      id: "",
-      uploadUrl: "",
-      type: "",
-      message: `No Upload Url Available`,
-    };
+      throw new Error("Invalid data for upload");
+    } catch (error: any) {
+      throw new Error(error?.response?.data?.message || error.message);
+    }
   }
 }

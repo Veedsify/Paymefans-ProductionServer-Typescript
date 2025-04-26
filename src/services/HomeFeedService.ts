@@ -57,7 +57,7 @@ class FeedService {
     userId: number,
     page: number
   ): Promise<{
-    posts: Array<Post & { score: number, likedByme: boolean }>;
+    posts: Array<Post & { score: number; likedByme: boolean }>;
     page: number;
     hasMore: boolean;
   }> {
@@ -95,6 +95,7 @@ class FeedService {
             profile_image: true,
             profile_banner: true,
             bio: true,
+            is_model: true,
             Subscribers: { select: { subscriber_id: true, created_at: true } },
             total_followers: true,
           },
@@ -115,7 +116,7 @@ class FeedService {
       });
       return {
         ...post,
-        likedByme: (postLike) ? true : false,
+        likedByme: postLike ? true : false,
       };
     });
 

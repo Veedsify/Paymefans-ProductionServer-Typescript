@@ -177,7 +177,7 @@ export default class PointService {
       }
 
       const platformFee = Number(process.env.PLATFORM_FEE) * Number(amount);
-      const points = (Number(amount) - platformFee) / Number(rate?.rate);
+      const points = Math.ceil((Number(amount) - platformFee) / Number(rate?.rate));
       const response = await this.CreatePaystackPayment({
         amount: parseInt(amount),
         platformFee,

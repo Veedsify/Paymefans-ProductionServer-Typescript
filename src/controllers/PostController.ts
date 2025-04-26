@@ -1,5 +1,6 @@
 import type { Request, Response } from "express";
 import PostService from "@services/PostService";
+import { AuthUser } from "types/user";
 export default class PostController {
   // Create Post
   static async CreatePost(req: Request, res: Response): Promise<any> {
@@ -24,14 +25,7 @@ export default class PostController {
         page: req.query.page as string,
         limit: req.query.limit as string,
       });
-      return res
-        .status(200)
-        .json({
-          status: true,
-          message: "Post Retreived Successfully",
-          data: MyPosts.data,
-          total: MyPosts.total,
-        });
+      return res.status(200).json(MyPosts);
     } catch (err: any) {
       console.error(err.message);
       res
@@ -47,14 +41,7 @@ export default class PostController {
         page: req.query.page as string,
         limit: req.query.limit as string,
       });
-      return res
-        .status(200)
-        .json({
-          status: true,
-          message: "Post Retreived Successfully",
-          data: PrivatePosts.data,
-          total: PrivatePosts.total,
-        });
+      return res.status(200).json(PrivatePosts);
     } catch (err: any) {
       console.error(err.message);
       res
@@ -70,14 +57,7 @@ export default class PostController {
         page: req.query.page as string,
         limit: req.query.limit as string,
       });
-      return res
-        .status(200)
-        .json({
-          status: true,
-          message: "Reposts Retreived Successfully",
-          data: MyReposts.data,
-          total: MyReposts.total,
-        });
+      return res.status(200).json(MyReposts);
     } catch (err: any) {
       console.error(err.message);
       res
@@ -93,14 +73,7 @@ export default class PostController {
         page: req.query.page as string,
         limit: req.query.limit as string,
       });
-      return res
-        .status(200)
-        .json({
-          status: true,
-          message: "Reposts Retreived Successfully",
-          data: Reposts.data,
-          total: Reposts.total,
-        });
+      return res.status(200).json(Reposts);
     } catch (err: any) {
       console.error(err.message);
       res
@@ -116,14 +89,12 @@ export default class PostController {
         page: req.query.page as string,
         limit: req.query.limit as string,
       });
-      return res
-        .status(200)
-        .json({
-          status: true,
-          message: "Media Retreived Successfully",
-          data: Media.data,
-          total: Media.total,
-        });
+      return res.status(200).json({
+        status: true,
+        message: "Media Retreived Successfully",
+        data: Media.data,
+        total: Media.total,
+      });
     } catch (err: any) {
       console.error(err.message);
       res
@@ -139,14 +110,7 @@ export default class PostController {
         page: req.query.page as string,
         limit: req.query.limit as string,
       });
-      return res
-        .status(200)
-        .json({
-          status: true,
-          message: "Media Retreived Successfully",
-          data: Media.data,
-          total: Media.total,
-        });
+      return res.status(200).json(Media);
     } catch (err: any) {
       console.error(err.message);
       res
@@ -162,7 +126,8 @@ export default class PostController {
         page: req.query.page as string,
         limit: req.query.limit as string,
       });
-      return res.status(200).json({ ...UserPost });
+      console.log(UserPost);
+      return res.status(200).json(UserPost);
     } catch (err: any) {
       console.error(err.message);
       res
@@ -170,8 +135,8 @@ export default class PostController {
         .json({ status: false, message: "Internal Server Error!" });
     }
   }
-   // Get User Private User Posts By ID
-   static async GetPrivatePostByID(req: Request, res: Response): Promise<any> {
+  // Get User Private User Posts By ID
+  static async GetPrivatePostByID(req: Request, res: Response): Promise<any> {
     try {
       const UserPost = await PostService.GetUserPrivatePostByID({
         userId: req.params.userId as string,
@@ -211,13 +176,11 @@ export default class PostController {
         userId: req.user?.id!,
         ...req.body,
       });
-      return res
-        .status(200)
-        .json({
-          status: true,
-          message: "Post Updated Successfully",
-          data: EditPost,
-        });
+      return res.status(200).json({
+        status: true,
+        message: "Post Updated Successfully",
+        data: EditPost,
+      });
     } catch (err: any) {
       console.error(err.message);
       res
@@ -303,6 +266,27 @@ export default class PostController {
       };
       const Delete = await PostService.DeletePost(options);
       return res.status(200).json({ ...Delete });
+    } catch (error: any) {
+      console.log(error.message);
+      res.status(500).json({
+        status: false,
+        message: "Internal Server Error",
+      });
+    }
+  }
+  // Gift Points
+  static async GiftPoints(req: Request, res: Response): Promise<any> {
+    try {
+      const options = {
+        postId: req.body.post_id,
+        userId: req.user?.id as AuthUser["id"],
+        points: req.body.points,
+        amount: req.body.amount,
+        points_buy_id: req.body.points_buy_id,
+        receiver_id: req.body.user_id,
+      };
+      const Gift = await PostService.GiftPoints(options);
+      return res.status(200).json({ ...Gift });
     } catch (error: any) {
       console.log(error.message);
       res.status(500).json({

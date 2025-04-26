@@ -4,11 +4,13 @@ import { Messages, Participants, Settings } from "@prisma/client";
 export type AllConversationProps = {
   user: AuthUser;
   conversationId: string;
+  page: string;
 };
 
 export interface AllConversationResponse {
   error: boolean;
   status: boolean;
+  hasMore: boolean;
   receiver: {
     id: number;
     user_id: string;
@@ -48,6 +50,7 @@ export interface MyConversationResponse {
   unreadCount: number;
   hasMore: boolean;
   message?: string;
+  page: number;
 }
 
 export interface UploadAttachmentsProps {

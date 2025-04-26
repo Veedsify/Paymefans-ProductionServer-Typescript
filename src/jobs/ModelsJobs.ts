@@ -28,18 +28,17 @@ async function ModelsJobs() {
     {
       
       repeat: {
-        every: 10000,
+        every: 3000,
         immediately: true, // Run immediately after adding the job
       },
     }
   );
   queueCount += 1;
-  console.log(`QueueCount`, queueCount);
   return job;
 }
 
 // Handle worker events
-worker.on('completed', job => console.log(`Job ${job.name} completed`));
+// worker.on('completed', job => console.log(`Job ${job.name} completed`));
 worker.on("failed", (job, err) =>
   console.error(`Job ${job?.id} failed withDirectives  error ${err}`)
 );

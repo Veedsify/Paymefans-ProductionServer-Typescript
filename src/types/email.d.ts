@@ -1,5 +1,6 @@
 export type EmailServiceProp = {
   email: string;
+  name: string;
   subject: string;
   message: string;
 };
@@ -27,3 +28,10 @@ export interface SendNewMessageEmailProps {
   subject: string;
   link: string;
 }
+
+export type Product = {
+  name: string;
+  price: string;
+  orderid: string;
+  date: string;
+};

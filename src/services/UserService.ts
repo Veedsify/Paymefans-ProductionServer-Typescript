@@ -13,65 +13,53 @@ import LoginHistoryService from "./LoginHistory";
 export default class UserService {
   static async RetrieveUser(userid: number): Promise<RetrieveUserResponse> {
     try {
-      const result = await query.$transaction(async (tx) => {
-        const user = await tx.user.findUnique({
-          where: {
-            id: userid,
-          },
-          include: {
-            UserPoints: true,
-            UserWallet: true,
-            Settings: true,
-            Model: true,
-            _count: {
-              select: {
-                Follow: {
-                  where: {
-                    user_id: userid,
-                  },
-                },
-                Subscribers: {
-                  where: {
-                    user_id: userid,
-                  },
-                },
-              },
-            },
-          },
-        });
-
-        if (!user) {
-          return { message: "User not found", status: false };
-        }
-
-        const following = await tx.user.count({
-          where: {
-            Follow: {
-              some: {
-                follower_id: userid,
-              },
-            },
-          },
-        });
-
-        const getMySubscriptions = await tx.subscribers.findMany({
-          where: {
-            subscriber_id: userid,
-          },
-          select: {
-            user_id: true,
-          },
-        });
-
-        const { password, ...rest } = user;
-        const subscriptions = getMySubscriptions.map((sub) => sub.user_id);
-        const purchasedPosts: number[] = [2];
-
-        return {
-          user: { ...rest, following, subscriptions, purchasedPosts },
-          status: true,
-        };
+      // Fetch user with related data
+      const user = await query.user.findUnique({
+        where: {
+          id: userid,
+        },
+        include: {
+          UserPoints: true,
+          UserWallet: true,
+          Settings: true,
+          Model: true,
+        },
       });
+
+      if (!user) {
+        return { message: "User not found", status: false };
+      }
+
+      // Fetch following count
+      const following = await query.user.count({
+        where: {
+          Follow: {
+            some: {
+              follower_id: userid,
+            },
+          },
+        },
+      });
+
+      // Fetch subscriptions
+      const getMySubscriptions = await query.subscribers.findMany({
+        where: {
+          subscriber_id: userid,
+        },
+        select: {
+          user_id: true,
+        },
+      });
+
+      const { password, ...rest } = user;
+      const subscriptions = getMySubscriptions.map((sub) => sub.user_id);
+      const purchasedPosts: number[] = [2];
+
+      const result = {
+        message: "User retrieved successfully",
+        user: { ...rest, following, subscriptions, purchasedPosts },
+        status: true,
+      };
 
       return result;
     } catch (error) {
@@ -135,7 +123,7 @@ export default class UserService {
         },
         select: {
           user_id: true,
-        }
+        },
       });
 
       const user = await query.user.findUnique({

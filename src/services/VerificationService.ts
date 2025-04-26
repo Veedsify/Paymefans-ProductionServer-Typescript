@@ -1,6 +1,7 @@
 import query from "@utils/prisma";
 import type { AuthUser } from "types/user";
 import type { StartModelVerificationResponse } from "types/verification";
+import EmailService from "./EmailService";
 
 export default class VerificationService {
   static async StartModelVerificationService({
@@ -44,6 +45,8 @@ export default class VerificationService {
           },
         });
 
+        // Send Model Verification Email
+        await EmailService.ModelWelcomeEmail(user.name, user.email);
         return {
           error: false,
           message: "Verification started",

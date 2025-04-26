@@ -46,6 +46,7 @@ export default class RegisterService {
 
         const EmailData: EmailServiceProp = {
             email: data.email,
+            name: data.name,
             subject: "Welcome to PayMeFans",
             message: "Welcome to PayMeFans, we are excited to have you here. If you have any questions or need help, feel free to reach out to us.",
         }

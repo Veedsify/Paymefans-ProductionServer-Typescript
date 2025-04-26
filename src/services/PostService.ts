@@ -16,6 +16,7 @@ import type {
   GetSinglePostResponse,
   GetUserPostByIdProps,
   GetUserPostByIdResponse,
+  GiftPointsProps,
   LikePostProps,
   LikePostResponse,
   RepostProps,
@@ -27,6 +28,10 @@ import { PostAudience } from "@prisma/client";
 import RemoveCloudflareMedia from "@libs/RemoveCloudflareMedia";
 import { Comments } from "@utils/mongoSchema";
 import { redis } from "@libs/RedisStore";
+import { GenerateUniqueId } from "@utils/GenerateUniqueId";
+import { UserTransactionQueue } from "@jobs/notifications/UserTransactionJob";
+import EmailService from "./EmailService";
+import GetSinglename from "@utils/GetSingleName";
 export default class PostService {
   // Create Post
   static async CreatePost(data: CreatePostProps): Promise<CreatePostResponse> {
@@ -34,7 +39,6 @@ export default class PostService {
       const postId = uuid();
       const user = data.user;
       const { content, visibility, media, removedMedia } = data;
-
       if (removedMedia) {
         const removeMedia = await RemoveCloudflareMedia(removedMedia);
         if ("error" in removeMedia && removeMedia.error) {
@@ -67,7 +71,6 @@ export default class PostService {
       }
       // All Images
       const allImages = media.every((file) => file.type === "image");
-
       // Continue with the rest of your logic
       const post = await query.post.create({
         data: {
@@ -131,11 +134,6 @@ export default class PostService {
       const parsedPage = page ? parseInt(page, 10) : 1;
       const validPage =
         Number.isNaN(parsedPage) || parsedPage <= 0 ? 1 : parsedPage;
-      const postCount = await query.post.count({
-        where: {
-          user_id: userId,
-        },
-      });
       const posts = await query.post.findMany({
         where: {
           user_id: userId,
@@ -184,11 +182,16 @@ export default class PostService {
           },
         },
         skip: (validPage - 1) * validLimit,
-        take: validLimit,
+        take: validLimit + 1,
         orderBy: {
           created_at: "desc",
         },
       });
+      let hasMore = false;
+      if (posts.length > validLimit) {
+        hasMore = true;
+        posts.pop();
+      }
 
       const postsChecked = posts.map(async (post) => {
         const postLike = await query.postLike.findFirst({
@@ -202,21 +205,18 @@ export default class PostService {
           likedByme: postLike ? true : false,
         };
       });
-
       const resolvedPosts = await Promise.all(postsChecked);
-
       return {
         status: true,
         message: "Posts retrieved successfully",
         data: resolvedPosts,
-        total: postCount,
+        hasMore: hasMore,
       };
     } catch (error: any) {
       console.log(error);
       throw new Error(error);
     }
   }
-
   // Get Current Private User Posts
   static async GetMyPrivatePosts({
     userId,
@@ -232,11 +232,6 @@ export default class PostService {
       const parsedPage = page ? parseInt(page, 10) : 1;
       const validPage =
         Number.isNaN(parsedPage) || parsedPage <= 0 ? 1 : parsedPage;
-      const postCount = await query.post.count({
-        where: {
-          user_id: userId,
-        },
-      });
       const posts = await query.post.findMany({
         where: {
           user_id: userId,
@@ -290,11 +285,17 @@ export default class PostService {
           },
         },
         skip: (validPage - 1) * validLimit,
-        take: validLimit,
+        take: validLimit + 1,
         orderBy: {
           created_at: "desc",
         },
       });
+
+      let hasMore = false;
+      if (posts.length > validLimit) {
+        hasMore = true;
+        posts.pop();
+      }
 
       const postsChecked = posts.map(async (post) => {
         const postLike = await query.postLike.findFirst({
@@ -308,14 +309,12 @@ export default class PostService {
           likedByme: postLike ? true : false,
         };
       });
-
       const resolvedPosts = await Promise.all(postsChecked);
-
       return {
         status: true,
         message: "Posts retrieved successfully",
         data: resolvedPosts,
-        total: postCount,
+        hasMore: hasMore,
       };
     } catch (error: any) {
       console.log(error);
@@ -333,9 +332,7 @@ export default class PostService {
       const parsedLimit = limit ? parseInt(limit, 10) : 5;
       const validLimit =
         Number.isNaN(parsedLimit) || parsedLimit <= 0 ? 5 : parsedLimit;
-
       const redisKey = `user-repost-${userId}-page-${page}-limit-${parsedLimit}`;
-
       // Parse page to an integer or default to 1 if not provided
       const userRepostCount = await query.userRepost.count({
         where: {
@@ -345,12 +342,11 @@ export default class PostService {
       if (userRepostCount === 0) {
         return {
           status: false,
-          total: 0,
+          hasMore: false,
           data: [],
           message: "No reposts found",
         };
       }
-
       const RepostRedisCache = await redis.get(redisKey);
       if (RepostRedisCache) {
         const parsedRepost = JSON.parse(RepostRedisCache);
@@ -359,10 +355,8 @@ export default class PostService {
           message: "Reposts retrieved successfully",
           data: parsedRepost,
           hasMore: parsedRepost.length > validLimit,
-          total: userRepostCount,
         };
       }
-
       const userReposts = await query.userRepost.findMany({
         where: {
           user_id: userId,
@@ -425,14 +419,11 @@ export default class PostService {
           id: "desc",
         },
       });
-
       let hasMore = false;
       if (userReposts.length > validLimit) {
         hasMore = true;
       }
-
       const reposts = userReposts.map((repost) => repost.post);
-
       const postsChecked = reposts.map(async (post) => {
         const postLike = await query.postLike.findFirst({
           where: {
@@ -445,17 +436,13 @@ export default class PostService {
           likedByme: postLike ? true : false,
         };
       });
-
       const resolvedPosts = await Promise.all(postsChecked);
-
       await redis.set(redisKey, JSON.stringify(resolvedPosts), "EX", 60);
-
       return {
         status: true,
         message: "Reposts retrieved successfully",
         data: resolvedPosts,
         hasMore,
-        total: userRepostCount,
       };
     } catch (error: any) {
       console.log(error);
@@ -477,19 +464,6 @@ export default class PostService {
       const parsedPage = page ? parseInt(page, 10) : 1;
       const validPage =
         Number.isNaN(parsedPage) || parsedPage <= 0 ? 1 : parsedPage;
-      const userRepostCount = await query.userRepost.count({
-        where: {
-          user_id: Number(userId),
-        },
-      });
-      if (userRepostCount === 0) {
-        return {
-          status: true,
-          message: "Reposts retrieved successfully",
-          data: [],
-          total: 0,
-        };
-      }
       const userReposts = await query.userRepost.findMany({
         where: {
           user_id: Number(userId),
@@ -541,13 +515,18 @@ export default class PostService {
           },
         },
         skip: (validPage - 1) * validLimit,
-        take: validLimit,
+        take: validLimit + 1,
         orderBy: {
           id: "desc",
         },
       });
-      const reposts = userReposts.map((repost) => repost.post);
 
+      let hasMore = false;
+      if (userReposts.length > validLimit) {
+        hasMore = true;
+        userReposts.pop();
+      }
+      const reposts = userReposts.map((repost) => repost.post);
       const postsChecked = reposts.map(async (post) => {
         const postLike = await query.postLike.findFirst({
           where: {
@@ -560,13 +539,12 @@ export default class PostService {
           likedByme: postLike ? true : false,
         };
       });
-
       const resolvedPosts = await Promise.all(postsChecked);
       return {
         status: true,
         message: "Reposts retrieved successfully",
         data: resolvedPosts,
-        total: userRepostCount,
+        hasMore: hasMore,
       };
     } catch (error: any) {
       console.log(error);
@@ -640,20 +618,6 @@ export default class PostService {
           user_id: Number(userId),
         },
       });
-      const mediaCount = await query.userMedia.count({
-        where: {
-          AND: [
-            {
-              accessible_to: "public",
-            },
-            {
-              accessible_to: "subscribers",
-            },
-          ],
-          media_state: "completed",
-          OR: [...postCount.map((post) => ({ post_id: post.id }))],
-        },
-      });
       const media = await query.userMedia.findMany({
         where: {
           NOT: {
@@ -686,16 +650,23 @@ export default class PostService {
           },
         },
         skip: (validPage - 1) * validLimit,
-        take: validLimit,
+        take: validLimit + 1,
         orderBy: {
           created_at: "desc",
         },
       });
+
+      let hasMore = false;
+      if (media.length > validLimit) {
+        hasMore = true;
+        media.pop();
+      }
+
       return {
         status: true,
         message: "Media retrieved successfully",
         data: media,
-        total: mediaCount,
+        hasMore,
       };
     } catch (error: any) {
       console.log(error);
@@ -717,15 +688,7 @@ export default class PostService {
       const parsedPage = page ? parseInt(page, 10) : 1;
       const validPage =
         Number.isNaN(parsedPage) || parsedPage <= 0 ? 1 : parsedPage;
-      const postCount = await query.post.count({
-        where: {
-          user_id: Number(userId),
-          post_status: "approved",
-          NOT: {
-            post_audience: "private",
-          },
-        },
-      });
+
       let posts = await query.post.findMany({
         where: {
           user_id: Number(userId),
@@ -781,8 +744,14 @@ export default class PostService {
           created_at: "desc",
         },
         skip: (validPage - 1) * validLimit,
-        take: validLimit,
+        take: validLimit + 1,
       });
+
+      let hasMore = false;
+      if (posts.length > validLimit) {
+        posts.pop();
+        hasMore = true;
+      }
 
       const postsChecked = posts.map(async (post) => {
         const postLike = await query.postLike.findFirst({
@@ -796,21 +765,18 @@ export default class PostService {
           likedByme: postLike ? true : false,
         };
       });
-
       const resolvedPosts = await Promise.all(postsChecked);
-
       return {
         status: true,
         message: "Posts retrieved successfully",
         data: resolvedPosts,
-        total: postCount,
+        hasMore,
       };
     } catch (error: any) {
       console.log(error);
       throw new Error(error.message);
     }
   }
-
   // Get User Post By User ID
   static async GetUserPrivatePostByID({
     userId,
@@ -826,24 +792,11 @@ export default class PostService {
       const parsedPage = page ? parseInt(page, 10) : 1;
       const validPage =
         Number.isNaN(parsedPage) || parsedPage <= 0 ? 1 : parsedPage;
-      const postCount = await query.post.count({
-        where: {
-          user_id: Number(userId),
-          post_status: "approved",
-          OR: [
-            { post_audience: "price" },
-            { post_audience: "subscribers" },
-          ],
-        },
-      });
       let posts = await query.post.findMany({
         where: {
           user_id: Number(userId),
           post_status: "approved",
-          OR: [
-            { post_audience: "price" },
-            { post_audience: "subscribers" },
-          ],
+          OR: [{ post_audience: "price" }, { post_audience: "subscribers" }],
         },
         select: {
           id: true,
@@ -892,8 +845,14 @@ export default class PostService {
           created_at: "desc",
         },
         skip: (validPage - 1) * validLimit,
-        take: validLimit,
+        take: validLimit + 1,
       });
+
+      let hasMore = false;
+      if (posts.length > validLimit) {
+        posts.pop();
+        hasMore = true;
+      }
 
       const postsChecked = posts.map(async (post) => {
         const postLike = await query.postLike.findFirst({
@@ -907,21 +866,18 @@ export default class PostService {
           likedByme: postLike ? true : false,
         };
       });
-
       const resolvedPosts = await Promise.all(postsChecked);
-
       return {
         status: true,
         message: "Posts retrieved successfully",
         data: resolvedPosts,
-        total: postCount,
+        hasMore,
       };
     } catch (error: any) {
       console.log(error);
       throw new Error(error.message);
     }
   }
-
   // Get Single Post By ID:
   static async GetSinglePost({
     postId,
@@ -985,16 +941,13 @@ export default class PostService {
           message: "Post not Private",
         };
       }
-
       const postLike = await query.postLike.findFirst({
         where: {
           post_id: post.id,
           user_id: post.user_id,
         },
       });
-
       const likedByme = postLike ? true : false;
-
       return {
         error: false,
         status: true,
@@ -1164,7 +1117,6 @@ export default class PostService {
             },
           },
         });
-
         return repost;
       });
       if (repost) {
@@ -1197,7 +1149,6 @@ export default class PostService {
       .sort({ date: -1 })
       .skip((parseInt(page) - 1) * parseInt(limit))
       .limit(parseInt(limit) + 1); // Fetch one extra for pagination check
-
     const hasMore = comments.length > parseInt(limit);
     if (hasMore) {
       comments.pop();
@@ -1331,11 +1282,9 @@ export default class PostService {
           id: post.id,
         },
       });
-
       await Comments.deleteMany({
         postId: Number(post.id),
       });
-
       return {
         status: true,
         message: "Post deleted successfully",
@@ -1345,4 +1294,161 @@ export default class PostService {
       throw new Error(error.message);
     }
   }
+  // Gift Points
+  static async GiftPoints(
+    options: GiftPointsProps
+  ): Promise<{ message: string; error: boolean }> {
+    try {
+      if (!options.points || !options.userId || !options.postId) {
+        return {
+          message: "Points, userId and postId are required",
+          error: true,
+        };
+      }
+      const { points, userId, postId, receiver_id } = options;
+      const findPost = await query.post.findFirst({
+        where: {
+          post_id: postId,
+          user_id: receiver_id,
+        },
+      });
+      if (!findPost) {
+        return {
+          message: "Post not found",
+          error: true,
+        };
+      }
+      // Check if the user has enough points
+      const user = await query.user.findFirst({
+        where: {
+          id: userId,
+        },
+        include: {
+          UserPoints: true,
+        },
+      });
+      if (user?.UserPoints && user?.UserPoints?.points < points) {
+        return {
+          message: "You do not have enough points",
+          error: true,
+        };
+      }
+      // Deduct points from the user and add to the receiver in a transaction
+      await query.$transaction([
+        query.user.update({
+          where: {
+            id: userId,
+          },
+          data: {
+            UserPoints: {
+              update: {
+                points: {
+                  decrement: points,
+                },
+              },
+            },
+          },
+        }),
+        query.user.update({
+          where: {
+            id: receiver_id,
+          },
+          data: {
+            UserPoints: {
+              update: {
+                points: {
+                  increment: points,
+                },
+              },
+            },
+          },
+        }),
+      ]);
+
+      // Receiver
+      const receiver = await query.user.findFirst({
+        where: {
+          id: receiver_id,
+        },
+      });
+      const [trx1, trx2] = await Promise.all([
+        `TRN${GenerateUniqueId()}`,
+        `TRN${GenerateUniqueId()}`,
+      ]);
+      const senderOptions = {
+        transactionId: trx1,
+        transaction: `Gifted ${points} points to user ${receiver?.username}`,
+        userId: userId,
+        amount: points,
+        transactionType: "debit",
+        transactionMessage: `You gifted ${points} points to user ${receiver?.username}`,
+        walletId: 1,
+      };
+      const receiverOptions = {
+        transactionId: trx2,
+        transaction: `Received ${points} points from user ${user?.username}`,
+        userId: receiver_id,
+        amount: points,
+        transactionType: "credit",
+        transactionMessage: `You received ${points} points from user ${user?.username}`,
+        walletId: 1,
+      };
+      const tasks = [
+        UserTransactionQueue.add("userTransaction", senderOptions, {
+          removeOnComplete: true,
+          attempts: 3,
+        }),
+        UserTransactionQueue.add("userTransaction", receiverOptions, {
+          removeOnComplete: true,
+          attempts: 3,
+        }),
+        EmailService.PostGiftSentEmail(
+          GetSinglename(user?.fullname as string),
+          String(user?.email),
+          String(receiver?.username),
+          points
+        ),
+        EmailService.PostGiftReceivedEmail(
+          GetSinglename(receiver?.fullname as string),
+          String(receiver?.email),
+          String(user?.username),
+          points
+        ),
+        query.notifications.create({
+          data: {
+            notification_id: `NOTI${GenerateUniqueId()}`,
+            message: `You have received <strong>${points}</strong> points from user ${user?.username}`,
+            user_id: receiver_id,
+            action: "purchase",
+            url: "/wallet",
+          },
+        }),
+        query.notifications.create({
+          data: {
+            notification_id: `NOTI${GenerateUniqueId()}`,
+            message: `You have gifted <strong>${points}</strong> points to user ${receiver?.username}`,
+            user_id: userId,
+            action: "purchase",
+            url: "/wallet",
+          },
+        }),
+      ];
+
+      try {
+        await Promise.all(tasks);
+      } catch (error) {
+        console.error("Error processing gift transaction:", error);
+        throw error; // Or handle partial failures differently
+      }
+
+      //  Return
+      return {
+        message: `You have successfully gifted ${points} points to ${receiver?.username}`,
+        error: false,
+      };
+    } catch (error: any) {
+      throw new Error(error.message);
+    }
+  }
+  // Handle Gift Transaction
 }

@@ -3,9 +3,6 @@ import type { Request, Response } from "express";
 import type { AuthUser } from "types/user";
 import fs from "fs";
 import { AwsVerificationService } from "@services/AwsVerificationService";
-import _, { attempt } from "lodash";
-import { AwsFaceVerification } from "@services/AwsRekognitionFacialVerification";
-import query from "@utils/prisma";
 import { AwsVerificationQueue } from "@jobs/verifications/AwsFacialVerificationJob";
 
 export default class VerificationController {

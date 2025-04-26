@@ -8,6 +8,7 @@ import type {
 } from "../types/subscribers";
 import { GenerateUniqueId } from "@utils/GenerateUniqueId";
 import { UserTransactionQueue } from "@jobs/notifications/UserTransactionJob";
+import EmailService from "./EmailService";
 
 export default class SubscriberService {
   static async CheckSubscriber({
@@ -125,7 +126,9 @@ export default class SubscriberService {
         select: {
           id: true,
           user_id: true,
+          fullname: true,
           username: true,
+          email: true,
           ModelSubscriptionPack: {
             select: {
               ModelSubscriptionTier: {
@@ -267,6 +270,22 @@ export default class SubscriberService {
         }),
       ]);
 
+      //   TierDuration
+      const tierDuration =
+        profileData.ModelSubscriptionPack?.ModelSubscriptionTier[0]
+          ?.tier_duration ?? 0;
+
+      await Promise.all([
+        EmailService.NewSubscriberNotification({
+          name: profileData?.fullname ? profileData.fullname.split(" ")[0] : profileData?.fullname,
+          username: authUser.username as string,
+          email: profileData?.email as string,
+          duration: Number(tierDuration) as number,
+          date: new Date().toLocaleDateString(),
+          subscriberId: userdata?.user_id as string,
+        }),
+      ]);
+
       const updateSubscription = await query.user.update({
         where: {
           id: profileData.id,
@@ -290,6 +309,10 @@ export default class SubscriberService {
           },
         });
 
+      const nextPaymentDate = new Date();
+      nextPaymentDate.setDate(nextPaymentDate.getDate() + Number(tierDuration));
+
+      //   Create Subscription History
       if (existingSubscription) {
         await query.userSubscriptionCurrent.update({
           where: {
@@ -297,6 +320,7 @@ export default class SubscriberService {
           },
           data: {
             subscription_id: SUB_ID,
+            ends_at: nextPaymentDate,
             subscription: profileData.ModelSubscriptionPack
               ?.ModelSubscriptionTier[0]?.tier_name as string,
           },
@@ -306,6 +330,7 @@ export default class SubscriberService {
           data: {
             subscription_id: SUB_ID,
             user_id: authUser.id,
+            ends_at: nextPaymentDate,
             model_id: profileData.id,
             subscription: profileData.ModelSubscriptionPack
               ?.ModelSubscriptionTier[0]?.tier_name as string,

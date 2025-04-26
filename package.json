@@ -9,7 +9,7 @@
   "scripts": {
     "build": "tsc",
     "bun-build": "bun build",
-    "start": "node -r tsconfig-paths/register dist/app.js",
+    "start": "bun -r tsconfig-paths/register dist/app.js",
     "dev": "nodemon --exec tsx -r tsconfig-paths/register src/app.ts",
     "dev2": "bun run --hot src/app.ts"
   },
@@ -78,6 +78,7 @@
     "nodemailer-express-handlebars": "^7.0.0",
     "nodemon": "^3.1.9",
     "npm": "^10.9.2",
+    "numeral": "^2.0.6",
     "pusher": "^5.2.0",
     "redis": "^4.7.0",
     "sanitize-html": "^2.14.0",

@@ -171,7 +171,7 @@ export default class SettingsService {
     }
 
     // Check Username Before Change
-    static async CheckUserName(username: string, user: AuthUser): Promise<CheckUserNameResponse> {
+    static async CheckUserName(username: string, _: AuthUser): Promise<CheckUserNameResponse> {
         try {
 
             if(!username){

@@ -9,6 +9,7 @@ export default class ConversationController {
             const conversations = await ConversationService.AllConversations({
                 user: req.user as AuthUser,
                 conversationId: req.params.conversationId as string,
+                page: req.query.page as string,
             });
             if (conversations.error) {
                 res.status(401).json({...conversations});

@@ -1,4 +1,12 @@
-import { MediaState, Post, PostAudience, PostCommentAttachments, PostLike, Subscribers, UserMedia } from "@prisma/client"
+import {
+  MediaState,
+  Post,
+  PostAudience,
+  PostCommentAttachments,
+  PostLike,
+  Subscribers,
+  UserMedia,
+} from "@prisma/client";
 import { AuthUser } from "./user";
 // --------------------------------------
 // Media Related Interfaces
@@ -7,69 +15,69 @@ import { AuthUser } from "./user";
  * Interface for creating new media
  */
 interface CreateMedia {
-    id: string;
-    type: string;
-    public: string;
-    blur: boolean;
+  id: string;
+  type: string;
+  public: string;
+  blur: boolean;
 }
 /**
  * Interface for removed media
  */
 interface RemovedMedia {
-    id: string;
-    type: string;
+  id: string;
+  type: string;
 }
 /**
  * Response type for fetching user's media
  */
 export type GetMyMediaResponse = {
-    status: boolean;
-    message: string;
-    data: UserMedia[];
-    total: number;
-}
+  status: boolean;
+  message: string;
+  data: UserMedia[];
+  total: number;
+};
 /**
  * Props for fetching user's media
  */
 export type GetMyMediaProps = {
-    userId: number;
-    page: string;
-    limit: string;
-}
+  userId: number;
+  page: string;
+  limit: string;
+};
 /**
  * Props for fetching another user's media
  */
 export type GetOtherMediaProps = {
-    userId: string;
-    page: string;
-    limit: string;
-}
+  userId: string;
+  page: string;
+  limit: string;
+};
 /**
  * Response type for fetching another user's media
  */
 export type GetOtherMediaResponse = {
-    status: boolean;
-    message: string;
-    data: {
-        id: number,
-        media_id: string,
-        post_id: number,
-        poster: string,
-        duration: string | null,
-        media_state: MediaState,
-        url: string,
-        blur: string,
-        media_type: string,
-        locked: boolean,
-        accessible_to: string,
-        post: {
-            user: {
-                id: number;
-            }
-        }
-    }[]
-    total: number;
-}
+  status: boolean;
+  message: string;
+  data: {
+    id: number;
+    media_id: string;
+    post_id: number;
+    poster: string;
+    duration: string | null;
+    media_state: MediaState;
+    url: string;
+    blur: string;
+    media_type: string;
+    locked: boolean;
+    accessible_to: string;
+    post: {
+      user: {
+        id: number;
+      };
+    };
+  }[];
+  hasMore: boolean;
+};
 // --------------------------------------
 // Post Creation Related Types
 // --------------------------------------
@@ -77,32 +85,34 @@ export type GetOtherMediaResponse = {
  * Props for creating a new post
  */
 interface CreatePostProps {
-    content: string;
-    visibility: string;
-    media: CreateMedia[];
-    user: AuthUser;
-    removedMedia: RemovedMedia[];
+  content: string;
+  visibility: string;
+  media: CreateMedia[];
+  user: AuthUser;
+  removedMedia: RemovedMedia[];
 }
 /**
  * Success response for post creation
  */
 export type CreatePostSuccessResponse = {
-    data: Post;
-    message: string;
-    status: true;
-}
+  data: Post;
+  message: string;
+  status: true;
+};
 /**
  * Error response for post creation
  */
 export type CreatePostErrorResponse = {
-    status: false;
-    message: string;
-    error: any
-}
+  status: false;
+  message: string;
+  error: any;
+};
 /**
  * Combined response type for post creation
  */
-export type CreatePostResponse = CreatePostSuccessResponse | CreatePostErrorResponse
+export type CreatePostResponse =
+  | CreatePostSuccessResponse
+  | CreatePostErrorResponse;
 // --------------------------------------
 // Post Retrieval Related Types
 // --------------------------------------
@@ -110,106 +120,105 @@ export type CreatePostResponse = CreatePostSuccessResponse | CreatePostErrorResp
  * Extended post data structure
  */
 export interface MyPost {
+  id: number;
+  content: string | null;
+  post_id: string;
+  post_audience: string;
+  media: any;
+  created_at: Date;
+  post_likes: number;
+  post_comments: number;
+  post_reposts: number;
+  was_repost: boolean;
+  post_status: string;
+  post_impressions: number;
+  repost_id: string | null;
+  repost_username: string | null;
+  UserMedia?: UserMedia[];
+  likedByme: boolean;
+  user: {
+    username: string;
+    profile_image: string | null;
+    name: string;
+    user_id: string;
     id: number;
-    content: string | null;
-    post_id: string;
-    post_audience: string;
-    media: any;
-    created_at: Date;
-    post_likes: number;
-    post_comments: number;
-    post_reposts: number;
-    was_repost: boolean;
-    post_status: string;
-    post_impressions: number;
-    repost_id: string | null;
-    repost_username: string | null;
-    UserMedia?: UserMedia[];
-    likedByme: boolean;
-    user: {
-        username: string;
-        profile_image: string | null;
-        name: string;
-        user_id: string;
-        id: number;
-    };
+  };
 }
 /**
  * Props for fetching user's posts
  */
 export type GetMyPostProps = {
-    userId: number;
-    page: string;
-    limit: string;
-}
+  userId: number;
+  page: string;
+  limit: string;
+};
 /**
  * Success response for fetching user's posts
  */
 type GetMyPostSuccessResponse = {
-    status: boolean;
-    message: string;
-    data: MyPost[];
-    hasMore?: boolean;
-    total: number;
-}
+  status: boolean;
+  message: string;
+  data: MyPost[];
+  hasMore?: boolean;
+};
 /**
  * Combined response type for fetching user's posts
  */
-export type GetMyPostResponse = GetMyPostSuccessResponse
+export type GetMyPostResponse = GetMyPostSuccessResponse;
 /**
  * Props for fetching posts by user ID
  */
 export type GetUserPostByIdProps = {
-    userId: string;
-    page: string;
-    limit: string;
-}
+  userId: string;
+  page: string;
+  limit: string;
+};
 /**
  * Single post data structure
  */
 interface GetSinglePost {
+  id: number;
+  content: string | null;
+  post_id: string;
+  post_audience: string;
+  media: any;
+  created_at: Date;
+  post_likes: number;
+  post_comments: number;
+  post_reposts: number;
+  post_impressions: number;
+  post_status: string;
+  was_repost: boolean;
+  repost_id: string | null;
+  repost_username: string | null;
+  UserMedia?: UserMedia[];
+  likedByme: boolean;
+  user: {
+    username: string;
+    profile_image: string | null;
+    name: string;
+    user_id: string;
     id: number;
-    content: string | null;
-    post_id: string;
-    post_audience: string;
-    media: any;
-    created_at: Date;
-    post_likes: number;
-    post_comments: number;
-    post_reposts: number;
-    post_impressions: number;
-    post_status: string;
-    was_repost: boolean;
-    repost_id: string | null;
-    repost_username: string | null;
-    UserMedia?: UserMedia[];
-    likedByme: boolean;
-    user: {
-        username: string;
-        profile_image: string | null;
-        name: string;
-        user_id: string;
-        id: number;
-    };
+  };
 }
 /**
  * Response for fetching posts by user ID
  */
 export type GetUserPostByIdResponse = {
-    status: boolean;
-    message: string;
-    data: GetSinglePost[];
-    total: number;
-}
+  status: boolean;
+  message: string;
+  data: GetSinglePost[];
+  hasMore: boolean;
+};
 /**
  * Response for fetching a single post
  */
 export type GetSinglePostResponse = {
-    status: boolean;
-    message: string;
-    error: boolean;
-    data: GetSinglePost | null;
-}
+  status: boolean;
+  message: string;
+  error: boolean;
+  data: GetSinglePost | null;
+};
 // --------------------------------------
 // Post Interaction Related Types
 // --------------------------------------
@@ -217,25 +226,25 @@ export type GetSinglePostResponse = {
  * Props for liking a post
  */
 export interface LikePostProps {
-    postId: string;
-    userId: number;
+  postId: string;
+  userId: number;
 }
 /**
  * Response for liking a post
  */
 export type LikePostResponse = {
-    success: boolean;
-    isLiked: boolean;
-    message: string;
-}
+  success: boolean;
+  isLiked: boolean;
+  message: string;
+};
 /**
  * Response for deleting a post
  */
 export type DeletePostResponse = {
-    status: boolean;
-    message: string;
-    error?: any;
-}
+  status: boolean;
+  message: string;
+  error?: any;
+};
 // --------------------------------------
 // Post Editing Related Types
 // --------------------------------------
@@ -243,30 +252,30 @@ export type DeletePostResponse = {
  * Editable post data structure
  */
 export interface EditPost {
-    id: number;
-    content: string | null
-    post_id: string
-    post_audience: PostAudience
-    created_at: Date;
-    post_likes: number;
-    post_comments: number;
-    PostLike: PostLike[],
-    UserMedia?: UserMedia[]
+  id: number;
+  content: string | null;
+  post_id: string;
+  post_audience: PostAudience;
+  created_at: Date;
+  post_likes: number;
+  post_comments: number;
+  PostLike: PostLike[];
+  UserMedia?: UserMedia[];
 }
 /**
  * Props for editing a post
  */
 export interface EditPostProps {
-    postId: string;
-    userId: number;
+  postId: string;
+  userId: number;
 }
 /**
  * Response for editing a post
  */
 export interface EditPostResponse {
-    status: boolean;
-    message: string;
-    data: EditPost | null;
+  status: boolean;
+  message: string;
+  data: EditPost | null;
 }
 // --------------------------------------
 // Repost Related Types
@@ -275,23 +284,23 @@ export interface EditPostResponse {
  * Props for reposting
  */
 export type RepostProps = {
-    userId: string;
-    page: string;
-    limit: string;
-}
+  userId: string;
+  page: string;
+  limit: string;
+};
 /**
  * Props for creating a repost
  */
 export interface CreateRepostProps {
-    postId: string;
-    userId: number;
+  postId: string;
+  userId: number;
 }
 /**
  * Response for repost operations
  */
 export interface RepostResponse {
-    message: string;
-    error: boolean;
+  message: string;
+  error: boolean;
 }
 // --------------------------------------
 // Comment Related Types
@@ -300,15 +309,24 @@ export interface RepostResponse {
  * Props for getting post comments
  */
 export interface GetPostCommentsProps extends GetMyPostProps {
-    postId: string;
+  postId: string;
 }
 /**
  * Response for fetching post comments
  */
 export interface GetPostCommentsResponse {
-    error: boolean;
-    hasMore: boolean;
-    message: string;
-    data: Comments;
-    total: number;
+  error: boolean;
+  hasMore: boolean;
+  message: string;
+  data: Comments;
+  total: number;
+}
+
+export interface GiftPointsProps {
+  postId: string;
+  points: number;
+  userId: number;
+  amount: number;
+  receiver_id: number;
+  points_buy_id: string;
 }
