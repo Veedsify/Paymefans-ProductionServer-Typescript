@@ -96,6 +96,8 @@ model User {
   LoginHistory              LoginHistory[]
   ResetPasswordRequests     ResetPasswordRequests[]
   TwoFactorAuth             TwoFactorAuth[]
+  WithdrawalRequest         WithdrawalRequest[]
+  WithdrawalRequest         WithdrawalRequest[]
 }
 
 model Participants {
@@ -729,6 +731,7 @@ model UserBanks {
   bank_name      String
   account_name   String
   account_number String   @unique
+  bank_type      String   @default("nuban")
   routing_number String?
   swift_code     String?
   bank_country   String
@@ -984,7 +987,46 @@ model ResetPasswordRequests {
   user       User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
 }
 
+model sessions {
+  id            String  @id
+  user_id       Int?    @unique
+  ip_address    String? @db.Text
+  user_agent    String?
+  payload       String  @db.Text
+  last_activity Int
+}
+
+model migrations {
+  id        Int    @id @default(autoincrement()) @db.Integer
+  migration String @db.Text
+  batch     Int    @db.Integer
+}
+
+model WithdrawalRequestCode {
+  id         Int      @id @default(autoincrement())
+  user_id    Int
+  code       Int
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+  user       User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+}
+
+model WithdrawalRequest {
+  id             Int                     @id @default(autoincrement())
+  user_id        Int
+  amount         Int                     @db.Integer
+  recipient_code String
+  reason         String                  @default("Paymefans Model Withdrawal")
+  status         WithdrawalRequestStatus
+  user           User                    @relation(fields: [user_id], references: [id], onDelete: Cascade)
+}
+
 // ENUMS DECLARATION
+enum WithdrawalRequestStatus {
+  pending
+  approved
+  rejected
+}
 
 enum OrderStatus {
   pending

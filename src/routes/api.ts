@@ -18,6 +18,7 @@ import store from "@routes/store/store"
 import help from "@routes/help/help"
 import webhooks from "@routes/webhooks/webhooks"
 import LogOutController from "@controllers/LogoutController";
+import withdraw from "@routes/withdraw/withdraw";
 const api = express.Router()
 
 // Authentication
@@ -58,6 +59,8 @@ api.use("/store", store)
 api.use("/help", help)
 // Webhooks
 api.use("/webhooks", webhooks)
+// Withdraw
+api.use("/withdraw", withdraw)
 // Logout
 api.post("/logout", LogOutController.Logout)
 

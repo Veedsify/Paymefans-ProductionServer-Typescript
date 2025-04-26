@@ -119,6 +119,7 @@ export default class VerificationController {
           faceVideo: verification.faceVideo,
         },
         {
+          removeOnComplete: true,
           attempts: 3,
         }
       );
