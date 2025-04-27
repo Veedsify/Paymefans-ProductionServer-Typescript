@@ -96,8 +96,8 @@ model User {
   LoginHistory              LoginHistory[]
   ResetPasswordRequests     ResetPasswordRequests[]
   TwoFactorAuth             TwoFactorAuth[]
-  WithdrawalRequest         WithdrawalRequest[]
-  WithdrawalRequest         WithdrawalRequest[]
+  WithdrawalRequest         WithdrawalRequest[] 
+  WithWithdrawalRequestCode WithdrawalRequestCode[]
 }
 
 model Participants {
@@ -686,6 +686,7 @@ model UserWithdrawalBankAccount {
   bank_name       String
   account_name    String
   account_number  String
+  bank_type       String   @default("nuban") 
   routing_number  String
   bank_country    String
   created_at      DateTime @default(now())

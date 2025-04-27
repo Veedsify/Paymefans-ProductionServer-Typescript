@@ -8,6 +8,8 @@ export type RetrieveWalletResponse = {
 export interface AddBankProps {
     accountName: string;
     accountNumber: string;
+    bankType: string;
+    country: string;
     bankCode: string;
     otherDetails: {
         name: string;

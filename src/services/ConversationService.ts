@@ -31,14 +31,6 @@ export default class ConversationService {
   }: AllConversationProps): Promise<AllConversationResponse> {
     // const redisKey = `user:${user.user_id}:conversations:${conversationId}`;
     try {
-      const pageNum = Number(page);
-      const messagesPerPage = Number(process.env.MESSAGES_PER_PAGE);
-
-      const validSkip =
-        !isNaN(pageNum) && !isNaN(messagesPerPage)
-          ? (pageNum - 1) * messagesPerPage
-          : 0;
-
       // Validate user's participation in the conversation
       const validateUserConversation = await query.conversations.findFirst({
         where: {
@@ -70,14 +62,22 @@ export default class ConversationService {
         },
       });
 
+      const pageNum = Number(page);
+      const messagesPerPage = Number(process.env.MESSAGES_PER_PAGE);
+      const validSkip =
+        !isNaN(pageNum) && !isNaN(messagesPerPage)
+          ? (pageNum - 1) * messagesPerPage
+          : 0;
+
       const conversationMessages = await query.messages.findMany({
         where: {
           conversationsId: conversationId,
         },
-        orderBy: { created_at: "asc" },
+        orderBy: { created_at: "desc" },
         skip: validSkip,
-        take: messagesPerPage,
+        take: messagesPerPage + 1, // Fetch one extra to check if there's more
       });
+
       if (!data) {
         return {
           messages: [],
@@ -87,10 +87,7 @@ export default class ConversationService {
           hasMore: false,
         };
       }
-      const messages = conversationMessages.slice(
-        0,
-        Number(process.env.MESSAGES_PER_PAGE)
-      );
+      const messages = conversationMessages
       const hasMore =
         conversationMessages.length > Number(process.env.MESSAGES_PER_PAGE);
 
@@ -122,6 +119,7 @@ export default class ConversationService {
           error: false,
           status: true,
         } as AllConversationResponse;
+        console.log("Result:", result);
         // await redis.set(redisKey, JSON.stringify(result), "EX", 3600); // Cache for 1 hour
         return result;
       }

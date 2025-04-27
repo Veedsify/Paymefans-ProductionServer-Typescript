@@ -1,6 +1,6 @@
-import {Request, Response} from "express";
+import { Request, Response } from "express";
 import WithdrawService from "@services/WithdrawService";
-import {AuthUser} from "../types/user";
+import { AuthUser } from "../types/user";
 
 export default class WithdrawController {
 
@@ -20,7 +20,17 @@ export default class WithdrawController {
 
         } catch (error: any) {
             console.log(error)
-            return res.status(500).json({error: "Internal Server Error"})
+            return res.status(500).json({ error: "Internal Server Error" })
+        }
+    }
+
+    // Approve Withdrawal Controller
+    static async ApproveWithdrawal(req: Request, res: Response): Promise<any> {
+        try {
+
+        } catch (error: any) {
+            console.log(error.message)
+            return res.status(500).json({ error: "Internal Server Error" })
         }
     }
 
