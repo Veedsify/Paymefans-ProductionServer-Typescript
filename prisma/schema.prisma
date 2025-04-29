@@ -96,7 +96,7 @@ model User {
   LoginHistory              LoginHistory[]
   ResetPasswordRequests     ResetPasswordRequests[]
   TwoFactorAuth             TwoFactorAuth[]
-  WithdrawalRequest         WithdrawalRequest[] 
+  WithdrawalRequest         WithdrawalRequest[]
   WithWithdrawalRequestCode WithdrawalRequestCode[]
 }
 
@@ -686,7 +686,7 @@ model UserWithdrawalBankAccount {
   bank_name       String
   account_name    String
   account_number  String
-  bank_type       String   @default("nuban") 
+  bank_type       String   @default("nuban")
   routing_number  String
   bank_country    String
   created_at      DateTime @default(now())
@@ -1019,7 +1019,17 @@ model WithdrawalRequest {
   recipient_code String
   reason         String                  @default("Paymefans Model Withdrawal")
   status         WithdrawalRequestStatus
+  created_at     DateTime                @default(now())
+  updated_at     DateTime                @updatedAt
   user           User                    @relation(fields: [user_id], references: [id], onDelete: Cascade)
+}
+
+model PlatformExchangeRate {
+  id         Int      @id @default(autoincrement())
+  rate       Int
+  value      Float    @default(0)
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
 }
 
 // ENUMS DECLARATION
