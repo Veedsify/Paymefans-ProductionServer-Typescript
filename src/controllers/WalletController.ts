@@ -33,7 +33,7 @@ export default class WalletController {
     static async DeleteBank(req: Request, res: Response): Promise<void> {
         try {
             const deleteBank = await WalletService.DeleteBank(req.body, req.user as AuthUser)
-            if (!deleteBank.status) {
+            if (deleteBank.error) {
                 res.status(401).send({...deleteBank})
             }
             res.status(200).send(deleteBank)

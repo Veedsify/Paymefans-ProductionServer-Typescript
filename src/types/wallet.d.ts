@@ -32,12 +32,13 @@ export type GetBanksResponse = {
 }
 
 export type DeleteBankResponse = {
+    error: boolean;
     status: boolean;
     message: string;
     data?: UserBanks
 }
 export type DeleteBankProp = {
-    accountNumber: string;
+    accountId: string;
 }
 export interface GetTransactionsResponse {
     error: boolean;

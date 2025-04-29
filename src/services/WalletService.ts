@@ -120,24 +120,23 @@ export default class WalletService {
     body: DeleteBankProp,
     user: AuthUser
   ): Promise<DeleteBankResponse> {
-    const { accountNumber } = body;
+    const { accountId } = body;
+    console.log(body)
     try {
       const bank = await query.userBanks.delete({
         where: {
-          account_number: accountNumber,
+          id: Number(accountId),
           user_id: user.id,
         },
       });
       return {
         status: true,
+        error: false,
         message: "Bank deleted successfully",
         data: bank,
       };
     } catch (error: any) {
-      return {
-        status: false,
-        message: error.message,
-      };
+      throw new Error(error.message);
     }
   }
 
