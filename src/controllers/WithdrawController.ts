@@ -25,7 +25,7 @@ export default class WithdrawController {
     }
 
     // Approve Withdrawal Controller
-    static async ApproveWithdrawal(req: Request, res: Response): Promise<any> {
+    static async ApproveWithdrawal(_: Request, res: Response): Promise<any> {
         try {
 
         } catch (error: any) {

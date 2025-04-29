@@ -27,9 +27,8 @@ export default class ConversationService {
   static async AllConversations({
     user,
     conversationId,
-    page = "1",
+    cursor = 0,
   }: AllConversationProps): Promise<AllConversationResponse> {
-    // const redisKey = `user:${user.user_id}:conversations:${conversationId}`;
     try {
       // Validate user's participation in the conversation
       const validateUserConversation = await query.conversations.findFirst({
@@ -61,23 +60,6 @@ export default class ConversationService {
           participants: true,
         },
       });
-
-      const pageNum = Number(page);
-      const messagesPerPage = Number(process.env.MESSAGES_PER_PAGE);
-      const validSkip =
-        !isNaN(pageNum) && !isNaN(messagesPerPage)
-          ? (pageNum - 1) * messagesPerPage
-          : 0;
-
-      const conversationMessages = await query.messages.findMany({
-        where: {
-          conversationsId: conversationId,
-        },
-        orderBy: { created_at: "desc" },
-        skip: validSkip,
-        take: messagesPerPage + 1, // Fetch one extra to check if there's more
-      });
-
       if (!data) {
         return {
           messages: [],
@@ -87,11 +69,23 @@ export default class ConversationService {
           hasMore: false,
         };
       }
-      const messages = conversationMessages
-      const hasMore =
-        conversationMessages.length > Number(process.env.MESSAGES_PER_PAGE);
-
-      // Determine the receiver
+      const messagesPerPage = Number(process.env.MESSAGES_PER_PAGE);
+      // Fetch one extra message to determine if there are more pages
+      const conversationMessages = await query.messages.findMany({
+        where: {
+          conversationsId: conversationId,
+          ...(cursor && cursor > 0 ? { id: { lt: cursor } } : {}),
+        },
+        orderBy: [{ id: "desc" }],
+        take: messagesPerPage, // Fetch one extra to check if there's more
+      });
+      const reversedConversations = conversationMessages.reverse();
+      // Reverse the order to get the latest messages first
+      // Set nextCursor to the ID of the last message in the current page
+      const nextCursor = reversedConversations.length > 0
+        ? reversedConversations[0].id
+        : 1;
+      // Determine the receiver (the other participant)
       const participant = data.participants.find(
         (p) => p.user_1 === user.user_id || p.user_2 === user.user_id
       );
@@ -112,28 +106,34 @@ export default class ConversationService {
             Settings: true,
           },
         });
-        const result = {
-          messages: messages,
+        if (!receiverData) {
+          return {
+            messages: [],
+            receiver: null,
+            hasMore: false,
+            error: false,
+            status: true,
+          };
+        }
+        return {
+          messages: reversedConversations as Messages[],
           receiver: receiverData,
-          hasMore,
           error: false,
           status: true,
-        } as AllConversationResponse;
-        console.log("Result:", result);
-        // await redis.set(redisKey, JSON.stringify(result), "EX", 3600); // Cache for 1 hour
-        return result;
+          nextCursor,
+        };
       }
-      // Cache the result in Redis
+      // Return empty result if no participant found
       return {
         messages: [],
-        hasMore,
         receiver: null,
+        hasMore: false,
         error: false,
         status: true,
       };
     } catch (error) {
       console.error("Error fetching conversation:", error);
-      throw new Error();
+      throw new Error("Failed to fetch conversation messages");
     } finally {
       await query.$disconnect(); // Ensure connection is closed
     }
@@ -237,7 +237,6 @@ export default class ConversationService {
   }): Promise<MyConversationResponse> {
     try {
       const skip = (Number(page) - 1) * Number(limit);
-
       // Unread Count Of Messages
       const unreadCount = await query.messages.findMany({
         orderBy: {
@@ -261,7 +260,6 @@ export default class ConversationService {
           seen: false,
         },
       });
-
       // Fetch conversations
       const conversationsByParticipants = await query.conversations.findMany({
         where: {
@@ -274,12 +272,10 @@ export default class ConversationService {
         skip,
         take: parseInt(limit) + 1, // Fetch one extra to check if there's more
       });
-
       const hasMore = conversationsByParticipants.length > Number(limit);
       if (hasMore) {
         conversationsByParticipants.pop(); // Remove the extra item
       }
-
       if (!conversationsByParticipants.length) {
         return {
           error: false,
@@ -290,7 +286,6 @@ export default class ConversationService {
           unreadCount: unreadCount.length,
         };
       }
-
       // Process conversations in parallel
       const conversationsPromises = conversationsByParticipants.map(
         async (participant) => {
@@ -301,25 +296,20 @@ export default class ConversationService {
               participants: true,
             },
           });
-
           if (!conversation) {
             return null;
           }
-
           const participantData = conversation.participants.find(
             (p) =>
               p.user_1 === authUser.user_id || p.user_2 === authUser.user_id
           );
-
           if (!participantData) {
             return null;
           }
-
           const receiverId =
             participantData.user_1 === authUser.user_id
               ? participantData.user_2
               : participantData.user_1;
-
           const receiver = await query.user.findFirst({
             where: { user_id: receiverId },
             select: {
@@ -330,7 +320,6 @@ export default class ConversationService {
               profile_image: true,
             },
           });
-
           return {
             receiver,
             conversation_id: participant.conversation_id,
@@ -338,7 +327,6 @@ export default class ConversationService {
           };
         }
       );
-
       // Wait for all promises and filter out null values
       const filteredConversations = await Promise.all(conversationsPromises)
         .then((results) =>
@@ -368,7 +356,6 @@ export default class ConversationService {
           console.error("Error processing conversations:", error);
           return [];
         });
-
       return {
         error: false,
         status: true,
@@ -399,22 +386,18 @@ export default class ConversationService {
           attachments: [],
         };
       }
-
       const videoMimeTypes = [
         "video/mp4",
         "video/webm",
         "video/ogg",
         "video/quicktime",
       ];
-
       const processedPaths: any[] = [];
-
       // Process each file in parallel
       await Promise.all(
         attachments.map(async (file) => {
           try {
             let processedPath: any | null = null;
-
             // Check if it's a video file
             if (videoMimeTypes.includes(file.mimetype)) {
               try {
@@ -428,7 +411,6 @@ export default class ConversationService {
                 if ("error" in video) {
                   throw new Error(video.message);
                 }
-
                 processedPath = {
                   url: `${process.env.CLOUDFLARE_CUSTOMER_SUBDOMAIN}${video.mediaId}/manifest/video.m3u8`,
                   name: file.filename,
@@ -444,10 +426,8 @@ export default class ConversationService {
                 );
               }
             }
-
             // For non-video files or if video processing fails, you might want to add other processing here
             // ...
-
             // Upload non-video files to S3
             if (file.mimetype.startsWith("image/")) {
               await UploadImageToS3({
@@ -474,7 +454,6 @@ export default class ConversationService {
                 saveToDb: true,
               });
             }
-
             if (processedPath) {
               processedPaths.push(processedPath);
               console.log(processedPaths);
@@ -484,7 +463,6 @@ export default class ConversationService {
           }
         })
       );
-
       return {
         message:
           processedPaths.length > 0
@@ -499,7 +477,6 @@ export default class ConversationService {
       throw new Error(error.message);
     }
   }
-
   // Search Messages
   // Search For Messages In A Conversation
   static async SearchMessages({
@@ -562,9 +539,7 @@ export default class ConversationService {
         },
       },
     });
-
     if (!conversationsData.length) return { conversations: [], status: true };
-
     // Batch process participants and messages
     const receiverIds = conversationsData.flatMap((conv) => {
       const participant = conv.participants.find(
@@ -572,13 +547,12 @@ export default class ConversationService {
       );
       return participant
         ? [
-            participant.user_1 === userId
-              ? participant.user_2
-              : participant.user_1,
-          ]
+          participant.user_1 === userId
+            ? participant.user_2
+            : participant.user_1,
+        ]
         : [];
     });
-
     // Batch fetch user data
     const users = await query.user.findMany({
       where: { user_id: { in: receiverIds } },
@@ -589,13 +563,11 @@ export default class ConversationService {
         profile_image: true,
       },
     });
-
     // Create user map
     const userMap = users.reduce((acc, user) => {
       acc[user.user_id] = user;
       return acc;
     }, {} as Record<string, (typeof users)[0]>);
-
     // Map conversations
     const conversations = conversationsData
       .map((conv) => {
@@ -603,18 +575,14 @@ export default class ConversationService {
           (p) => p.user_1 === userId || p.user_2 === userId
         );
         if (!participant) return null;
-
         const receiverId =
           participant.user_1 === userId
             ? participant.user_2
             : participant.user_1;
-
         const user = userMap[receiverId];
         // Skip this conversation if user is undefined
         if (!user) return null;
-
         const lastMessage = conv.messages[0] as Messages;
-
         return {
           conversation: {
             user_id: user.user_id,
@@ -650,7 +618,6 @@ export default class ConversationService {
           return 0;
         }
       });
-
     return { conversations, status: true };
   }
   // Search Conversations

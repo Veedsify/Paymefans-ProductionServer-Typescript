@@ -5,19 +5,21 @@ export type AllConversationProps = {
   user: AuthUser;
   conversationId: string;
   page: string;
+  cursor?: number;
 };
 
 export interface AllConversationResponse {
   error: boolean;
   status: boolean;
-  hasMore: boolean;
+  hasMore?: boolean;
+  nextCursor?: number;
   receiver: {
     id: number;
     user_id: string;
     name: string;
     username: string;
     profile_image: string | null;
-    Settings: Settings;
+    Settings: Settings | null;
   } | null;
   invalid_conversation?: boolean;
   message?: string;
