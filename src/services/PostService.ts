@@ -1141,10 +1141,10 @@ export default class PostService {
     limit = "10",
   }: GetPostCommentsProps): Promise<GetPostCommentsResponse> {
     const countComments = await Comments.countDocuments({
-      postId: Number(postId),
+      postId: String(postId),
     });
     const comments = await Comments.find({
-      postId: Number(postId),
+      postId: String(postId),
     })
       .sort({ date: -1 })
       .skip((parseInt(page) - 1) * parseInt(limit))

@@ -1,0 +1,15 @@
+export const currencyRates = [
+    { rate: 1, currency: "USD", value: 1 },
+    { rate: 1632, currency: "NGN", value: 1632 },
+    { rate: 1, currency: "POINTS", value: 16 },
+    { rate: 1, currency: "KEN", value: 129.19 },
+    { rate: 1, currency: "ZAR", value: 18.55 },
+    { rate: 1, currency: "GHC", value: 14.3 },
+    { rate: 1, currency: "EUR", value: 0.85 },
+    { rate: 1, currency: "GBP", value: 0.75 },
+    { rate: 1, currency: "JPY", value: 110 },
+    { rate: 1, currency: "AUD", value: 1.3 },
+    { rate: 1, currency: "CAD", value: 1.4 },
+    { rate: 1, currency: "CNY", value: 7 },
+    { rate: 1, currency: "INR", value: 80 },
+]

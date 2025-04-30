@@ -1,7 +1,7 @@
 import query from "@utils/prisma";
 import { v4 as uuidv4 } from "uuid";
 
-const pointSeeding = [
+export const pointSeeding = [
   {
     id: uuidv4(),
     points: 5,

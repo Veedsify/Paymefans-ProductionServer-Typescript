@@ -35,3 +35,15 @@ export type Product = {
   orderid: string;
   date: string;
 };
+
+export interface SendCustomEmailProps {
+  recipients: string;
+  subject: string;
+  message: string;
+}
+
+export type SendCustomEmailResponse = {
+  message: string;
+  error: boolean;
+  statusCode: number;
+}

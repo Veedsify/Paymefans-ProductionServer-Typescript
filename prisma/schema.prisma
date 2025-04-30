@@ -1026,8 +1026,19 @@ model WithdrawalRequest {
 
 model PlatformExchangeRate {
   id         Int      @id @default(autoincrement())
+  name       String   @unique
   rate       Int
   value      Float    @default(0)
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+}
+
+model OuterPages {
+  id         Int      @id @default(autoincrement())
+  page_id    String   @unique
+  slug       String
+  title      String
+  content    String   @db.Text
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
 }
@@ -1035,8 +1046,9 @@ model PlatformExchangeRate {
 // ENUMS DECLARATION
 enum WithdrawalRequestStatus {
   pending
-  approved
+  processing
   rejected
+  completed
 }
 
 enum OrderStatus {

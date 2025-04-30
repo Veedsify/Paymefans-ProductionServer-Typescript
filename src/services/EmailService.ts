@@ -6,14 +6,14 @@ import type {
     SendEmailServiceProp,
     SendNewMessageEmailProps,
 } from "../types/email";
-import {EmailQueue} from "@jobs/emails/EmailQueueHandler";
+import { EmailQueue } from "@jobs/emails/EmailQueueHandler";
 
 export default class EmailService {
     // Send Welcome Email
     static async SendWelcomeEmail(
         data: EmailServiceProp
     ): Promise<EmailServiceResponse> {
-        if (!data) return {message: "Invalid request", error: true};
+        if (!data) return { message: "Invalid request", error: true };
         const RequiredFields = ["email", "subject", "message"];
         const MissingFields = Object.entries(data)
             .filter(([key, value]) => {
@@ -49,9 +49,9 @@ export default class EmailService {
             });
             console.log("Email Queue", JSON.stringify(sendEmail));
             if (sendEmail) {
-                return {message: "Email sent successfully", error: false};
+                return { message: "Email sent successfully", error: false };
             }
-            return {message: "Email Not Sent", error: true};
+            return { message: "Email Not Sent", error: true };
         } catch (error: any) {
             throw new Error(error);
         }
@@ -61,10 +61,10 @@ export default class EmailService {
     static async SendPointPurchaseEmail(
         data: SendEmailServiceProp
     ): Promise<SendEmailResponse> {
-        if (!data) return {message: "Invalid Email Request", error: true};
-        const {email, subject, name, points, transactionId} = data;
+        if (!data) return { message: "Invalid Email Request", error: true };
+        const { email, subject, name, points, transactionId } = data;
         if (!email || !subject || !name || !points || !transactionId) {
-            return {message: "Invalid Email Request", error: true};
+            return { message: "Invalid Email Request", error: true };
         }
         try {
             const options = {
@@ -73,7 +73,7 @@ export default class EmailService {
                     subject,
                 },
                 template: "pointpurchase.ejs",
-                templateData: {name, points, transactionId},
+                templateData: { name, points, transactionId },
             };
             const sendEmail = await EmailQueue.add("pointPurchasEmail", options, {
                 attempts: 3,
@@ -82,9 +82,9 @@ export default class EmailService {
             });
             console.log("Email Queue", JSON.stringify(sendEmail));
             if (sendEmail) {
-                return {message: "Email sent successfully", error: false};
+                return { message: "Email sent successfully", error: false };
             }
-            return {message: "Email Not Sent", error: true};
+            return { message: "Email Not Sent", error: true };
         } catch (error: any) {
             throw new Error(error);
         }
@@ -92,17 +92,17 @@ export default class EmailService {
 
     // Send New Message Email
     static async SendNewMessageEmail({
-                                         name,
-                                         email,
-                                         subject,
-                                         link,
-                                     }: SendNewMessageEmailProps): Promise<{
+        name,
+        email,
+        subject,
+        link,
+    }: SendNewMessageEmailProps): Promise<{
         message: string;
         error: boolean;
     }> {
         try {
             if (!email || !subject || !name || !link) {
-                return {message: "Invalid Email Request", error: true};
+                return { message: "Invalid Email Request", error: true };
             }
             const options = {
                 emailData: {
@@ -110,7 +110,7 @@ export default class EmailService {
                     subject,
                 },
                 template: "newMessage.ejs",
-                templateData: {name, link},
+                templateData: { name, link },
             };
             const sendEmail = await EmailQueue.add("newMessageEmail", options, {
                 attempts: 3,
@@ -119,9 +119,9 @@ export default class EmailService {
             });
             console.log("Email Queue", JSON.stringify(sendEmail));
             if (sendEmail) {
-                return {message: "Email sent successfully", error: false};
+                return { message: "Email sent successfully", error: false };
             }
-            return {message: `Email Sent Successfully`, error: false};
+            return { message: `Email Sent Successfully`, error: false };
         } catch (err: any) {
             throw new Error(err.message);
         }
@@ -129,11 +129,11 @@ export default class EmailService {
 
     // Send Two Factor Authentication Email
     static async SendTwoFactorAuthEmail({
-                                            email,
-                                            subject,
-                                            code,
-                                            name,
-                                        }: {
+        email,
+        subject,
+        code,
+        name,
+    }: {
         email: string;
         subject: string;
         code: number;
@@ -144,7 +144,7 @@ export default class EmailService {
     }> {
         try {
             if (!email || !subject || !code || !name) {
-                return {message: "Invalid Email Request", error: true};
+                return { message: "Invalid Email Request", error: true };
             }
             const options = {
                 emailData: {
@@ -152,7 +152,7 @@ export default class EmailService {
                     subject,
                 },
                 template: "verificationCode.ejs",
-                templateData: {code, name},
+                templateData: { code, name },
             };
             const sendEmail = await EmailQueue.add("twoFactorAuthEmail", options, {
                 attempts: 3,
@@ -160,9 +160,9 @@ export default class EmailService {
                 removeOnComplete: true,
             });
             if (sendEmail) {
-                return {message: "Email sent successfully", error: false};
+                return { message: "Email sent successfully", error: false };
             }
-            return {message: `Email Not Sent`, error: true};
+            return { message: `Email Not Sent`, error: true };
         } catch (err: any) {
             throw new Error(err.message);
         }
@@ -177,9 +177,9 @@ export default class EmailService {
         date: string;
         subscriberId: string;
     }): Promise<{ message: string; error: boolean }> {
-        const {name, username, email, subscriberId, duration, date} = data;
+        const { name, username, email, subscriberId, duration, date } = data;
         if (!name || !username || !email || !subscriberId) {
-            return {message: "Invalid Name Request", error: true};
+            return { message: "Invalid Name Request", error: true };
         }
         try {
             const options = {
@@ -210,9 +210,9 @@ export default class EmailService {
                 }
             );
             if (sendEmail) {
-                return {message: "Email sent successfully", error: false};
+                return { message: "Email sent successfully", error: false };
             }
-            return {message: "Email Not Sent", error: true};
+            return { message: "Email Not Sent", error: true };
         } catch (error: any) {
             throw new Error(error);
         }
@@ -221,7 +221,7 @@ export default class EmailService {
     // Two Factor Authentication
     static async ConfirmTwoFactorAuth(name: string, email: string) {
         if (!name || !email) {
-            return {message: "Invalid Request", error: true};
+            return { message: "Invalid Request", error: true };
         }
         try {
             const options = {
@@ -245,9 +245,9 @@ export default class EmailService {
                 }
             );
             if (sendEmail) {
-                return {message: "Email sent successfully", error: false};
+                return { message: "Email sent successfully", error: false };
             }
-            return {message: "Email Not Sent", error: true};
+            return { message: "Email Not Sent", error: true };
         } catch (error: any) {
             throw new Error(error);
         }
@@ -256,7 +256,7 @@ export default class EmailService {
     // Verification Complete
     static async VerificationComplete(name: string, email: string) {
         if (!name || !email) {
-            return {message: "Invalid Request", error: true};
+            return { message: "Invalid Request", error: true };
         }
         try {
             const options = {
@@ -276,9 +276,9 @@ export default class EmailService {
                 removeOnComplete: true,
             });
             if (sendEmail) {
-                return {message: "Email sent successfully", error: false};
+                return { message: "Email sent successfully", error: false };
             }
-            return {message: "Email Not Sent", error: true};
+            return { message: "Email Not Sent", error: true };
         } catch (error: any) {
             throw new Error(error);
         }
@@ -288,7 +288,7 @@ export default class EmailService {
     static async UserBannedEmail(name: string, email: string) {
         try {
             if (!name || !email) {
-                return {message: "Invalid Request", error: true};
+                return { message: "Invalid Request", error: true };
             }
 
             const options = {
@@ -310,10 +310,10 @@ export default class EmailService {
             });
 
             if (sendEmail) {
-                return {message: "Email sent successfully", error: false};
+                return { message: "Email sent successfully", error: false };
             }
 
-            return {message: "Email Not Sent", error: true};
+            return { message: "Email Not Sent", error: true };
         } catch (err: any) {
             throw new Error(err.message);
         }
@@ -323,7 +323,7 @@ export default class EmailService {
     static async ModelWelcomeEmail(name: string, email: string) {
         try {
             if (!name || !email) {
-                return {message: "Invalid Request", error: true};
+                return { message: "Invalid Request", error: true };
             }
 
             const options = {
@@ -345,10 +345,10 @@ export default class EmailService {
             });
 
             if (sendEmail) {
-                return {message: "Email sent successfully", error: false};
+                return { message: "Email sent successfully", error: false };
             }
 
-            return {message: "Email Not Sent", error: true};
+            return { message: "Email Not Sent", error: true };
         } catch (err: any) {
             throw new Error(err.message);
         }
@@ -364,7 +364,7 @@ export default class EmailService {
     ) {
         try {
             if (!name || !email || !subscriptionId || !username || !duration) {
-                return {message: "Invalid Request", error: true};
+                return { message: "Invalid Request", error: true };
             }
 
             const period =
@@ -404,10 +404,10 @@ export default class EmailService {
             );
 
             if (sendEmail) {
-                return {message: "Email sent successfully", error: false};
+                return { message: "Email sent successfully", error: false };
             }
 
-            return {message: "Email Not Sent", error: true};
+            return { message: "Email Not Sent", error: true };
         } catch (err: any) {
             throw new Error(err.message);
         }
@@ -421,7 +421,7 @@ export default class EmailService {
     ): Promise<{ message: string; error: boolean }> {
         try {
             if (!name || !email) {
-                return {message: "Invalid Request", error: true};
+                return { message: "Invalid Request", error: true };
             }
 
             const options = {
@@ -448,10 +448,10 @@ export default class EmailService {
             );
 
             if (sendEmail) {
-                return {message: "Email sent successfully", error: false};
+                return { message: "Email sent successfully", error: false };
             }
 
-            return {message: "Email Not Sent", error: true};
+            return { message: "Email Not Sent", error: true };
         } catch (err: any) {
             throw new Error(err.message);
         }
@@ -461,7 +461,7 @@ export default class EmailService {
     static async EmailVerify(name: string, link: string, email: string) {
         try {
             if (!name || !link || !email) {
-                return {message: "Invalid Request", error: true};
+                return { message: "Invalid Request", error: true };
             }
 
             const options = {
@@ -484,10 +484,10 @@ export default class EmailService {
             });
 
             if (sendEmail) {
-                return {message: "Email sent successfully", error: false};
+                return { message: "Email sent successfully", error: false };
             }
 
-            return {message: "Email Not Sent", error: true};
+            return { message: "Email Not Sent", error: true };
         } catch (err: any) {
             throw new Error(err.message);
         }
@@ -501,7 +501,7 @@ export default class EmailService {
     ): Promise<{ message: string; error: boolean }> {
         try {
             if (!name || !email) {
-                return {message: "Invalid Request", error: true};
+                return { message: "Invalid Request", error: true };
             }
 
             const options = {
@@ -530,10 +530,10 @@ export default class EmailService {
             });
 
             if (sendEmail) {
-                return {message: "Email sent successfully", error: false};
+                return { message: "Email sent successfully", error: false };
             }
 
-            return {message: "Email Not Sent", error: true};
+            return { message: "Email Not Sent", error: true };
         } catch (error: any) {
             throw new Error(error.message);
         }
@@ -551,7 +551,7 @@ export default class EmailService {
     }> {
         try {
             if (!name || !email || !username) {
-                return {message: "Invalid Request", error: true};
+                return { message: "Invalid Request", error: true };
             }
 
             const options = {
@@ -574,10 +574,10 @@ export default class EmailService {
             });
 
             if (sendEmail) {
-                return {message: "Email sent successfully", error: false};
+                return { message: "Email sent successfully", error: false };
             }
 
-            return {message: "Email Not Sent", error: true};
+            return { message: "Email Not Sent", error: true };
         } catch (error: any) {
             throw new Error(error.message);
         }
@@ -593,7 +593,7 @@ export default class EmailService {
     }> {
         try {
             if (!name || !email) {
-                return {message: "Invalid Request", error: true};
+                return { message: "Invalid Request", error: true };
             }
 
             const options = {
@@ -615,10 +615,10 @@ export default class EmailService {
             });
 
             if (sendEmail) {
-                return {message: "Email sent successfully", error: false};
+                return { message: "Email sent successfully", error: false };
             }
 
-            return {message: "Email Not Sent", error: true};
+            return { message: "Email Not Sent", error: true };
         } catch (err: any) {
             throw new Error(err.message);
         }
@@ -636,7 +636,7 @@ export default class EmailService {
     }> {
         try {
             if (!name || !email) {
-                return {message: "Invalid Request", error: true};
+                return { message: "Invalid Request", error: true };
             }
 
             const options = {
@@ -660,10 +660,10 @@ export default class EmailService {
             });
 
             if (sendEmail) {
-                return {message: "Email sent successfully", error: false};
+                return { message: "Email sent successfully", error: false };
             }
 
-            return {message: "Email Not Sent", error: true};
+            return { message: "Email Not Sent", error: true };
         } catch (err: any) {
             throw new Error(err.message);
         }
@@ -681,7 +681,7 @@ export default class EmailService {
     }> {
         try {
             if (!name || !email || !username || points <= 0) {
-                return {message: "Invalid Request", error: true};
+                return { message: "Invalid Request", error: true };
             }
 
             const options = {
@@ -704,10 +704,10 @@ export default class EmailService {
             });
 
             if (sendEmail) {
-                return {message: "Email sent successfully", error: false};
+                return { message: "Email sent successfully", error: false };
             }
 
-            return {message: "Email Not Sent", error: true};
+            return { message: "Email Not Sent", error: true };
         } catch (err: any) {
             throw new Error(err.message);
         }
@@ -725,7 +725,7 @@ export default class EmailService {
     }> {
         try {
             if (!name || !email || !username || points <= 0) {
-                return {message: "Invalid Request", error: true};
+                return { message: "Invalid Request", error: true };
             }
 
             const options = {
@@ -748,10 +748,10 @@ export default class EmailService {
             });
 
             if (sendEmail) {
-                return {message: "Email sent successfully", error: false};
+                return { message: "Email sent successfully", error: false };
             }
 
-            return {message: "Email Not Sent", error: true};
+            return { message: "Email Not Sent", error: true };
         } catch (err: any) {
             throw new Error(err.message);
         }
@@ -767,7 +767,7 @@ export default class EmailService {
     }> {
         try {
             if (!name || !email || !code) {
-                return {message: "Invalid Request", error: true};
+                return { message: "Invalid Request", error: true };
             }
 
             const options = {
@@ -789,10 +789,54 @@ export default class EmailService {
             });
 
             if (sendEmail) {
-                return {message: "Email sent successfully", error: false};
+                return { message: "Email sent successfully", error: false };
             }
 
-            return {message: "Email Not Sent", error: true};
+            return { message: "Email Not Sent", error: true };
+        } catch (err: any) {
+            throw new Error(err.message);
+        }
+    }
+
+    //  Custom Email
+    static async SendCustomEmail(
+        name: string,
+        email: string,
+        message: string,
+        subject: string
+    ): Promise<{
+        message: string;
+        error: boolean;
+    }> {
+        try {
+            if (!name || !email || !message) {
+                return { message: "Invalid Request", error: true };
+            }
+
+            const options = {
+                emailData: {
+                    subject,
+                    email,
+                },
+                template: "customEmail.ejs",
+                templateData: {
+                    name,
+                    subject,
+                    message,
+                },
+            };
+
+            const sendEmail = await EmailQueue.add("customEmail", options, {
+                attempts: 3,
+                backoff: 5000,
+                removeOnComplete: true,
+            });
+
+            if (sendEmail) {
+                return { message: "Email sent successfully", error: false };
+            }
+
+            return { message: "Email Not Sent", error: true };
         } catch (err: any) {
             throw new Error(err.message);
         }

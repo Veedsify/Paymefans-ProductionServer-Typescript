@@ -4,6 +4,7 @@ import type { NextFunction } from "express";
 import path from "path";
 import http from "http";
 import api from "@routes/api";
+import admin from "@routes/admin";
 import AppSocket from "@libs/AppSocket";
 import { RegisterCloudflareStreamWebhook } from "@libs/RegisterCloudflareStreamWebhook";
 import cors from "cors";
@@ -74,6 +75,7 @@ app.use(express.json());
 
 // Basic route
 app.use("/api", api);
+app.use("/admin", admin)
 
 // Analytics Job
 ModelsJobs();

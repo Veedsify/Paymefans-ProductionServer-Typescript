@@ -5,16 +5,16 @@ export default class CommentsController {
     // New Comment
     // This is for creating a new comment on a post
     static NewComment = async (req: Request, res: Response): Promise<any> => {
-        try{
-            const { postId, comment} = req.body
-            const { user } = req as {user: AuthUser}
+        try {
+            const { post_id, postId, comment } = req.body
+            const { user } = req as { user: AuthUser }
             const { files } = req.files as { files: Express.Multer.File[] }
-            const newComment = await CommentsService.NewComment(postId, comment, user, files)
-            if(newComment.error){
-                return res.status(401).json({...newComment})
+            const newComment = await CommentsService.NewComment(post_id, comment, user, postId, files)
+            if (newComment.error) {
+                return res.status(401).json({ ...newComment })
             }
-            return res.status(200).json({...newComment})
-        }catch(error){
+            return res.status(200).json({ ...newComment })
+        } catch (error) {
             console.log(error)
             return res.status(500).json(`An error occured while creating comment`)
         }
@@ -22,15 +22,15 @@ export default class CommentsController {
     // Like Comment
     // This is for liking a comment
     static LikeComment = async (req: Request, res: Response): Promise<any> => {
-        try{
+        try {
             const { commentId } = req.body
-            const { user } = req as {user: AuthUser}
+            const { user } = req as { user: AuthUser }
             const likeComment = await CommentsService.LikeComment(commentId, user)
-            if(likeComment.error){
-                return res.status(401).json({...likeComment})
+            if (likeComment.error) {
+                return res.status(401).json({ ...likeComment })
             }
-            return res.status(200).json({...likeComment})
-        }  catch(error){
+            return res.status(200).json({ ...likeComment })
+        } catch (error) {
             console.log(error)
             return res.status(500).json(`An error occured while liking comment`)
         }

@@ -1,18 +1,19 @@
-import {UploadImageToS3} from "@libs/UploadImageToS3";
-import {GenerateUniqueId} from "@utils/GenerateUniqueId";
-import {Comments} from "@utils/mongoSchema";
+import { UploadImageToS3 } from "@libs/UploadImageToS3";
+import { GenerateUniqueId } from "@utils/GenerateUniqueId";
+import { Comments } from "@utils/mongoSchema";
 import query from "@utils/prisma";
-import type {LikeCommentResponse, NewCommentResponse} from "types/comments";
-import type {AuthUser} from "types/user";
+import type { LikeCommentResponse, NewCommentResponse } from "types/comments";
+import type { AuthUser } from "types/user";
 
 export default class CommentsService {
     // New Comment
     // This is for creating a new comment on a post
     // Function takes in the postId, post_id, reply_to, comment, user and files
     static async NewComment(
-        postId: string,
+        post_id: string,
         comment: string,
         user: AuthUser,
+        postId: number,
         files?: Express.Multer.File[]
     ): Promise<NewCommentResponse> {
         try {
@@ -77,7 +78,7 @@ export default class CommentsService {
                 username: user.username,
                 userId: user.id,
                 profile_image: commentOwner?.profile_image || `${process.env.SERVER_ORIGINAL_URL}/site/avatar.png`,
-                postId: Number(postId),
+                postId: String(post_id),
                 parentId: null,
                 comment: comment,
                 attachment: commentAttachments,

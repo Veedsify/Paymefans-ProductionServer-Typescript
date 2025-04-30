@@ -4,6 +4,7 @@ export interface NewCommentResponse {
   status: boolean;
   message: string;
   error?: boolean;
+  
   data: Comments | null;
 }
 
