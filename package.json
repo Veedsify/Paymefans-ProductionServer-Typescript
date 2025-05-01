@@ -44,6 +44,7 @@
     "aws-sdk": "^2.1692.0",
     "axios": "^1.8.2",
     "bcryptjs": "^3.0.2",
+    "buffer": "^6.0.3",
     "bullmq": "^5.47.1",
     "busboy": "^1.6.0",
     "check-password-strength": "^2.0.10",

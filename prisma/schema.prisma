@@ -82,7 +82,6 @@ model User {
   HelpContact               HelpContact[]
   PostCommentLikes          PostCommentLikes[]
   PointConversionRateUsers  PointConversionRateUsers[]
-  GroupParticipants         GroupParticipants[]
   BlockedGroupParticipant   BlockedGroupParticipant[]
   PostImpression            PostImpression[]
   CommentImpression         CommentImpression[]
@@ -98,6 +97,9 @@ model User {
   TwoFactorAuth             TwoFactorAuth[]
   WithdrawalRequest         WithdrawalRequest[]
   WithWithdrawalRequestCode WithdrawalRequestCode[]
+  Groups                    Groups[]
+  GroupMessage              GroupMessage[]
+  Tag                       Tag[]
 }
 
 model Participants {
@@ -133,6 +135,8 @@ model Messages {
   ReportMessage   ReportMessage[]
   Conversations   Conversations?  @relation(fields: [conversationsId], references: [conversation_id], onDelete: SetNull)
   conversationsId String?
+  Groups          Groups?         @relation(fields: [groupsId], references: [id])
+  groupsId        Int?
 
   @@index([sender_id])
   @@index([receiver_id])
@@ -891,14 +895,34 @@ model FAQAnswers {
   FAQ        FAQ      @relation(fields: [faq_id], references: [id], onDelete: Cascade)
 }
 
-model GroupParticipants {
-  id         Int      @id @default(autoincrement())
-  user_id    Int
-  group_id   Int
-  created_at DateTime @default(now())
-  updated_at DateTime @updatedAt
-  user       User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
-  group      Groups   @relation(fields: [group_id], references: [id], onDelete: Cascade)
+model GroupMessage {
+  id          Int               @id @default(autoincrement())
+  content     String?
+  senderId    Int
+  sender      User              @relation(fields: [senderId], references: [id])
+  groupChatId Int
+  groupChat   Groups            @relation(fields: [groupChatId], references: [id], onDelete: Cascade)
+  attachments GroupAttachment[]
+  tags        Tag[]
+  createdAt   DateTime          @default(now())
+}
+
+model Tag {
+  id        Int          @id @default(autoincrement())
+  userId    Int
+  user      User         @relation(fields: [userId], references: [id])
+  messageId Int
+  message   GroupMessage @relation(fields: [messageId], references: [id])
+  createdAt DateTime     @default(now())
+}
+
+model GroupAttachment {
+  id        Int          @id @default(autoincrement())
+  url       String // URL to the file (e.g., stored in AWS S3)
+  type      String // e.g., "image", "video"
+  messageId Int
+  message   GroupMessage @relation(fields: [messageId], references: [id])
+  createdAt DateTime     @default(now())
 }
 
 model Groups {
@@ -906,9 +930,11 @@ model Groups {
   group_id                String
   created_at              DateTime                  @default(now())
   updated_at              DateTime                  @updatedAt
-  partitcipants           GroupParticipants[]
-  BlockedGroupParticipant BlockedGroupParticipant[]
+  partitcipants           User[]
+  messages                Messages[]
   GroupSettings           GroupSettings?
+  GroupMessage            GroupMessage[]
+  BlockedGroupParticipant BlockedGroupParticipant[]
 }
 
 model GroupSettings {

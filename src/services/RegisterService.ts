@@ -212,6 +212,17 @@ export default class RegisterService {
             },
         });
 
+        await query.user.update({
+            where: {
+                id: data.id,
+            },
+            data: {
+                total_following: {
+                    increment: 1
+                },
+            },
+        });
+
         return query.follow.create({
             data: {
                 user_id: adminId,
