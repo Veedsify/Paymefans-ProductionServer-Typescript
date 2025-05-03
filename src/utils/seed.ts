@@ -51,9 +51,11 @@ async function main() {
 
   await prisma.platformExchangeRate.createMany({
     data: currencyRates.map((rate) => ({
+      buyValue: rate.buy,
+      sellValue: rate.sell,
       rate: rate.rate,
       name: rate.currency,
-      value: rate.value,
+      symbol: rate.symbol
     }))
   })
 

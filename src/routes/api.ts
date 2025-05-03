@@ -20,6 +20,7 @@ import webhooks from "@routes/users/webhooks/webhooks"
 import LogOutController from "@controllers/LogoutController";
 import withdraw from "@routes/users/withdraw/withdraw";
 import pages from "./users/pages/pages"
+import rates from "./users/rate/rate"
 const api = express.Router()
 
 // Authentication
@@ -66,4 +67,6 @@ api.use("/withdraw", withdraw)
 api.post("/logout", LogOutController.Logout)
 // Outer Pages
 api.use("/pages", pages)
+// Rates
+api.use("/rates", rates)
 export default api

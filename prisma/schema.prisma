@@ -42,6 +42,7 @@ model User {
   state                     String?
   city                      String?
   zip                       String?
+  currency                  String?                     @default("NGN")
   post_watermark            String?
   total_followers           Int                         @default(0)
   total_following           Int                         @default(0)
@@ -151,6 +152,8 @@ model Model {
   dob                 DateTime
   country             String
   hookup              Boolean               @default(false)
+  payment_status      Boolean               @default(false)
+  payment_reference   String?               @unique
   verification_video  String?
   verification_image  String?
   verification_status Boolean               @default(false)
@@ -464,6 +467,10 @@ model Settings {
   instagram_url         String?
   twitter_url           String?
   facebook_url          String?
+  snapchat_url          String?
+  tiktok_url            String?
+  telegram_url          String?
+  youtube_url           String?
   created_at            DateTime @default(now())
   updated_at            DateTime @updatedAt
   user                  User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
@@ -1014,21 +1021,6 @@ model ResetPasswordRequests {
   user       User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
 }
 
-model sessions {
-  id            String  @id
-  user_id       Int?    @unique
-  ip_address    String? @db.Text
-  user_agent    String?
-  payload       String  @db.Text
-  last_activity Int
-}
-
-model migrations {
-  id        Int    @id @default(autoincrement()) @db.Integer
-  migration String @db.Text
-  batch     Int    @db.Integer
-}
-
 model WithdrawalRequestCode {
   id         Int      @id @default(autoincrement())
   user_id    Int
@@ -1053,8 +1045,10 @@ model WithdrawalRequest {
 model PlatformExchangeRate {
   id         Int      @id @default(autoincrement())
   name       String   @unique
-  rate       Int
-  value      Float    @default(0)
+  buyValue   Float    @default(0)
+  sellValue  Float    @default(0)
+  rate       Float    @default(0)
+  symbol     String   @default("$")
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
 }

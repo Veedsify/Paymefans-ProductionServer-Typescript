@@ -15,6 +15,8 @@ import type { AuthUser } from "types/user";
 import { GenerateUniqueId } from "@utils/GenerateUniqueId";
 import { redis } from "@libs/RedisStore";
 import EmailService from "./EmailService";
+import RateConversionService from "./RateConversionService";
+import convertCurrency from "@utils/RateConverter";
 
 export default class PointService {
   static async RetrievePoints(userid: number): Promise<RetrievePointResponse> {
@@ -36,7 +38,7 @@ export default class PointService {
   // Buy points
   static async BuyPoints(
     user: AuthUser,
-    points_buy_id: string
+    points_buy_id: string,
   ): Promise<BuyPointResponse> {
     try {
       const point = await query.globalPointsBuy.findFirst({
@@ -59,7 +61,7 @@ export default class PointService {
   // Paystack payment
   static async PaystackPayment(
     point: GlobalPointsBuy,
-    user: AuthUser
+    user: AuthUser,
   ): Promise<PaystackPointBuyResponse> {
     try {
       const referenceId = `PNT${GenerateUniqueId()}`;
@@ -90,9 +92,9 @@ export default class PointService {
             callback_url:
               process.env.SERVER_ORIGINAL_URL + "/api/points/callback",
           }),
-        }
+        },
       );
-      const data = await CreateOrder.json() as any;
+      const data = (await CreateOrder.json()) as any;
       return { ...data };
     } catch (error: any) {
       throw new Error(error.message);
@@ -100,7 +102,7 @@ export default class PointService {
   }
   // Conversion rate
   static async GetConversionRate(
-    userId: number
+    userId: number,
   ): Promise<ConversionRateResponse> {
     try {
       // Find either user's conversion rate or global conversion rate, avoiding multiple queries
@@ -147,7 +149,8 @@ export default class PointService {
   // Purchase points
   static async PurchasePoints(
     user: AuthUser,
-    amount: string
+    amount: string,
+    ngn_amount: number,
   ): Promise<PointPurchaseResponse> {
     try {
       if (!user) {
@@ -166,9 +169,9 @@ export default class PointService {
         };
       }
 
-      const rate = await this.GetConversionRate(user.id);
+      const rate = await RateConversionService.GetPlatFormExchangeRate();
 
-      if (rate.error == true) {
+      if (rate.error) {
         return {
           status: false,
           error: true,
@@ -176,12 +179,15 @@ export default class PointService {
         };
       }
 
-      const platformFee = Number(process.env.PLATFORM_FEE) * Number(amount);
-      const points = Math.ceil((Number(amount) - platformFee) / Number(rate?.rate));
+      const approximateAmount = Number(Math.floor(ngn_amount));
+      const platformFee = Number(process.env.PLATFORM_FEE) * approximateAmount;
+      const amountInUSD = await convertCurrency(rate.data, ngn_amount, user?.currency || "USD", "USD");
+      const POINTS_PER_USD = rate.data.find(rate => rate.name === "POINTS")?.value || 1;
+      // Apply 10% fee and convert to points (1 USD = 16 points)
+      const pointsAfterFee = Math.floor(amountInUSD * Number(process.env.PLATFORM_TOPUP_FEE_PERCENTAGE) * POINTS_PER_USD);
       const response = await this.CreatePaystackPayment({
-        amount: parseInt(amount),
-        platformFee,
-        rate: Number(rate?.rate),
+        amount: Number(approximateAmount),
+        points: pointsAfterFee,
         user: user,
       });
 
@@ -198,7 +204,7 @@ export default class PointService {
         error: false,
         message: "Payment initiated successfully",
         checkout: response.data,
-        points: points,
+        points: pointsAfterFee,
         platformFee: platformFee,
       };
     } catch (err: any) {
@@ -209,8 +215,7 @@ export default class PointService {
   // Paystack payment
   static async CreatePaystackPayment({
     amount,
-    platformFee,
-    rate,
+    points,
     user,
   }: CreatePaystackPaymentProps): Promise<any> {
     try {
@@ -219,7 +224,7 @@ export default class PointService {
         data: {
           purchase_id: referenceId,
           user_id: user.id,
-          points: Number((amount - platformFee) / rate),
+          points: points,
           amount: amount,
           success: false,
         },
@@ -241,7 +246,7 @@ export default class PointService {
             callback_url:
               process.env.SERVER_ORIGINAL_URL + "/api/points/callback",
           }),
-        }
+        },
       );
 
       const data = await CreateOrder.json();
@@ -286,13 +291,15 @@ export default class PointService {
       });
 
       //Send Email Confirmation
-        await EmailService.SendPointPurchaseEmail({
-          email: user?.email as string,
-          name: user?.fullname ? (user.fullname.split(" ")[1] || user.fullname) : 'User',
-          points: purchase.points,
-          subject: "Paypoints Purchase Confirmation",
-          transactionId: purchase.purchase_id,
-        })
+      await EmailService.SendPointPurchaseEmail({
+        email: user?.email as string,
+        name: user?.fullname
+          ? user.fullname.split(" ")[1] || user.fullname
+          : "User",
+        points: purchase.points,
+        subject: "Paypoints Purchase Confirmation",
+        transactionId: purchase.purchase_id,
+      });
 
       // Use a transaction to ensure data consistency
       return await query.$transaction(async (tx) => {
@@ -346,11 +353,11 @@ export default class PointService {
           headers: {
             Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}`,
           },
-        }
+        },
       );
 
       if (response.status === 200) {
-        return await response.json() as any
+        return (await response.json()) as any;
       }
       return null;
     } catch (error) {
@@ -378,7 +385,7 @@ export default class PointService {
   }
   // Price per message
   static async PricePerMessage(
-    userId: number
+    userId: number,
   ): Promise<PricePerMessageResponse> {
     try {
       const PriceKey = `price_per_message:${userId}`;

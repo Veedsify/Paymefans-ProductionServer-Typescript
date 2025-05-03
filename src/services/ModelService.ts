@@ -1,4 +1,5 @@
 import type { AuthUser } from "types/user";
+import RateConversionService from "./RateConversionService";
 import type {
   ModelsSearchResponse,
   GetModelAvailableForHookupResponse,
@@ -24,11 +25,12 @@ import { GenerateUniqueId } from "@utils/GenerateUniqueId";
 import { redis } from "@libs/RedisStore";
 import EmailService from "./EmailService";
 import GetSinglename from "@utils/GetSingleName";
+import { PaystackService } from "./PaystackService";
 
 export default class ModelService {
   static async GetModels(
     body: { limit: number },
-    user: AuthUser
+    user: AuthUser,
   ): Promise<GetModelsResponse> {
     const { limit } = body;
     try {
@@ -46,7 +48,7 @@ export default class ModelService {
                     `;
 
           const modelsWithoutPassword = models.map(
-            ({ password, ...rest }: { password: string }) => rest
+            ({ password, ...rest }: { password: string }) => rest,
           );
           const options = {
             error: false,
@@ -152,7 +154,7 @@ export default class ModelService {
 
   static async GetModelAvailableForHookup(
     body: GetModelAvailableForHookupProps,
-    user: AuthUser
+    user: AuthUser,
   ): Promise<GetModelAvailableForHookupResponse> {
     const { limit } = body;
     try {
@@ -183,7 +185,7 @@ export default class ModelService {
                 `;
 
         const modelsWithoutPassword = models.map(
-          ({ password, ...rest }: { password: string }) => rest
+          ({ password, ...rest }: { password: string }) => rest,
         );
         const options = {
           error: false,
@@ -196,7 +198,7 @@ export default class ModelService {
           `hookups`,
           JSON.stringify(options),
           "EX",
-          1000 * 60 * 10
+          1000 * 60 * 10,
         ); // 10 minutes
         return options;
       }
@@ -213,7 +215,7 @@ export default class ModelService {
 
   static async SignupModel(
     body: SignupModelProps,
-    user: AuthUser
+    user: AuthUser,
   ): Promise<SignupModelResponse> {
     try {
       const { firstname, lastname, dob, country, available, gender } = body;
@@ -310,17 +312,71 @@ export default class ModelService {
           // });
           await EmailService.ModelWelcomeEmail(
             GetSinglename(getUser.name),
-            getUser.email
+            getUser.email,
           );
         }
       } catch (e) {
         console.log(`Error creating stream user: ${e}`);
       }
 
+      const rate = await RateConversionService.GetConversionRate(user.id, 7);
+
+      console.log("Rate", rate);
+
+      if (!rate) {
+        return {
+          error: true,
+          status: false,
+          message: "An error occurred while fetching conversion rate",
+        };
+      }
+
+      const paymentReference = GenerateUniqueId();
+
+      // Initialize a payment link
+      const paymentLink = await PaystackService.InitializePayment({
+        amount: rate.amount,
+        currency: rate.currency,
+        email: user.email,
+        reference: paymentReference,
+        callback_url: `${process.env.SERVER_ORIGINAL_URL}/api/webhooks/model-signup-callback`,
+      });
+
+      if (!paymentLink) {
+        return {
+          error: true,
+          status: false,
+          message: "An error occurred while initializing payment",
+        };
+      }
+
+      // Update the model with the payment reference
+      await query.model.update({
+        where: {
+          id: signUpUserAsModel.id,
+        },
+        data: {
+          payment_reference: paymentReference,
+          payment_status: false,
+        },
+      });
+
+      if (paymentLink.status === false) {
+        return {
+          error: true,
+          status: false,
+          message: paymentLink.message,
+        };
+      }
+
+      const { authorization_url, reference } = paymentLink.data;
+
       query.$disconnect();
       return {
         message: "You have been signed up as a model",
         status: true,
+        reference,
+        url: authorization_url,
         error: false,
       };
     } catch (e) {

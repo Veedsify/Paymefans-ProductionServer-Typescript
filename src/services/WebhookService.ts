@@ -3,8 +3,9 @@ import { redis } from "@libs/RedisStore";
 import query from "@utils/prisma";
 import s3 from "@utils/s3";
 import axios, { AxiosResponse } from "axios";
-import { Buffer } from "buffer"
+import { Buffer } from "buffer";
 import sharp from "sharp";
+import { PaystackService } from "./PaystackService";
 // Retry intervals in milliseconds: 2 minutes, 4 minutes, 10 minutes, 30 minutes.
 const RETRY_DELAYS = [120000, 240000, 600000, 1800000];
 const MAX_RETRIES = 4;
@@ -29,15 +30,18 @@ export class WebhookService {
       // If the post isn’t found, schedule a retry too.
       if (!postRecord) {
         console.warn(
-          `Post not found for ID ${mediaRecord.post_id}. Scheduling retry...`
+          `Post not found for ID ${mediaRecord.post_id}. Scheduling retry...`,
         );
         return WebhookService.scheduleRetry(uid, response, 0);
       }
       async function fetchImageFile(thumbnail: string): Promise<Buffer> {
         try {
-          const imgResponse: AxiosResponse<ArrayBuffer> = await axios.get(thumbnail, {
-            responseType: "arraybuffer",
-          });
+          const imgResponse: AxiosResponse<ArrayBuffer> = await axios.get(
+            thumbnail,
+            {
+              responseType: "arraybuffer",
+            },
+          );
           const buffer = Buffer.from(imgResponse.data); // no need for 'binary' here
           return buffer;
         } catch (error) {
@@ -46,7 +50,7 @@ export class WebhookService {
         }
       }
       // Example usage
-      const fileKey = `thumbnails/blured/${postRecord.user_id}/${uid}`
+      const fileKey = `thumbnails/blured/${postRecord.user_id}/${uid}`;
 
       const ImageBuffer = await sharp(await fetchImageFile(thumbnail))
         .resize(640)
@@ -84,12 +88,11 @@ export class WebhookService {
         },
       });
       // Check if all media for this post have been processed.
-      const isAllMediaProcessed = await WebhookService.checkIfAllMediaProcessed(
-        mediaRecord
-      );
+      const isAllMediaProcessed =
+        await WebhookService.checkIfAllMediaProcessed(mediaRecord);
       if (isAllMediaProcessed) {
         console.log(
-          `All media processed for post ${mediaRecord.post_id}, marking as approved.`
+          `All media processed for post ${mediaRecord.post_id}, marking as approved.`,
         );
         await query.post.update({
           where: { id: Number(mediaRecord.post_id) },
@@ -104,7 +107,7 @@ export class WebhookService {
   static async scheduleRetry(
     uid: string,
     response: any,
-    attempt: number
+    attempt: number,
   ): Promise<void> {
     // Prevent scheduling if we've reached max number of retries.
     if (attempt >= MAX_RETRIES) {
@@ -118,14 +121,14 @@ export class WebhookService {
     const executeAt = Date.now() + delay; // timestamp when the retry should execute.
     console.log(
       `Scheduling retry for media ID ${uid} in ${delay / 1000
-      } seconds. Attempt ${attempt + 1}`
+      } seconds. Attempt ${attempt + 1}`,
     );
     // Store the retry data along with the scheduled execution time.
     // The key will expire a bit after the intended run period to prevent stale data.
     await redis.setex(
       `retry:media:${uid}`,
       Math.ceil(delay / 1000) + 60,
-      JSON.stringify({ response, attempt: attempt + 1, executeAt })
+      JSON.stringify({ response, attempt: attempt + 1, executeAt }),
     );
   }
   // Retry processor runs every minute.
@@ -150,7 +153,7 @@ export class WebhookService {
       }
       if (attempt > MAX_RETRIES) {
         console.warn(
-          `Max retries reached for media ${mediaId}, stopping retries.`
+          `Max retries reached for media ${mediaId}, stopping retries.`,
         );
         await redis.del(key);
         continue;
@@ -168,13 +171,13 @@ export class WebhookService {
       });
       if (post?.post_status === "approved") {
         console.log(
-          `Post ${mediaRecord.post_id} already approved. Cancelling retry for media ${mediaId}.`
+          `Post ${mediaRecord.post_id} already approved. Cancelling retry for media ${mediaId}.`,
         );
         await redis.del(key);
         continue;
       }
       console.log(
-        `Retrying processing for media ${mediaId}, attempt ${attempt}`
+        `Retrying processing for media ${mediaId}, attempt ${attempt}`,
       );
       await WebhookService.HandleCloudflareProcessedMedia(response);
       await redis.del(key);
@@ -208,12 +211,57 @@ export class WebhookService {
       }
       console.log(
         `Post ${postId} still has ${totalMedia - completedMedia
-        } media files processing.`
+        } media files processing.`,
       );
       return false;
     } catch (error) {
       console.error("Error in checkIfAllMediaProcessed:", error);
       return false;
+    }
+  }
+  // Handle model signup callback
+  // This function is called when a model signs up.
+  // It initializes a payment for the model.
+  static async HandleModelSignupCallback(reference: string): Promise<any> {
+    try {
+      const models = await query.model.findFirst({
+        where: {
+          payment_reference: reference,
+        },
+      });
+
+      if (!models) {
+        return {
+          error: true,
+          message: "Model not found",
+        };
+      }
+
+      const validatePayment = await PaystackService.ValidatePayment(reference);
+
+      if (validatePayment.error) {
+        return {
+          error: true,
+          message: validatePayment.message,
+        };
+      }
+
+      await query.model.update({
+        where: {
+          id: models.id,
+        },
+        data: {
+          payment_status: true,
+        },
+      });
+
+      return {
+        error: false,
+        message: "Verification Successful ",
+        url: `${process.env.APP_URL}/verification?success=true`,
+      };
+    } catch (error: any) {
+      throw new Error(error.message);
     }
   }
 }

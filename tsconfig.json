@@ -14,17 +14,19 @@
     "paths": {
       "@controllers/*": ["controllers/*"],
       "@libs/*": ["libs/*"],
+      "@emails/*": ["emails/*"],
       "@middleware/*": ["middleware/*"],
       "@routes/*": ["routes/*"],
       "@services/*": ["services/*"],
       "@utils/*": ["utils/*"],
       "@views/*": ["views/*"],
       "@jobs/*": ["jobs/*"],
+      "@permissions/*": ["permissions/*"]
     },
     "declaration": false,
     "noImplicitAny": true,
     "noImplicitReturns": true,
     "noUnusedLocals": true,
-    "noUnusedParameters": true,
+    "noUnusedParameters": true
   }
 }

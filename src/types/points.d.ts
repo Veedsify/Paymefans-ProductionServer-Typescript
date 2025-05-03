@@ -44,8 +44,7 @@ export type PointPurchaseResponse = {
 
 export type CreatePaystackPaymentProps = {
       amount: number;
-      platformFee: number;
-      rate: number;
+      points: number;
       user: AuthUser;
 }
 

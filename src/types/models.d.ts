@@ -1,35 +1,37 @@
 export interface ModelsSearchResponse {
       error: boolean;
       message: string;
-      status?: boolean
-      models: Models[]
+      status?: boolean;
+      models: Models[];
 }
 
 export interface GetModelsResponse {
       error: boolean;
       message: string;
-      status?: boolean
-      models: Models[]
+      status?: boolean;
+      models: Models[];
 }
 export interface GetModelAvailableForHookupResponse {
       error: boolean;
       message: string;
-      status?: boolean
-      hookups: Hookups[]
+      status?: boolean;
+      hookups: Hookups[];
 }
 export interface SignupModelResponse {
       error: boolean;
       message: string;
-      status?: boolean
+      status?: boolean;
+      url?: string;
+      reference?: string;
 }
 export interface ValidateModelPaymentResponse {
       error: boolean;
       message: string;
-      status?: boolean
+      status?: boolean;
 }
 
 export interface Models extends Omit<User, "password"> { }
-export interface Hookups extends Omit<User, "password"> extends Settings { }
+export interface Hookups extends Omit<User, "password">, Settings { }
 
 export interface ModelsSearchProps {
       limit: string;
@@ -57,4 +59,4 @@ export interface CreateStreamProps {
 export interface ValidateModelPaymentProps {
       reference: string;
       trxref: string;
- }
+}

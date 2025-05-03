@@ -23,6 +23,7 @@ export default class AuthController {
         .status(201)
         .json({ message: "Account created successfully", status: true });
     } catch (error) {
+      console.log(error);
       return res
         .status(500)
         .json({ message: "Internal server error", status: false });
@@ -77,7 +78,7 @@ export default class AuthController {
   static async Wallet(req: Request, res: Response): Promise<any> {
     try {
       const UserWallet = await WalletService.RetrieveWallet(
-        req?.user?.id as number
+        req?.user?.id as number,
       );
       return res.status(200).json({ balance: UserWallet.wallet, status: true });
     } catch (error) {
@@ -91,6 +92,9 @@ export default class AuthController {
   static async Retrieve(req: Request, res: Response): Promise<any> {
     try {
       const user = await UserService.RetrieveUser(req?.user?.id as number);
+      if (user.status === false) {
+        return res.status(401).json(user);
+      }
       return res.status(200).json(user);
     } catch (error: any) {
       console.log(error.message);
@@ -106,7 +110,7 @@ export default class AuthController {
       const { two_factor_auth } = req.body;
       const user = await UserService.UpdateTwoFactorAuth(
         req?.user?.id as number,
-        two_factor_auth
+        two_factor_auth,
       );
 
       if (user.error) {

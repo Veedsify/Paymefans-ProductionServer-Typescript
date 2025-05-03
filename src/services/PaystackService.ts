@@ -1,20 +1,32 @@
-import {bankTypes} from "../types/withdraw";
+import { bankTypes } from "../types/withdraw";
 
 export class PaystackService {
-    static async InitializePayment(data: { email: string, amount: number }): Promise<any> {
+    static async InitializePayment(data: {
+        email: string;
+        amount: number;
+        currency: string;
+        reference: string;
+        callback_url: string;
+    }): Promise<any> {
         try {
-            const {email, amount} = data;
-            const response = await fetch("https://api.paystack.co/transaction/initialize", {
-                method: "POST",
-                headers: {
-                    Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}`,
-                    "Content-Type": "application/json",
+            const { email, amount, currency, callback_url, reference } = data;
+            const response = await fetch(
+                "https://api.paystack.co/transaction/initialize",
+                {
+                    method: "POST",
+                    headers: {
+                        Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}`,
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({
+                        email,
+                        amount,
+                        currenct: currency,
+                        callback_url,
+                        reference,
+                    }),
                 },
-                body: JSON.stringify({
-                    email,
-                    amount,
-                }),
-            });
+            );
 
             const responseData = await response.json();
             return responseData;
@@ -26,13 +38,13 @@ export class PaystackService {
 
     // Create Customer
     static async CreateCustomer(data: {
-        email: string,
-        first_name: string,
-        last_name: string,
-        phone: string
+        email: string;
+        first_name: string;
+        last_name: string;
+        phone: string;
     }): Promise<any> {
         try {
-            const {email, first_name, last_name, phone} = data;
+            const { email, first_name, last_name, phone } = data;
             const response = await fetch("https://api.paystack.co/customer", {
                 method: "POST",
                 headers: {
@@ -57,11 +69,11 @@ export class PaystackService {
 
     // Resolve Bank Account
     static async ResolveBankAccount(data: {
-        account_number: string,
-        bank_code: string
+        account_number: string;
+        bank_code: string;
     }): Promise<any> {
         try {
-            const {account_number, bank_code} = data;
+            const { account_number, bank_code } = data;
             const response = await fetch("https://api.paystack.co/bank/resolve", {
                 method: "POST",
                 headers: {
@@ -84,28 +96,31 @@ export class PaystackService {
 
     // Link The Bank Account
     static async TransferRecipient(data: {
-        account_number: string,
-        bank_code: string,
-        name: string,
-        type: bankTypes
-        currency: "NGN"
+        account_number: string;
+        bank_code: string;
+        name: string;
+        type: bankTypes;
+        currency: "NGN";
     }): Promise<any> {
         try {
-            const {account_number, bank_code, name, type, currency} = data;
-            const response = await fetch("https://api.paystack.co/transferrecipient", {
-                method: "POST",
-                headers: {
-                    Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}`,
-                    "Content-Type": "application/json",
+            const { account_number, bank_code, name, type, currency } = data;
+            const response = await fetch(
+                "https://api.paystack.co/transferrecipient",
+                {
+                    method: "POST",
+                    headers: {
+                        Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}`,
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({
+                        type: type,
+                        name: name,
+                        account_number,
+                        bank_code,
+                        currency,
+                    }),
                 },
-                body: JSON.stringify({
-                    type: type,
-                    name: name,
-                    account_number,
-                    bank_code,
-                    currency,
-                }),
-            });
+            );
 
             const responseData = await response.json();
             return responseData;
@@ -117,12 +132,12 @@ export class PaystackService {
 
     // Initiate Transfer
     static async InitiateTransfer(data: {
-        amount: number,
-        recipient_code: string,
-        reason: string
+        amount: number;
+        recipient_code: string;
+        reason: string;
     }): Promise<any> {
         try {
-            const {amount, recipient_code, reason} = data;
+            const { amount, recipient_code, reason } = data;
             const response = await fetch("https://api.paystack.co/transfer", {
                 method: "POST",
                 headers: {
@@ -141,6 +156,35 @@ export class PaystackService {
         } catch (error) {
             console.error(error);
             throw new Error("Error initiating transfer");
+        }
+    }
+
+    // Validate Payment
+    // This function is used to validate a payment.
+    static async ValidatePayment(
+        reference: string,
+    ): Promise<{ error: boolean; message: string }> {
+        try {
+            const response = await fetch(
+                `https://api.paystack.co/transaction/verify/${reference}`,
+                {
+                    method: "GET",
+                    headers: {
+                        Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}`,
+                        "Content-Type": "application/json",
+                    },
+                },
+            );
+
+            const responseData = await response.json();
+            console.log(responseData);
+            return {
+                error: responseData.data.status == "success" ? false : true,
+                message: responseData.message,
+            };
+        } catch (error) {
+            console.error(error);
+            throw new Error("Error validating payment");
         }
     }
 }
