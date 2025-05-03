@@ -49,11 +49,6 @@ export default class AuthController {
     try {
       const LoginAccount = await LoginService.LoginUser(req.body);
 
-      if (LoginAccount.error) {
-        console.log(LoginAccount.message);
-        return res.status(401).json(LoginAccount);
-      }
-
       return res.status(200).json(LoginAccount);
     } catch (error) {
       return res

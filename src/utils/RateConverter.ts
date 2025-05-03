@@ -1,5 +1,6 @@
 type Rate = {
-  value: number;
+  buyValue: number;
+  sellValue: number;
   symbol: string;
   name: string;
   rate: number;
@@ -12,9 +13,45 @@ export default async function convertCurrency(
   fromCurrency: string,
   toCurrency: string,
 ): Promise<number> {
-  const fromRate = rates.find((rate) => rate.name === fromCurrency)?.value || 1;
-  const toRate = rates.find((rate) => rate.name === toCurrency)?.value || 1;
+  if (fromCurrency === "POINTS") {
+    // Convert points to USD first (16 points = $1)
+    const usdAmount =
+      amount /
+      (rates.find((rate: Rate) => rate.name === "POINTS")?.buyValue ||
+        16);
 
-  // Convert from source currency to USD (our base currency)
-  return (amount / fromRate) * toRate;
+    // Then convert USD to target currency
+    const targetRate =
+      rates.find((rate: Rate) => rate.name === toCurrency)
+        ?.buyValue || 1;
+
+    return usdAmount * targetRate;
+  }
+
+  // For other currency conversions
+  if (fromCurrency === "USD") {
+    // Direct conversion from USD
+    const toRate =
+      rates.find((rate: Rate) => rate.name === toCurrency)
+        ?.buyValue || 1;
+    return amount * toRate;
+  } else if (toCurrency === "USD") {
+    // Convert to USD
+    const fromRate =
+      rates.find((rate: Rate) => rate.name === fromCurrency)
+        ?.buyValue || 1;
+    return amount / fromRate;
+  } else {
+    // Convert through USD as intermediate
+    const fromRate =
+      rates.find((rate: Rate) => rate.name === fromCurrency)
+        ?.buyValue || 1;
+    const toRate =
+      rates.find((rate: Rate) => rate.name === toCurrency)
+        ?.buyValue || 1;
+
+    // First convert to USD then to target currency
+    const usdAmount = amount / fromRate;
+    return usdAmount * toRate;
+  }
 }
