@@ -87,7 +87,7 @@ export default class SocketService {
     data: HandleSeenProps,
     socket: Socket,
     userRoom: string,
-    io: any
+    _: any
   ) {
     const lastMessageSeen = await MessageService.MessagesSeenByReceiver(data);
     if (lastMessageSeen.success) {
@@ -99,7 +99,7 @@ export default class SocketService {
       await redis.del(`conversations:${data.receiver_id}`);
       // const conversations = await this.GetCachedConversations(data.userId);
       // const receiverConversations = await this.GetCachedConversations(data.receiver_id);
-      io.to(userRoom).emit("prefetch-conversations", "conversations");
+      // io.to(userRoom).emit("prefetch-conversations", "conversations");
       // socket.to(userRoom).emit("conversations", receiverConversations);
     }
   }
@@ -215,12 +215,12 @@ export default class SocketService {
 
   // Handle conversations opened
   // Join conversations room for user conversations
-  static async HandleConversationsOpened(
-    conversationId: string,
-    socket: Socket
-  ) {
-    socket.emit("prefetch-conversations", conversationId);
-  }
+  // static async HandleConversationsOpened(
+  //   conversationId: string,
+  //   socket: Socket
+  // ) {
+  //   socket.emit("prefetch-conversations", conversationId);
+  // }
   // Save message to database
 
   // Handle New Message
@@ -236,7 +236,6 @@ export default class SocketService {
       if (message) {
         socket.to(userRoom).emit("message", {
           ...data,
-          message_id: message.message_id,
         });
 
         //clear cached conversations
@@ -246,7 +245,7 @@ export default class SocketService {
         await redis.del(receiverMessageKey);
         await redis.del(`conversations:${user.userId}`);
         await redis.del(`conversations:${data.receiver_id}`);
-        io.to(userRoom).emit("prefetch-conversations", "conversations");
+        io.to(socket.id).emit("prefetch-conversations", "conversations");
 
         // Check If Receiver Is Active
         const allActiveUsers = await redis.hgetall("activeUsers");
@@ -273,12 +272,10 @@ export default class SocketService {
             subject,
             link,
           });
-        } else {
-          io.to(found.socket_id).emit(
-            "prefetch-conversations",
-            "conversations"
-          );
         }
+
+        io.to(found?.socket_id).emit("prefetch-conversations", "conversations");
+
       } else {
         socket.emit("message-error", {
           message: "An error occurred while sending this message",

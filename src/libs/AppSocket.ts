@@ -48,9 +48,9 @@ async function AppSocket(io: any) {
     socket.on("notifications-join", (userId: string) =>
       SocketService.HandleNotificationJoin(userId, socket)
     );
-    socket.on("conversations-opened", (conversationId: string) =>
-      SocketService.HandleConversationsOpened(conversationId, socket)
-    );
+    // socket.on("conversations-opened", (conversationId: string) =>
+    //   SocketService.HandleConversationsOpened(conversationId, socket)
+    // );
     socket.on("user-connected", (data: any) =>
       SocketService.HandleUserConnected(socket, user, data)
     );

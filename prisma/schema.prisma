@@ -101,6 +101,8 @@ model User {
   Groups                    Groups[]
   GroupMessage              GroupMessage[]
   Tag                       Tag[]
+  SupportTickets            SupportTickets[]
+  SupportTicketReplies      SupportTicketReplies[]
 }
 
 model Participants {
@@ -1061,6 +1063,30 @@ model OuterPages {
   content    String   @db.Text
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
+}
+
+model SupportTickets {
+  id                   Int                    @id @default(autoincrement())
+  ticket_id            String                 @unique
+  user_id              Int
+  subject              String
+  message              String
+  status               String                 @default("open")
+  created_at           DateTime               @default(now())
+  updated_at           DateTime               @updatedAt
+  user                 User                   @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  SupportTicketReplies SupportTicketReplies[]
+}
+
+model SupportTicketReplies {
+  id         Int            @id @default(autoincrement())
+  ticket_id  String
+  user_id    Int
+  message    String
+  created_at DateTime       @default(now())
+  updated_at DateTime       @updatedAt
+  user       User           @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  ticket     SupportTickets @relation(fields: [ticket_id], references: [ticket_id], onDelete: Cascade)
 }
 
 // ENUMS DECLARATION

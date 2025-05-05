@@ -48,7 +48,6 @@ export default class AuthController {
   static async Login(req: Request, res: Response): Promise<any> {
     try {
       const LoginAccount = await LoginService.LoginUser(req.body);
-
       return res.status(200).json(LoginAccount);
     } catch (error) {
       return res

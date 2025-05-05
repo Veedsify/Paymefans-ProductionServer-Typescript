@@ -30,8 +30,8 @@ export default class ConversationService {
     cursor = 0,
   }: AllConversationProps): Promise<AllConversationResponse> {
     try {
-      // Validate user's participation in the conversation
-      const validateUserConversation = await query.conversations.findFirst({
+      // 1. Fetch conversation and validate participation in one query
+      const conversation = await query.conversations.findFirst({
         where: {
           conversation_id: conversationId,
           participants: {
@@ -40,9 +40,10 @@ export default class ConversationService {
             },
           },
         },
-        select: { id: true, conversation_id: true },
+        select: { participants: true, conversation_id: true },
       });
-      if (!validateUserConversation) {
+
+      if (!conversation) {
         return {
           messages: [],
           receiver: null,
@@ -53,49 +54,35 @@ export default class ConversationService {
           error: true,
         };
       }
-      // Fetch conversation details
-      const data = await query.conversations.findFirst({
-        where: { conversation_id: conversationId },
-        select: {
-          participants: true,
-        },
-      });
-      if (!data) {
-        return {
-          messages: [],
-          receiver: null,
-          error: false,
-          status: true,
-          hasMore: false,
-        };
-      }
-      const messagesPerPage = Number(process.env.MESSAGES_PER_PAGE);
-      // Fetch one extra message to determine if there are more pages
-      const conversationMessages = await query.messages.findMany({
+
+      // 2. Get pagination limit
+      const messagesPerPage = Number(process.env.MESSAGES_PER_PAGE) || 20;
+
+      // 3. Fetch paginated messages (fetch one extra for hasMore)
+      const messages = await query.messages.findMany({
         where: {
           conversationsId: conversationId,
           ...(cursor && cursor > 0 ? { id: { lt: cursor } } : {}),
         },
         orderBy: [{ id: "desc" }],
-        take: messagesPerPage, // Fetch one extra to check if there's more
+        take: messagesPerPage + 1,
       });
-      const reversedConversations = conversationMessages.reverse();
-      // Reverse the order to get the latest messages first
-      // Set nextCursor to the ID of the last message in the current page
-      const nextCursor = reversedConversations.length > 0
-        ? reversedConversations[0].id
-        : 1;
-      // Determine the receiver (the other participant)
-      const participant = data.participants.find(
+
+      const hasMore = messages.length > messagesPerPage;
+      if (hasMore) messages.pop(); // Remove the extra message
+
+      // Messages should be returned in ascending order for chat UIs
+      const orderedMessages = messages.slice().reverse();
+
+      // 4. Find the receiver
+      const participant = conversation.participants.find(
         (p) => p.user_1 === user.user_id || p.user_2 === user.user_id
       );
+      let receiver = null;
       if (participant) {
         const receiverId =
-          participant.user_1 === user.user_id
-            ? participant.user_2
-            : participant.user_1;
-        // Fetch receiver data
-        const receiverData = await query.user.findFirst({
+          participant.user_1 === user.user_id ? participant.user_2 : participant.user_1;
+        receiver = await query.user.findFirst({
           where: { user_id: receiverId },
           select: {
             id: true,
@@ -106,36 +93,23 @@ export default class ConversationService {
             Settings: true,
           },
         });
-        if (!receiverData) {
-          return {
-            messages: [],
-            receiver: null,
-            hasMore: false,
-            error: false,
-            status: true,
-          };
-        }
-        return {
-          messages: reversedConversations as Messages[],
-          receiver: receiverData,
-          error: false,
-          status: true,
-          nextCursor,
-        };
       }
-      // Return empty result if no participant found
+
       return {
-        messages: [],
-        receiver: null,
-        hasMore: false,
+        messages: orderedMessages as Messages[],
+        receiver,
         error: false,
         status: true,
+        hasMore,
+        nextCursor: orderedMessages.length > 0 ? orderedMessages[0].id : undefined,
       };
     } catch (error) {
       console.error("Error fetching conversation:", error);
       throw new Error("Failed to fetch conversation messages");
     } finally {
-      await query.$disconnect(); // Ensure connection is closed
+      if (query.$disconnect) {
+        await query.$disconnect();
+      }
     }
   }
   // Create Conversation
@@ -236,32 +210,29 @@ export default class ConversationService {
     limit?: string;
   }): Promise<MyConversationResponse> {
     try {
-      const skip = (Number(page) - 1) * Number(limit);
-      // Unread Count Of Messages
-      const unreadCount = await query.messages.findMany({
-        orderBy: {
-          created_at: "desc",
-        },
+      const pageNum = Math.max(1, parseInt(page, 10) || 1);
+      const takeNum = Math.max(1, parseInt(limit, 10) || 30);
+      const skip = (pageNum - 1) * takeNum;
+
+      // 1. Get unread count in one query
+      const unreadCount = await query.messages.count({
+        orderBy: { created_at: "desc" },
         take: 1,
         where: {
-          sender: {
-            id: { not: authUser.id },
-          },
+          sender: { id: { not: authUser.id } },
+          seen: false,
           Conversations: {
             participants: {
               some: {
-                OR: [
-                  { user_1: authUser.user_id },
-                  { user_2: authUser.user_id },
-                ],
+                OR: [{ user_1: authUser.user_id }, { user_2: authUser.user_id }],
               },
             },
           },
-          seen: false,
         },
       });
-      // Fetch conversations
-      const conversationsByParticipants = await query.conversations.findMany({
+
+      // 2. Get conversation IDs paginated
+      const conversations = await query.conversations.findMany({
         where: {
           participants: {
             some: {
@@ -269,100 +240,105 @@ export default class ConversationService {
             },
           },
         },
+        orderBy: { updated_at: "desc" }, // or created_at, as you need
         skip,
-        take: parseInt(limit) + 1, // Fetch one extra to check if there's more
+        take: takeNum + 1, // +1 to detect if there's more
+        select: {
+          conversation_id: true,
+          participants: true,
+        },
       });
-      const hasMore = conversationsByParticipants.length > Number(limit);
-      if (hasMore) {
-        conversationsByParticipants.pop(); // Remove the extra item
-      }
-      if (!conversationsByParticipants.length) {
+
+      const hasMore = conversations.length > takeNum;
+      if (hasMore) conversations.pop();
+
+      if (!conversations.length) {
         return {
           error: false,
           status: true,
           conversations: [],
           hasMore: false,
-          page: Number(page),
-          unreadCount: unreadCount.length,
+          page: pageNum,
+          unreadCount,
         };
       }
-      // Process conversations in parallel
-      const conversationsPromises = conversationsByParticipants.map(
-        async (participant) => {
-          const conversation = await query.conversations.findFirst({
-            where: { conversation_id: participant.conversation_id },
-            select: {
-              messages: { orderBy: { created_at: "desc" }, take: 1 },
-              participants: true,
-            },
-          });
-          if (!conversation) {
-            return null;
-          }
-          const participantData = conversation.participants.find(
-            (p) =>
-              p.user_1 === authUser.user_id || p.user_2 === authUser.user_id
-          );
-          if (!participantData) {
-            return null;
-          }
-          const receiverId =
-            participantData.user_1 === authUser.user_id
-              ? participantData.user_2
-              : participantData.user_1;
-          const receiver = await query.user.findFirst({
-            where: { user_id: receiverId },
-            select: {
-              id: true,
-              user_id: true,
-              name: true,
-              username: true,
-              profile_image: true,
-            },
-          });
-          return {
+
+      // 3. Gather all conversation IDs and participant IDs for batch fetching
+      const conversationIds = conversations.map(c => c.conversation_id);
+
+      // 4. Batch fetch latest messages for each conversation
+      const messages = await query.messages.findMany({
+        where: { conversationsId: { in: conversationIds } },
+        orderBy: { created_at: "desc" },
+        distinct: ["conversationsId"],
+        // Some ORMs may require a workaround to get "latest per conversation"
+      });
+
+      // 5. Determine receiver IDs for batch user fetch
+      const receiverIds = conversations.map(c => {
+        const p = c.participants.find(
+          (p: any) => p.user_1 === authUser.user_id || p.user_2 === authUser.user_id
+        );
+        return p
+          ? p.user_1 === authUser.user_id
+            ? p.user_2
+            : p.user_1
+          : null;
+      }).filter(Boolean)
+
+      const receivers = await query.user.findMany({
+        where: { user_id: { in: receiverIds as any } },
+        select: {
+          id: true,
+          user_id: true,
+          name: true,
+          username: true,
+          profile_image: true,
+        },
+      });
+
+      // 6. Map user_id to user for quick lookup
+      const receiverMap = new Map(receivers.map(u => [u.user_id, u]));
+
+      // 7. Assemble the conversation results
+      const conversationsResult = conversations.map(convo => {
+        const lastMessage = messages.find(m => m.conversationsId === convo.conversation_id) || null;
+        const p = convo.participants.find(
+          (p: any) => p.user_1 === authUser.user_id || p.user_2 === authUser.user_id
+        );
+        const receiverId = p
+          ? p.user_1 === authUser.user_id
+            ? p.user_2
+            : p.user_1
+          : null;
+        const receiver = receiverId ? receiverMap.get(receiverId) : null;
+        return receiver
+          ? {
             receiver,
-            conversation_id: participant.conversation_id,
-            lastMessage: conversation.messages[0],
-          };
+            conversation_id: convo.conversation_id,
+            lastMessage,
+          }
+          : null;
+      }).filter(Boolean);
+
+      // 8. Sort conversations by lastMessage date
+      conversationsResult.sort((a, b) => {
+        if (a?.lastMessage?.created_at && b?.lastMessage?.created_at) {
+          return new Date(b.lastMessage.created_at).getTime() -
+            new Date(a.lastMessage.created_at).getTime();
         }
-      );
-      // Wait for all promises and filter out null values
-      const filteredConversations = await Promise.all(conversationsPromises)
-        .then((results) =>
-          results
-            .filter((result) => result !== null && result.receiver !== null)
-            .sort((a, b) => {
-              // If both conversations have last messages, sort by their creation date
-              if (a?.lastMessage?.created_at && b?.lastMessage?.created_at) {
-                return (
-                  new Date(b.lastMessage.created_at).getTime() -
-                  new Date(a.lastMessage.created_at).getTime()
-                );
-              }
-              // If a doesn't have a last message but b does, b comes first
-              else if (!a?.lastMessage && b?.lastMessage) {
-                return 1;
-              }
-              // If b doesn't have a last message but a does, a comes first
-              else if (a?.lastMessage && !b?.lastMessage) {
-                return -1;
-              }
-              // If neither have last messages, leave in original order
-              return 0;
-            })
-        )
-        .catch((error) => {
-          console.error("Error processing conversations:", error);
-          return [];
-        });
+        if (!a?.lastMessage && b?.lastMessage) return 1;
+        if (a?.lastMessage && !b?.lastMessage) return -1;
+        return 0;
+      });
+
       return {
         error: false,
         status: true,
-        conversations: filteredConversations as Conversations[],
-        unreadCount: unreadCount.length,
+        conversations: conversationsResult as Conversations[],
+        unreadCount,
         hasMore,
-        page: Number(page),
+        page: pageNum,
       };
     } catch (error: any) {
       console.error("Error fetching conversations:", error);

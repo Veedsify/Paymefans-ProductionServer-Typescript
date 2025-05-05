@@ -30,13 +30,6 @@ export default class UserService {
         return { message: "User not found", status: false };
       }
 
-      if (user.active_status === false) {
-        return {
-          message: "User account is deactivated",
-          status: false,
-        };
-      }
-
       // Fetch following count
       const following = await query.user.count({
         where: {

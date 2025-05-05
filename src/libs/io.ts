@@ -18,6 +18,9 @@ const socketOptions = {
       ADMIN_PANEL_URL as string,
       LIVESTREAM_PORT as string,
       APP_URL as string,
+      "http://192.168.18.126",
+      "http://192.168.18.126:3009",
+      "http://192.168.18.126:3000"
     ],
     methods: ["GET", "POST"],
   },
@@ -26,7 +29,7 @@ const socketOptions = {
 
 export default {
   init: async (server: http.Server) => {
-   
+
     io = new Server(server, socketOptions);
 
     // Optional: Handle Redis connection errors

@@ -1,7 +1,7 @@
 import TriggerModels from "@jobs/models";
-import type {LoginUserProps, LoginUserResponse} from "../types/auth";
+import type { LoginUserProps, LoginUserResponse } from "../types/auth";
 import ComparePasswordHash from "@libs/ComparePassordHash";
-import {Authenticate} from "@libs/jwt";
+import { Authenticate } from "@libs/jwt";
 import query from "@utils/prisma";
 import TriggerHookups from "@jobs/hookup";
 import LoginHistoryService from "@services/LoginHistory";
@@ -12,10 +12,10 @@ export default class LoginService {
     // Login User
     static async LoginUser(data: LoginUserProps): Promise<LoginUserResponse> {
         try {
-            if (!data) return {error: true, message: "Invalid request"};
-            const {email, password: pass} = data;
+            if (!data) return { error: true, message: "Invalid request" };
+            const { email, password: pass } = data;
             if (!email || !pass) {
-                return {error: true, message: "Email and password are required"};
+                return { error: true, message: "Email and password are required" };
             }
             const user = await query.user.findFirst({
                 where: {
@@ -27,18 +27,14 @@ export default class LoginService {
             });
 
             if (!user) {
-                return {error: true, message: "Invalid email or password"};
-            }
-
-            if (!user.active_status) {
-                return {error: true, message: "Sorry This account has been disabled, contact support for further assistance"};
+                return { error: true, message: "Invalid email or password" };
             }
 
             const match = await ComparePasswordHash(pass, user.password);
             if (!match) {
-                return {error: true, message: "Invalid email or password"};
+                return { error: true, message: "Invalid email or password" };
             }
-            const {password, ...rest} = user;
+            const { password, ...rest } = user;
 
             if (user?.Settings?.two_factor_auth) {
                 const code = _.random(100000, 999999);
@@ -56,7 +52,7 @@ export default class LoginService {
                 });
 
                 if (sendAuthEmail.error) {
-                    return {error: true, message: sendAuthEmail.message};
+                    return { error: true, message: sendAuthEmail.message };
                 }
 
                 return {
@@ -79,10 +75,10 @@ export default class LoginService {
                     console.error("Error saving login history:", error);
                 }
 
-                return {token, error: false, message: "Login Successful", user: rest};
+                return { token, error: false, message: "Login Successful", user: rest };
             }
         } catch (error) {
-            return {error: true, message: "Internal server error"};
+            return { error: true, message: "Internal server error" };
         }
     }
 }

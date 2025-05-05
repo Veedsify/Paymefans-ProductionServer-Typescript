@@ -37,6 +37,9 @@ app.use(
       APP_URL!,
       LIVESTREAM_PORT!,
       "http://localhost:5173",
+      "http://192.168.18.126",
+      "http://192.168.18.126:3009",
+      "http://192.168.18.126:3000"
     ].filter(Boolean),
     credentials: true,
     optionsSuccessStatus: 200,

@@ -1,4 +1,4 @@
-import type {Request} from "express";
+import type { Request } from "express";
 import type {
     BannerChangeResponse,
     ProfileServiceResponse,
@@ -6,9 +6,9 @@ import type {
     ProfileUpdateResponse,
 } from "../types/profile";
 import query from "@utils/prisma";
-import {UploadImageToS3} from "@libs/UploadImageToS3";
-import type {UploadOptions} from "@libs/UploadImageToS3";
-import {UpdateAvatarQueue} from "@jobs/comments/UpdateCommentsAvatar";
+import { UploadImageToS3 } from "@libs/UploadImageToS3";
+import type { UploadOptions } from "@libs/UploadImageToS3";
+import { UpdateAvatarQueue } from "@jobs/comments/UpdateCommentsAvatar";
 
 class ProfileService {
     // Get Profile
@@ -33,6 +33,7 @@ class ProfileService {
                 location: true,
                 city: true,
                 zip: true,
+                active_status: true,
                 post_watermark: true,
                 total_followers: true,
                 total_following: true,
@@ -50,14 +51,14 @@ class ProfileService {
         });
 
         if (!user) {
-            return {message: "User not found", status: false};
+            return { message: "User not found", status: false };
         }
-        return {message: "User found", status: true, user};
+        return { message: "User found", status: true, user };
     }
 
     // Change Banner
     static async BannerChange(req: Request): Promise<BannerChangeResponse> {
-        const {user} = req;
+        const { user } = req;
         const file = req.file; // Use Multer's file object
         let url = "";
 
@@ -77,7 +78,7 @@ class ProfileService {
             file: file!,
             folder: "banners",
             contentType: "image/jpeg",
-            resize: {width: 1950, height: 650, fit: "cover", position: "center"},
+            resize: { width: 1950, height: 650, fit: "cover", position: "center" },
             deleteLocal: true,
             saveToDb: true,
             onUploadComplete: (BannerUrl: string) => SaveBannerToDb(BannerUrl),
@@ -87,17 +88,17 @@ class ProfileService {
 
         await UploadImageToS3(options);
 
-        return {message: "Banner updated", status: true, url};
+        return { message: "Banner updated", status: true, url };
     }
 
     static async ProfileUpdate(req: Request): Promise<ProfileUpdateResponse> {
-        const {user} = req;
+        const { user } = req;
         const file = req.file; // Use Multer's file object
         let url = "";
 
         if (!file) {
             await this.ProfileUpdateInfo(req.body, user?.user_id!);
-            return {message: "Profile updated", status: true, url: ""};
+            return { message: "Profile updated", status: true, url: "" };
         }
 
         const SaveAvatarToDb = async (AvatarUrl: string) => {
@@ -111,7 +112,7 @@ class ProfileService {
                 },
             });
             // Update comments avatar
-            await UpdateAvatarQueue.add("UpdateAvatarQueue", {userId: user?.id, avatarUrl: AvatarUrl}, {
+            await UpdateAvatarQueue.add("UpdateAvatarQueue", { userId: user?.id, avatarUrl: AvatarUrl }, {
                 attempts: 3,
                 backoff: 5000,
             })
@@ -123,7 +124,7 @@ class ProfileService {
             file: file!,
             folder: "avatars",
             contentType: "image/jpeg",
-            resize: {width: 200, height: 200, fit: "cover", position: "center"},
+            resize: { width: 200, height: 200, fit: "cover", position: "center" },
             deleteLocal: true,
             saveToDb: true,
             onUploadComplete: (AvatarUrl: string) => SaveAvatarToDb(AvatarUrl),
@@ -133,13 +134,13 @@ class ProfileService {
 
         await UploadImageToS3(options);
 
-        return {message: "Avatar updated", status: true, url};
+        return { message: "Avatar updated", status: true, url };
     }
 
     // Update Profile Info
 
     static async ProfileUpdateInfo(
-        {name, location, bio, website, email, username}: ProfileUpdateInfo,
+        { name, location, bio, website, email, username }: ProfileUpdateInfo,
         userId: string
     ) {
         try {

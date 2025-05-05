@@ -52,6 +52,10 @@ class SaveMessageToDb {
           ? participant1.user_2
           : participant1.user_1;
 
+      const modifiedAttachment = attachment.map((file: any) => ({
+        ...file,
+        poster: `${process.env.CLOUDFLARE_CUSTOMER_SUBDOMAIN}/${file.id}/thumbnails/thumbnail.gif?time=1s&height=400&duration=4s`
+      }));
       // Save the message to the database
       const newMessage = await query.messages.create({
         data: {
@@ -61,9 +65,10 @@ class SaveMessageToDb {
           message: sanitizedHtml,
           seen: false,
           receiver_id: receiver,
-          attachment: attachment,
+          attachment: modifiedAttachment,
         },
         select: {
+          id: true,
           message_id: true,
           conversationsId: true,
           receiver: {
