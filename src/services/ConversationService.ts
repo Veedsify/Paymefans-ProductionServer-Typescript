@@ -31,12 +31,6 @@ export default class ConversationService {
         cursor = 0,
     }: AllConversationProps): Promise<AllConversationResponse> {
         try {
-            const cacheKey = `conversation:${user.user_id}:${conversationId}:${cursor}`;
-            const cachedData = await redis.get(cacheKey);
-            if (cachedData) {
-                return JSON.parse(cachedData);
-            }
-
             // 1. Fetch conversation and validate participation in one query
             const conversation = await query.conversations.findFirst({
                 where: {
@@ -83,12 +77,14 @@ export default class ConversationService {
 
             // 4. Find the receiver
             const participant = conversation.participants.find(
-                (p) => p.user_1 === user.user_id || p.user_2 === user.user_id
+                (p) => p.user_1 === user.user_id || p.user_2 === user.user_id,
             );
             let receiver = null;
             if (participant) {
                 const receiverId =
-                    participant.user_1 === user.user_id ? participant.user_2 : participant.user_1;
+                    participant.user_1 === user.user_id
+                        ? participant.user_2
+                        : participant.user_1;
                 receiver = await query.user.findFirst({
                     where: { user_id: receiverId },
                     select: {
@@ -109,13 +105,11 @@ export default class ConversationService {
                 error: false,
                 status: true,
                 hasMore,
-                nextCursor: orderedMessages.length > 0 ? orderedMessages[0].id : undefined,
+                nextCursor:
+                    orderedMessages.length > 0 ? orderedMessages[0].id : undefined,
             };
 
-            redis.set(cacheKey, JSON.stringify(response), "EX", 10)
-
             return response;
-
         } catch (error) {
             console.error("Error fetching conversation:", error);
             throw new Error("Failed to fetch conversation messages");
@@ -239,7 +233,10 @@ export default class ConversationService {
                     Conversations: {
                         participants: {
                             some: {
-                                OR: [{ user_1: authUser.user_id }, { user_2: authUser.user_id }],
+                                OR: [
+                                    { user_1: authUser.user_id },
+                                    { user_2: authUser.user_id },
+                                ],
                             },
                         },
                     },
@@ -279,7 +276,7 @@ export default class ConversationService {
             }
 
             // 3. Gather all conversation IDs and participant IDs for batch fetching
-            const conversationIds = conversations.map(c => c.conversation_id);
+            const conversationIds = conversations.map((c) => c.conversation_id);
 
             // 4. Batch fetch latest messages for each conversation
             const messages = await query.messages.findMany({
@@ -290,16 +287,19 @@ export default class ConversationService {
             });
 
             // 5. Determine receiver IDs for batch user fetch
-            const receiverIds = conversations.map(c => {
-                const p = c.participants.find(
-                    (p: any) => p.user_1 === authUser.user_id || p.user_2 === authUser.user_id
-                );
-                return p
-                    ? p.user_1 === authUser.user_id
-                        ? p.user_2
-                        : p.user_1
-                    : null;
-            }).filter(Boolean)
+            const receiverIds = conversations
+                .map((c) => {
+                    const p = c.participants.find(
+                        (p: any) =>
+                            p.user_1 === authUser.user_id || p.user_2 === authUser.user_id,
+                    );
+                    return p
+                        ? p.user_1 === authUser.user_id
+                            ? p.user_2
+                            : p.user_1
+                        : null;
+                })
+                .filter(Boolean);
 
             const receivers = await query.user.findMany({
                 where: { user_id: { in: receiverIds as any } },
@@ -313,34 +313,41 @@ export default class ConversationService {
             });
 
             // 6. Map user_id to user for quick lookup
-            const receiverMap = new Map(receivers.map(u => [u.user_id, u]));
+            const receiverMap = new Map(receivers.map((u) => [u.user_id, u]));
 
             // 7. Assemble the conversation results
-            const conversationsResult = conversations.map(convo => {
-                const lastMessage = messages.find(m => m.conversationsId === convo.conversation_id) || null;
-                const p = convo.participants.find(
-                    (p: any) => p.user_1 === authUser.user_id || p.user_2 === authUser.user_id
-                );
-                const receiverId = p
-                    ? p.user_1 === authUser.user_id
-                        ? p.user_2
-                        : p.user_1
-                    : null;
-                const receiver = receiverId ? receiverMap.get(receiverId) : null;
-                return receiver
-                    ? {
-                        receiver,
-                        conversation_id: convo.conversation_id,
-                        lastMessage,
-                    }
-                    : null;
-            }).filter(Boolean);
+            const conversationsResult = conversations
+                .map((convo) => {
+                    const lastMessage =
+                        messages.find((m) => m.conversationsId === convo.conversation_id) ||
+                        null;
+                    const p = convo.participants.find(
+                        (p: any) =>
+                            p.user_1 === authUser.user_id || p.user_2 === authUser.user_id,
+                    );
+                    const receiverId = p
+                        ? p.user_1 === authUser.user_id
+                            ? p.user_2
+                            : p.user_1
+                        : null;
+                    const receiver = receiverId ? receiverMap.get(receiverId) : null;
+                    return receiver
+                        ? {
+                            receiver,
+                            conversation_id: convo.conversation_id,
+                            lastMessage,
+                        }
+                        : null;
+                })
+                .filter(Boolean);
 
             // 8. Sort conversations by lastMessage date
             conversationsResult.sort((a, b) => {
                 if (a?.lastMessage?.created_at && b?.lastMessage?.created_at) {
-                    return new Date(b.lastMessage.created_at).getTime() -
-                        new Date(a.lastMessage.created_at).getTime();
+                    return (
+                        new Date(b.lastMessage.created_at).getTime() -
+                        new Date(a.lastMessage.created_at).getTime()
+                    );
                 }
                 if (!a?.lastMessage && b?.lastMessage) return 1;
                 if (a?.lastMessage && !b?.lastMessage) return -1;
@@ -397,7 +404,7 @@ export default class ConversationService {
                                 const fileId = `video-${GenerateUniqueId()}`;
                                 const filePath = file.path;
                                 file.filename = `paymefans-${conversationId}-${fileId}${path.extname(
-                                    file.path
+                                    file.path,
                                 )}`;
                                 const video = await tusUploader({ filePath, file, fileId });
                                 if ("error" in video) {
@@ -414,7 +421,7 @@ export default class ConversationService {
                             } catch (error) {
                                 console.error(
                                     `Error processing video file ${file.filename}:`,
-                                    error
+                                    error,
                                 );
                             }
                         }
@@ -453,7 +460,7 @@ export default class ConversationService {
                     } catch (error) {
                         console.error(`Error processing file ${file.filename}:`, error);
                     }
-                })
+                }),
             );
             return {
                 message:
@@ -513,7 +520,7 @@ export default class ConversationService {
     // GetUser Conversations
     // Fetch all conversations for a specific user
     static async GetUserConversations(
-        userId: string
+        userId: string,
     ): Promise<GetUserConversationsReponse> {
         // Fetch conversations with essential relations
         const conversationsData = await query.conversations.findMany({
@@ -537,7 +544,7 @@ export default class ConversationService {
         // Batch process participants and messages
         const receiverIds = conversationsData.flatMap((conv) => {
             const participant = conv.participants.find(
-                (p) => p.user_1 === userId || p.user_2 === userId
+                (p) => p.user_1 === userId || p.user_2 === userId,
             );
             return participant
                 ? [
@@ -558,15 +565,18 @@ export default class ConversationService {
             },
         });
         // Create user map
-        const userMap = users.reduce((acc, user) => {
-            acc[user.user_id] = user;
-            return acc;
-        }, {} as Record<string, (typeof users)[0]>);
+        const userMap = users.reduce(
+            (acc, user) => {
+                acc[user.user_id] = user;
+                return acc;
+            },
+            {} as Record<string, (typeof users)[0]>,
+        );
         // Map conversations
         const conversations = conversationsData
             .map((conv) => {
                 const participant = conv.participants.find(
-                    (p) => p.user_1 === userId || p.user_2 === userId
+                    (p) => p.user_1 === userId || p.user_2 === userId,
                 );
                 if (!participant) return null;
                 const receiverId =
