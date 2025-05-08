@@ -4,78 +4,62 @@ import EmailService from "@services/EmailService";
 import GetSinglename from "@utils/GetSingleName";
 import query from "@utils/prisma";
 import { Queue, Worker } from "bullmq";
-// import logger from "@libs/Logger";`
-// import config from "@config"; // Hypothetical config module
+import type { AwsRekognitionObject } from "types/verification";
 
-// Logger setup
-
-// Interfaces for type safety
-interface AwsRekognitionObject {
-  key: string;
-  bucket: string;
-}
-
-interface VerificationJobData {
-  token: string;
-  front: AwsRekognitionObject;
-  faceVideo: AwsRekognitionObject;
-}
-
-interface VerificationResult {
-  error: boolean;
-  message: string;
-}
-
-// Custom error class
-class VerificationError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = "VerificationError";
-  }
-}
-
-// Initialize queue
 const AwsVerificationQueue = new Queue("aws-verification", {
   connection: redis,
 });
 
-// Process face comparison
-const processFaceComparison = async (
+const ProcessFaceComparison = async (
   front: AwsRekognitionObject,
   faceVideo: AwsRekognitionObject
 ): Promise<boolean> => {
-  const awsComparison = await AwsFaceVerification({ front, faceVideo });
-  if (awsComparison.error) {
-    // logger.error("Face comparison failed", { error: awsComparison.error });
+  // Aws Face Verification With Rekognition
+  const AwsComparison = await AwsFaceVerification({
+    front: front,
+    faceVideo: faceVideo,
+  });
+
+  if (AwsComparison.error) {
     return false;
   }
+  // Aws Data Verification ID Details & Country Match With User
+  // Coming in Later
   return true;
 };
 
-// Update verification status in database
-const updateModelVerification = async (
+const UpdateVerificationStatus = async (
   token: string,
   match: boolean,
   front: AwsRekognitionObject,
   faceVideo: AwsRekognitionObject
 ) => {
+  // Check For Verification
   const model = await query.model.findFirst({
-    where: { token },
-    select: { id: true },
+    where: {
+      token: token,
+    },
+    select: {
+      id: true,
+    },
   });
 
   if (!model) {
-    throw new VerificationError("Model not found");
+    return { error: true, message: "Model not found" };
   }
-
-  const cloudfrontUrl = process.env.AWS_CLOUDFRONT_URL; // Safely access env var
-  return query.model.update({
-    where: { id: model.id },
+  const user = await query.model.update({
+    where: {
+      id: model.id,
+    },
     data: {
       verification_state: match ? "approved" : "rejected",
       verification_status: match,
-      verification_video: match ? `${cloudfrontUrl}/${faceVideo.key}` : "",
-      verification_image: match ? `${cloudfrontUrl}/${front.key}` : "",
+      verification_video: match
+        ? `${process.env.AWS_CLOUDFRONT_URL}/${faceVideo.key}`
+        : "",
+      verification_image: match
+        ? `${process.env.AWS_CLOUDFRONT_URL}/${front.key}`
+        : "",
     },
     select: {
       user_id: true,
@@ -88,104 +72,74 @@ const updateModelVerification = async (
       },
     },
   });
-};
 
-// Send verification notification
-const sendVerificationNotification = async (
-  name: string,
-  email: string
-): Promise<void> => {
-  await EmailService.VerificationComplete(name, email);
-  // logger.info("Verification email sent", { email });
-};
-
-// Update user status
-const updateUserStatus = async (userId: number): Promise<void> => {
-  await query.user.update({
-    where: { id: userId },
-    data: { is_model: true },
-  });
-};
-
-// Main verification status update logic
-const updateVerificationStatus = async (
-  token: string,
-  match: boolean,
-  front: AwsRekognitionObject,
-  faceVideo: AwsRekognitionObject
-): Promise<VerificationResult> => {
-  try {
-    if (!match) {
-      return { error: true, message: "Verification failed" };
-    }
-
-    const user = await updateModelVerification(token, match, front, faceVideo);
-    if (!user?.user) {
-      throw new VerificationError("User not found");
-    }
-
-    const name = GetSinglename(user.user.name);
-    await Promise.all([
-      sendVerificationNotification(name, user.user.email),
-      updateUserStatus(user.user_id),
-    ]);
-
-    return { error: false, message: "Verification successful" };
-  } catch (error) {
-    // logger.error("Verification status update failed", { error });
-    throw error instanceof VerificationError
-      ? error
-      : new VerificationError("Failed to update verification status");
+  if (!user) {
+    return { error: true, message: "User not found" };
   }
+
+  // Send Verification Successful Notification
+  // Send Verification Successful Email
+  const name = GetSinglename(user?.user.name as string);
+
+  if (!match && user?.user) {
+    return { error: true, message: "Verification failed" };
+  }
+  await EmailService.VerificationComplete(name, user.user.email);
+
+  await query.user.update({
+    where: {
+      id: user.user_id,
+    },
+    data: {
+      is_model: true,
+    },
+  });
+
+  return { error: false, message: "Verification successful" };
 };
 
-// Worker setup
 const AwsVerificationWorker = new Worker(
   "aws-verification",
   async (job) => {
-    const { token, front, faceVideo } = job.data as VerificationJobData;
     try {
-      const match = await processFaceComparison(front, faceVideo);
-      const result = await updateVerificationStatus(token, match, front, faceVideo);
-      // logger.info("Verification job completed", { jobId: job.id, result });
-      return result;
-    } catch (error) {
-      // logger.error("Verification job failed", { jobId: job.id, error });
-      throw error;
+      const { front, faceVideo, token } = job.data;
+      const match = await ProcessFaceComparison(front, faceVideo);
+      //  perform strict id chech here
+      const result = await UpdateVerificationStatus(
+        token,
+        match,
+        front,
+        faceVideo
+      );
+      console.log(result);
+
+      if (result.error) {
+        return {
+          error: true,
+          message: result.message,
+        };
+      }
+      console.log(result);
+      return {
+        error: false,
+        message: "Verification successful",
+      };
+    } catch (error: any) {
+      console.log(error);
+      throw new Error(error.message);
     }
   },
   { connection: redis }
 );
 
-// Event handlers
-AwsVerificationWorker.on("failed", async (job) => {
-  const logEntry = `${new Date().toISOString()} - Job ${job?.id} failed - ${JSON.stringify(job?.data)}`;
-  await query.batchProcessLogs.create({
-    data: {
-      job_id: job?.id as string,
-      job_name: job?.name,
-      job_data: logEntry,
-    },
-  });
-});
-
-AwsVerificationWorker.on("completed", async (job) => {
-  const logEntry = `${new Date().toISOString()} - Job ${job.id
-    } completed - ${JSON.stringify(job.data)}`;
-  await query.batchProcessLogs.create({
-    data: {
-      job_id: job.id as string,
-      job_name: job.name,
-      job_data: logEntry,
-    },
-  });
-});
-
-// Graceful shutdown
-process.on("SIGTERM", async () => {
-  await AwsVerificationWorker.close();
-  await AwsVerificationQueue.close();
-  // logger.info("Worker and queue closed gracefully");
+AwsVerificationWorker.on("failed", (job) =>
+  console.log(
+    `${job?.name} - with ID ${job?.id} Failed cause ${job?.failedReason}`
+  )
+);
+AwsVerificationWorker.on("completed", (job) => {
+  console.log(`Job ${job.id} completed!`);
+  // Handle the completion of the job
 });
 
 export { AwsVerificationQueue };

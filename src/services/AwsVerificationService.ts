@@ -1,18 +1,18 @@
-import type {AwsVerificationResponse, ProcessVerificationProps} from "../types/verification";
-import {acceptedCountries} from "@utils/AcceptedVerificationCountries";
-import {documentTypes} from "@utils/AcceptedDocumentTypes";
-import {UploadImageToS3} from "@libs/UploadImageToS3";
+import type { AwsVerificationResponse, ProcessVerificationProps } from "../types/verification";
+import { acceptedCountries } from "@utils/AcceptedVerificationCountries";
+import { documentTypes } from "@utils/AcceptedDocumentTypes";
+import { UploadImageToS3 } from "@libs/UploadImageToS3";
 
-const {S3_BUCKET_NAME} = process.env;
+const { S3_BUCKET_NAME } = process.env;
 
 export class AwsVerificationService {
     static async ProcessVerification({
-                                         token,
-                                         files,
-                                         terms,
-                                         country,
-                                         documentType
-                                     }: ProcessVerificationProps): Promise<AwsVerificationResponse> {
+        token,
+        files,
+        terms,
+        country,
+        documentType
+    }: ProcessVerificationProps): Promise<AwsVerificationResponse> {
         if (!token) {
             return {
                 error: true,

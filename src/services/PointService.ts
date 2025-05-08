@@ -182,7 +182,7 @@ export default class PointService {
       const approximateAmount = Number(Math.floor(ngn_amount));
       const platformFee = Number(process.env.PLATFORM_FEE) * approximateAmount;
       const amountInUSD = await convertCurrency(rate.data, ngn_amount, user?.currency || "USD", "USD");
-      const POINTS_PER_USD = rate.data.find(rate => rate.name === "POINTS")?.buyValue || 1;
+      const POINTS_PER_USD = rate.data.find(rate => rate.name === "POINTS")?.sellValue || 1;
       // Apply 10% fee and convert to points (1 USD = 16 points)
       const pointsAfterFee = Math.floor(amountInUSD * Number(process.env.PLATFORM_TOPUP_FEE_PERCENTAGE) * POINTS_PER_USD);
       const response = await this.CreatePaystackPayment({

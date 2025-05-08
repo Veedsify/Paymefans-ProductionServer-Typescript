@@ -10,6 +10,7 @@ import type {
   RetrieveWalletResponse,
 } from "../types/wallet";
 import type { AuthUser } from "../types/user";
+import { PaystackService } from "./PaystackService";
 
 export default class WalletService {
   static async RetrieveWallet(userid: number): Promise<RetrieveWalletResponse> {
@@ -38,7 +39,23 @@ export default class WalletService {
       bankType,
       country,
     } = body;
-    console.log(otherDetails);
+
+    if (!accountName || !accountNumber || !bankCode) {
+      return {
+        error: true,
+        status: false,
+        message: "Account Name, Account Number and Bank Code are required",
+      };
+    }
+
+    const createTransferRecipient = await PaystackService.TransferRecipient({
+      account_number: accountNumber,
+      bank_code: bankCode,
+      name: accountName,
+      type: bankType,
+      currency: "NGN",
+    })
+
     try {
       return await query.$transaction(async (t) => {
         const checkBanks = await t.userBanks.findFirst({
@@ -64,6 +81,7 @@ export default class WalletService {
             account_name: accountName,
             account_number: accountNumber,
             bank_country: country,
+            recipient_code: createTransferRecipient.data.recipient_code,
           },
         });
 
