@@ -27,14 +27,15 @@ export type StoreSingleProductResponse = {
 
 
 export type StoreAllProductsResponse = {
-      error: boolean;
-      message: string;
-      totalProducts: number;
-      hasMore: boolean;
-      data: StoreProduct[];
+  error: boolean;
+  message: string;
+  totalProducts: number;
+  hasMore: boolean;
+  perPage: number;
+  data: StoreProduct[];
 }
 
 export type AllProductProps = {
-      page: string;
-      limit: string;
+  page: string;
+  limit: string;
 }

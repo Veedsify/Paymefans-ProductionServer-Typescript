@@ -67,6 +67,9 @@ class FeedService {
       where: {
         post_is_visible: true,
         post_status: "approved",
+        user: {
+          active_status: true,
+        },
         OR: [
           { post_audience: "public" },
           {

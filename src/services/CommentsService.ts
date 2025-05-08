@@ -1,9 +1,9 @@
-import { UploadImageToS3 } from "@libs/UploadImageToS3";
-import { GenerateUniqueId } from "@utils/GenerateUniqueId";
-import { Comments } from "@utils/mongoSchema";
+import {UploadImageToS3} from "@libs/UploadImageToS3";
+import {GenerateUniqueId} from "@utils/GenerateUniqueId";
+import {Comments} from "@utils/mongoSchema";
 import query from "@utils/prisma";
-import type { LikeCommentResponse, NewCommentResponse } from "types/comments";
-import type { AuthUser } from "types/user";
+import type {LikeCommentResponse, NewCommentResponse} from "types/comments";
+import type {AuthUser} from "types/user";
 
 export default class CommentsService {
     // New Comment
@@ -14,6 +14,7 @@ export default class CommentsService {
         comment: string,
         user: AuthUser,
         postId: number,
+        parentId: string | null,
         files?: Express.Multer.File[]
     ): Promise<NewCommentResponse> {
         try {
@@ -79,12 +80,19 @@ export default class CommentsService {
                 userId: user.id,
                 profile_image: commentOwner?.profile_image || `${process.env.SERVER_ORIGINAL_URL}/site/avatar.png`,
                 postId: String(post_id),
-                parentId: null,
+                parentId: parentId && parentId !== "null" ? parentId : null,
                 comment: comment,
                 attachment: commentAttachments,
                 likes: 0,
                 impressions: 0,
             });
+
+            if (parentId) {
+                await Comments.updateOne(
+                    {comment_id: parentId},
+                    {$inc: {replies: 1}}
+                )
+            }
 
             await query.post.update({
                 where: {

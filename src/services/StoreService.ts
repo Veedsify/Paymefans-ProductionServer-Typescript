@@ -1,6 +1,6 @@
 import { redis } from "@libs/RedisStore";
 import query from "@utils/prisma";
-import type{
+import type {
   AllProductProps,
   StoreAllProductsResponse,
   StoreSingleProductResponse,
@@ -13,9 +13,10 @@ export default class StoreService {
   }: AllProductProps): Promise<StoreAllProductsResponse> {
     try {
       // Wrap redis.get in a Promise
+      const cacheKey = `products:${page}:${limit}`;
       const cachedProducts = await new Promise<string | null>(
         (resolve, reject) => {
-          redis.get("products", (err, reply) => {
+          redis.get(cacheKey, (err, reply) => {
             if (err) return reject(err);
             resolve(reply as string | null);
           });
@@ -23,7 +24,7 @@ export default class StoreService {
       );
 
       if (cachedProducts) {
-        return JSON.parse(cachedProducts);
+        return JSON.parse(cachedProducts) as StoreAllProductsResponse;
       }
 
       const countProducts = await query.product.count();
@@ -70,15 +71,33 @@ export default class StoreService {
         products.pop(); // Remove the last item to fit the limit
       }
 
-      // Cache the products for 60 seconds
-      redis.set("products", JSON.stringify(products), "EX", 60);
-      return {
+      const productsWithModifyImageUrl = products.map((product) => {
+        const modifiedImages = product.images.map((image) => {
+          return {
+            ...image,
+            image_url: `${process.env.AWS_CLOUDFRONT_URL}/${image.image_url}`,
+          };
+        });
+
+        return {
+          ...product,
+          images: modifiedImages,
+        };
+      })
+
+      const response = {
         error: false,
         hasMore,
+        perPage: Number(limit),
         totalProducts: countProducts,
         message: "Products fetched successfully",
-        data: products,
+        data: productsWithModifyImageUrl,
       };
+
+      // Cache the products for 60 seconds
+      redis.set(cacheKey, JSON.stringify(response), "EX", 60);
+
+      return response;
     } catch (error: any) {
       console.error("Error fetching products:", error);
       throw new Error("An error occurred while fetching products");
@@ -133,11 +152,22 @@ export default class StoreService {
         };
       }
 
+
+      const modifiedProductDetails = {
+        ...productDetails,
+        images: productDetails.images.map((image) => {
+          return {
+            ...image,
+            image_url: `${process.env.AWS_CLOUDFRONT_URL}/${image.image_url}`,
+          };
+        }),
+      };
+
       return {
         error: false,
         message: "Product fetched successfully",
         status: 200,
-        data: productDetails,
+        data: modifiedProductDetails,
       };
     } catch (error: any) {
       console.error("Error fetching product details:", error);

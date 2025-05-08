@@ -232,6 +232,8 @@ export default class SocketService {
     io: any
   ) {
     try {
+
+
       const message = await SaveMessageToDb.SaveMessage(data);
       if (message) {
         socket.to(userRoom).emit("message", {
@@ -266,12 +268,12 @@ export default class SocketService {
             message.receiver.name.split(" ")[0] ?? message.receiver.name;
           const subject = `You've received a new message on PayMeFans!`;
           const link = `${process.env.APP_URL}/chats/${message.conversationsId}`;
-          await EmailService.SendNewMessageEmail({
-            email: message.receiver.email,
-            name: name,
-            subject,
-            link,
-          });
+          // await EmailService.SendNewMessageEmail({
+          //   email: message.receiver.email,
+          //   name: name,
+          //   subject,
+          //   link,
+          // });
         }
 
         io.to(found?.socket_id).emit("prefetch-conversations", "conversations");

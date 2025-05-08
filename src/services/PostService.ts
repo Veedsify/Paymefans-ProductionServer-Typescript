@@ -894,6 +894,9 @@ export default class PostService {
               post_audience: "private",
             },
           ],
+          user: {
+            active_status: true
+          }
         },
         select: {
           user: {
@@ -1145,6 +1148,7 @@ export default class PostService {
     });
     const comments = await Comments.find({
       postId: String(postId),
+      parentId: null
     })
       .sort({ date: -1 })
       .skip((parseInt(page) - 1) * parseInt(limit))
@@ -1283,7 +1287,7 @@ export default class PostService {
         },
       });
       await Comments.deleteMany({
-        postId: Number(post.id),
+        postId: String(post.post_id),
       });
       return {
         status: true,
