@@ -321,7 +321,6 @@ export default class ModelService {
 
       const rate = await RateConversionService.GetConversionRate(user.id, 7);
 
-      console.log("Rate", rate);
 
       if (!rate) {
         return {

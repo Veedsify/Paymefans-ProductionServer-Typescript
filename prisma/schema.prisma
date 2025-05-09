@@ -620,8 +620,9 @@ model UserTransaction {
   amount              Float
   transaction_message String
   transaction         String
-  created_at          DateTime        @default(now())
   transaction_type    TransactionType
+  current_buy_value   Float           @default(0)
+  created_at          DateTime        @default(now())
   updated_at          DateTime        @updatedAt
   user                User            @relation(fields: [user_id], references: [id], onDelete: Cascade)
   UserWallet          UserWallet      @relation(fields: [wallet_id], references: [id], onDelete: Cascade)
@@ -710,16 +711,17 @@ model UserWithdrawalBankAccount {
 }
 
 model UserPointsPurchase {
-  id           Int         @id @default(autoincrement())
-  purchase_id  String      @unique
-  user_id      Int
-  points       Int
-  amount       Float
-  success      Boolean
-  created_at   DateTime    @default(now())
-  updated_at   DateTime    @updatedAt
-  userPointsId Int?
-  UserPoints   UserPoints? @relation(fields: [userPointsId], references: [id], onDelete: SetNull)
+  id                Int         @id @default(autoincrement())
+  purchase_id       String      @unique
+  user_id           Int
+  points            Int
+  amount            Float
+  success           Boolean
+  current_buy_value Float       @default(0)
+  created_at        DateTime    @default(now())
+  updated_at        DateTime    @updatedAt
+  userPointsId      Int?
+  UserPoints        UserPoints? @relation(fields: [userPointsId], references: [id], onDelete: SetNull)
 
   @@index([userPointsId])
 }

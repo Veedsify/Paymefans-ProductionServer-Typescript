@@ -16,7 +16,7 @@ import { GenerateUniqueId } from "@utils/GenerateUniqueId";
 import { redis } from "@libs/RedisStore";
 import EmailService from "./EmailService";
 import RateConversionService from "./RateConversionService";
-import convertCurrency from "@utils/RateConverter";
+import { SellCurrencyConvert } from "@utils/RateConverter";
 
 export default class PointService {
   static async RetrievePoints(userid: number): Promise<RetrievePointResponse> {
@@ -181,9 +181,10 @@ export default class PointService {
 
       const approximateAmount = Number(Math.floor(ngn_amount));
       const platformFee = Number(process.env.PLATFORM_FEE) * approximateAmount;
-      const amountInUSD = await convertCurrency(rate.data, ngn_amount, user?.currency || "USD", "USD");
+      const amountInUSD = await SellCurrencyConvert(rate.data, ngn_amount, user?.currency || "USD", "USD");
       const POINTS_PER_USD = rate.data.find(rate => rate.name === "POINTS")?.sellValue || 1;
       // Apply 10% fee and convert to points (1 USD = 16 points)
+      console.log("Amount in USD", amountInUSD);
       const pointsAfterFee = Math.floor(amountInUSD * Number(process.env.PLATFORM_TOPUP_FEE_PERCENTAGE) * POINTS_PER_USD);
       const response = await this.CreatePaystackPayment({
         amount: Number(approximateAmount),

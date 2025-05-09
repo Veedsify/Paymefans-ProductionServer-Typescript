@@ -7,7 +7,56 @@ type Rate = {
 };
 
 // Convert local currency amount to target currency
-export default async function convertCurrency(
+export async function SellCurrencyConvert(
+  rates: Rate[],
+  amount: number,
+  fromCurrency: string,
+  toCurrency: string,
+): Promise<number> {
+  if (fromCurrency === "POINTS") {
+    // Convert points to USD first (16 points = $1)
+    const usdAmount =
+      amount /
+      (rates.find((rate: Rate) => rate.name === "POINTS")?.sellValue ||
+        16);
+
+    // Then convert USD to target currency
+    const targetRate =
+      rates.find((rate: Rate) => rate.name === toCurrency)
+        ?.sellValue || 1;
+
+    return usdAmount * targetRate;
+  }
+
+  // For other currency conversions
+  if (fromCurrency === "USD") {
+    // Direct conversion from USD
+    const toRate =
+      rates.find((rate: Rate) => rate.name === toCurrency)
+        ?.sellValue || 1;
+    return amount * toRate;
+  } else if (toCurrency === "USD") {
+    // Convert to USD
+    const fromRate =
+      rates.find((rate: Rate) => rate.name === fromCurrency)
+        ?.sellValue || 1;
+    return amount / fromRate;
+  } else {
+    // Convert through USD as intermediate
+    const fromRate =
+      rates.find((rate: Rate) => rate.name === fromCurrency)
+        ?.sellValue || 1;
+    const toRate =
+      rates.find((rate: Rate) => rate.name === toCurrency)
+        ?.sellValue || 1;
+
+    // First convert to USD then to target currency
+    const usdAmount = amount / fromRate;
+    return usdAmount * toRate;
+  }
+}
+
+export async function BuyCurrencyConvert(
   rates: Rate[],
   amount: number,
   fromCurrency: string,
