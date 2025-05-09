@@ -61,6 +61,8 @@ export default class RateConversionService {
         },
       });
 
+      console.log(rates);
+
       if (!rates || rates.length === 0) {
         return {
           error: true,
