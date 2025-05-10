@@ -621,7 +621,10 @@ model UserTransaction {
   transaction_message String
   transaction         String
   transaction_type    TransactionType
-  current_buy_value   Float           @default(0)
+  currency            String? // e.g. "NGN", "GHS"
+  exchange_rate       Float? // local-to-USD rate at time of transaction
+  usd_equivalent      Float? // converted amount in USD
+  current_buy_value   Float           @default(0) // points per 1 USD
   created_at          DateTime        @default(now())
   updated_at          DateTime        @updatedAt
   user                User            @relation(fields: [user_id], references: [id], onDelete: Cascade)
@@ -714,10 +717,13 @@ model UserPointsPurchase {
   id                Int         @id @default(autoincrement())
   purchase_id       String      @unique
   user_id           Int
-  points            Int
-  amount            Float
-  success           Boolean
-  current_buy_value Float       @default(0)
+  points            Int         @default(0)
+  amount            Float // amount in user's local currency
+  currency          String? // e.g. "NGN", "GHS"
+  exchange_rate     Float? // local-to-USD rate at time of transaction
+  usd_equivalent    Float? // converted amount in USD
+  current_buy_value Float       @default(0) // points per 1 USD
+  success           Boolean     @default(false)
   created_at        DateTime    @default(now())
   updated_at        DateTime    @updatedAt
   userPointsId      Int?

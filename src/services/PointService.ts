@@ -16,7 +16,8 @@ import { GenerateUniqueId } from "@utils/GenerateUniqueId";
 import { redis } from "@libs/RedisStore";
 import EmailService from "./EmailService";
 import RateConversionService from "./RateConversionService";
-import { SellCurrencyConvert } from "@utils/RateConverter";
+import { BuyCurrencyConvert, SellCurrencyConvert } from "@utils/RateConverter";
+import rates from "@routes/users/rate/rate";
 
 export default class PointService {
   static async RetrievePoints(userid: number): Promise<RetrievePointResponse> {
@@ -151,6 +152,7 @@ export default class PointService {
     user: AuthUser,
     amount: string,
     ngn_amount: number,
+    usd_amount: number,
   ): Promise<PointPurchaseResponse> {
     try {
       if (!user) {
@@ -181,15 +183,18 @@ export default class PointService {
 
       const approximateAmount = Number(Math.floor(ngn_amount));
       const platformFee = Number(process.env.PLATFORM_FEE) * approximateAmount;
-      const amountInUSD = await SellCurrencyConvert(rate.data, ngn_amount, user?.currency || "USD", "USD");
-      const POINTS_PER_USD = rate.data.find(rate => rate.name === "POINTS")?.sellValue || 1;
+      const POINTS_PER_USD = rate.data.find(rate => rate.name === "POINTS")?.buyValue || 1;
+      const exchangeRate = await BuyCurrencyConvert(rate.data, 1, "USD", user?.currency || "USD");
       // Apply 10% fee and convert to points (1 USD = 16 points)
-      console.log("Amount in USD", amountInUSD);
-      const pointsAfterFee = Math.floor(amountInUSD * Number(process.env.PLATFORM_TOPUP_FEE_PERCENTAGE) * POINTS_PER_USD);
+      const pointsAfterFee = Math.floor(usd_amount * Number(process.env.PLATFORM_TOPUP_FEE_PERCENTAGE) * POINTS_PER_USD);
       const response = await this.CreatePaystackPayment({
         amount: Number(approximateAmount),
         points: pointsAfterFee,
         user: user,
+        pointPerUsd: POINTS_PER_USD,
+        exchangeRate: exchangeRate, 
+        amountInUsd: usd_amount,
+        currency: user?.currency || "USD",
       });
 
       if (!response.data || response.data.authorization_url == "") {
@@ -218,6 +223,10 @@ export default class PointService {
     amount,
     points,
     user,
+    pointPerUsd,
+    exchangeRate,
+    amountInUsd,
+    currency,
   }: CreatePaystackPaymentProps): Promise<any> {
     try {
       const referenceId = `PNT${GenerateUniqueId()}`;
@@ -228,6 +237,10 @@ export default class PointService {
           points: points,
           amount: amount,
           success: false,
+          current_buy_value: pointPerUsd,
+          currency: currency,
+          exchange_rate: exchangeRate,
+          usd_equivalent: amountInUsd,
         },
       });
       query.$disconnect();

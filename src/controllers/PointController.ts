@@ -40,6 +40,7 @@ export default class PointController {
         req?.user!,
         req.body.amount,
         parseInt(req.body.ngn_amount),
+        parseFloat(req.body.usd_amount),
       );
       return res.status(200).json({ ...Points });
     } catch (error: any) {
