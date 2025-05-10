@@ -16,8 +16,7 @@ import { GenerateUniqueId } from "@utils/GenerateUniqueId";
 import { redis } from "@libs/RedisStore";
 import EmailService from "./EmailService";
 import RateConversionService from "./RateConversionService";
-import { BuyCurrencyConvert, SellCurrencyConvert } from "@utils/RateConverter";
-import rates from "@routes/users/rate/rate";
+import { BuyCurrencyConvert } from "@utils/RateConverter";
 
 export default class PointService {
   static async RetrievePoints(userid: number): Promise<RetrievePointResponse> {
@@ -192,7 +191,7 @@ export default class PointService {
         points: pointsAfterFee,
         user: user,
         pointPerUsd: POINTS_PER_USD,
-        exchangeRate: exchangeRate, 
+        exchangeRate: exchangeRate,
         amountInUsd: usd_amount,
         currency: user?.currency || "USD",
       });
