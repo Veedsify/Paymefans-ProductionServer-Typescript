@@ -1098,6 +1098,85 @@ model SupportTicketReplies {
   ticket     SupportTickets @relation(fields: [ticket_id], references: [ticket_id], onDelete: Cascade)
 }
 
+model Configurations {
+  id                                    Int      @id @default(autoincrement())
+  app_name                              String   @map("app_name")
+  app_version                           String   @map("app_version")
+  app_url                               String   @map("app_url")
+  app_description                       String   @map("app_description")
+  app_logo                              String   @map("app_logo")
+  // Currency Settings 
+  default_currency                      String   @default("USD") @map("default_currency")
+  default_rate                          Float    @default(1.0) @map("default_rate")
+  default_symbol                        String   @default("$") @map("default_symbol")
+  // Point Conversion Settings 
+  point_conversion_rate                 Float    @default(1.0) @map("point_conversion_rate")
+  point_conversion_rate_ngn             Float    @default(1.0) @map("point_conversion_rate_ngn")
+  // Withdrawal Settings 
+  min_withdrawal_amount                 Float    @default(0.0) @map("min_withdrawal_amount")
+  min_withdrawal_amount_ngn             Float    @default(0.0) @map("min_withdrawal_amount_ngn")
+  // Deposit Settings 
+  min_deposit_amount                    Float    @default(0.0) @map("min_deposit_amount")
+  min_deposit_amount_ngn                Float    @default(0.0) @map("min_deposit_amount_ngn")
+  // Theme Settings 
+  default_mode                          String   @default("light") @map("default_mode")
+  primary_color                         String   @default("#000000") @map("primary_color")
+  secondary_color                       String   @default("#FFFFFF") @map("secondary_color")
+  accent_color                          String   @default("#0000FF") @map("accent_color")
+  // Pagination Settings 
+  home_feed_limit                       Int      @default(20) @map("home_feed_limit")
+  personal_profile_limit                Int      @default(10) @map("personal_profile_limit")
+  personal_media_limit                  Int      @default(10) @map("personal_media_limit")
+  personal_repost_limit                 Int      @default(10) @map("personal_repost_limit")
+  post_page_comment_limit               Int      @default(20) @map("post_page_comment_limit")
+  post_page_comment_reply_limit         Int      @default(10) @map("post_page_comment_reply_limit")
+  other_user_profile_limit              Int      @default(10) @map("other_user_profile_limit")
+  other_user_media_limit                Int      @default(10) @map("other_user_media_limit")
+  other_user_repost_limit               Int      @default(10) @map("other_user_repost_limit")
+  notification_limit                    Int      @default(20) @map("notification_limit")
+  transaction_limit                     Int      @default(20) @map("transaction_limit")
+  // Model Search Settings 
+  model_search_limit                    Int      @default(20) @map("model_search_limit")
+  // Messaging Settings 
+  conversation_limit                    Int      @default(20) @map("conversation_limit")
+  message_limit                         Int      @default(50) @map("message_limit")
+  // Group Settings 
+  group_message_limit                   Int      @default(50) @map("group_message_limit")
+  group_participant_limit               Int      @default(100) @map("group_participant_limit")
+  group_limit                           Int      @default(20) @map("group_limit")
+  // Hookup Settings 
+  hookup_enabled                        Boolean  @default(false) @map("hookup_enabled")
+  hookup_page_limit                     Int      @default(20) @map("hookup_page_limit")
+  // Status Settings 
+  status_limit                          Int      @default(20) @map("status_limit")
+  // Subscription Settings 
+  subscription_limit                    Int      @default(20) @map("subscription_limit")
+  subscribers_limit                     Int      @default(1000) @map("subscribers_limit")
+  active_subscribers_limit              Int      @default(1000) @map("active_subscribers_limit")
+  // Follower Settings
+  followers_limit                       Int      @default(1000) @map("followers_limit")
+  // User Media Settings
+  upload_media_limit                    Int      @default(10) @map("upload_media_limit")
+  // Model Media Settings
+  model_upload_media_limit              Int      @default(10) @map("model_upload_media_limit")
+  // Success/Error Messages
+  profile_updated_success_message       String   @default("Profile updated successfully") @map("profile_updated_success_message")
+  profile_updated_error_message         String   @default("Failed to update profile") @map("profile_updated_error_message")
+  profile_updating_message              String   @default("Updating profile...") @map("profile_updating_message")
+  profile_image_updated_success_message String   @default("Profile image updated successfully") @map("profile_image_updated_success_message")
+  profile_image_updated_error_message   String   @default("Failed to update profile image") @map("profile_image_updated_error_message")
+  profile_image_updating_message        String   @default("Updating profile image...") @map("profile_image_updating_message")
+  point_purchase_success_message        String   @default("Points purchased successfully") @map("point_purchase_success_message")
+  point_purchase_error_message          String   @default("Failed to purchase points") @map("point_purchase_error_message")
+  point_purchasing_message              String   @default("Purchasing points...") @map("point_purchasing_message")
+  point_purchase_minimum_message        String   @default("Minimum purchase amount not met") @map("point_purchase_minimum_message")
+  // Timestamps
+  created_at                            DateTime @default(now()) @map("created_at")
+  updated_at                            DateTime @updatedAt @map("updated_at")
+
+  @@index([app_name]) // Optimize queries filtering by app_name }
+}
+
 // ENUMS DECLARATION
 enum WithdrawalRequestStatus {
   pending
