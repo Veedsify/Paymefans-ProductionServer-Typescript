@@ -17,6 +17,7 @@ import type { Request, Response } from "express";
 import EmitActiveUsers from "@jobs/EmitActiveUsers";
 import ModelsJobs from "@jobs/ModelsJobs";
 import { connectDB } from "@utils/mongodb";
+import ConfigMiddleware from "@middleware/ConfigMiddleware";
 
 const { ADMIN_PANEL_URL, VERIFICATION_URL, APP_URL, LIVESTREAM_PORT } =
   process.env;
@@ -27,6 +28,9 @@ const port = 3009;
 
 // HTTP request logging
 app.use(logger("dev"));
+
+// Instance Middleware
+app.use(ConfigMiddleware);
 
 // Cors
 app.use(
@@ -76,6 +80,8 @@ RegisterCloudflareStreamWebhook();
 app.use(express.static(path.join("public")));
 app.use(express.urlencoded({ extended: false }));
 app.use(express.json());
+
+
 
 // Basic route
 app.use("/api", api);

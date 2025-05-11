@@ -88,6 +88,140 @@ async function main() {
     ]
   })
 
+
+  await prisma.configurations.upsert({
+    where: { id: 1 },
+    update: {
+      app_name: 'Paymefans',
+      app_version: '1.0.0',
+      app_description: 'Paymefans is a social media platform that connects models and fans.',
+      app_logo: 'https://api.paymefans.com/site/logo.png',
+      app_url: 'https://yourapp.com',
+      // Currency Settings
+      default_currency: 'NGN',
+      default_rate: 1632.0,
+      default_symbol: '₦',
+      // Point Conversion Settings
+      point_conversion_rate: 1,
+      point_conversion_rate_ngn: 100,
+      // Withdrawal Settings
+      min_withdrawal_amount: 500,
+      min_withdrawal_amount_ngn: 50000,
+      // Deposit Settings
+      min_deposit_amount: 25,
+      min_deposit_amount_ngn: 2500,
+      // Theme Settings
+      default_mode: 'light',
+      primary_color: '#1976d2',
+      secondary_color: '#424242',
+      accent_color: '#82B1FF',
+      // Pagination Settings
+      home_feed_limit: 10,
+      personal_profile_limit: 10,
+      personal_media_limit: 10,
+      personal_repost_limit: 10,
+      post_page_comment_limit: 10,
+      post_page_comment_reply_limit: 10,
+      other_user_profile_limit: 10,
+      other_user_media_limit: 10,
+      other_user_repost_limit: 10,
+      notification_limit: 10,
+      transaction_limit: 10,
+      // Model Search Settings
+      model_search_limit: 10,
+      // Messaging Settings 
+      conversation_limit: 10,
+      message_limit: 10,
+      // Group Settings 
+      group_message_limit: 10,
+      group_participant_limit: 10,
+      group_limit: 10,
+      // Hookup Settings 
+      hookup_enabled: true,
+      hookup_page_limit: 10,
+      // Status Settings 
+      status_limit: 10,
+      // Subscription Settings 
+      subscription_limit: 10,
+      subscribers_limit: 10,
+      active_subscribers_limit: 10,
+      // Follower Settings
+      followers_limit: 10,
+      // User Media Settings
+      upload_media_limit: 10,
+      // Model Media Settings
+      model_upload_media_limit: 10,
+      // Success/Error Messages
+      profile_updated_success_message: 'Profile updated successfully.',
+      profile_updated_error_message: 'Failed to update profile.',
+      profile_updating_message: 'Updating profile...',
+      profile_image_updated_success_message: 'Profile image updated successfully.',
+      profile_image_updated_error_message: 'Failed to update profile image.',
+      profile_image_updating_message: 'Updating profile image...',
+      point_purchase_success_message: 'Points purchased successfully.',
+      point_purchase_error_message: 'Failed to purchase points.',
+      point_purchasing_message: 'Purchasing points...',
+      point_purchase_minimum_message: 'Minimum point purchase not met.',
+    },
+    create: {
+      id: 1, // use 1 or whatever your default id is
+      app_name: 'Your App Name',
+      app_version: '1.0.0',
+      app_description: 'Your app description',
+      app_logo: '/logo.png',
+      app_url: 'https://yourapp.com',
+      // ... all the same fields as above
+      default_currency: 'USD',
+      default_rate: 1.0,
+      default_symbol: '$',
+      point_conversion_rate: 100,
+      point_conversion_rate_ngn: 120,
+      min_withdrawal_amount: 10,
+      min_withdrawal_amount_ngn: 5000,
+      min_deposit_amount: 5,
+      min_deposit_amount_ngn: 2500,
+      default_mode: 'light',
+      primary_color: '#1976d2',
+      secondary_color: '#424242',
+      accent_color: '#82B1FF',
+      home_feed_limit: 10,
+      personal_profile_limit: 10,
+      personal_media_limit: 10,
+      personal_repost_limit: 10,
+      post_page_comment_limit: 10,
+      post_page_comment_reply_limit: 10,
+      other_user_profile_limit: 10,
+      other_user_media_limit: 10,
+      other_user_repost_limit: 10,
+      notification_limit: 10,
+      transaction_limit: 10,
+      model_search_limit: 10,
+      conversation_limit: 10,
+      message_limit: 10,
+      group_message_limit: 10,
+      group_participant_limit: 10,
+      group_limit: 10,
+      hookup_enabled: true,
+      hookup_page_limit: 10,
+      status_limit: 10,
+      subscription_limit: 10,
+      subscribers_limit: 10,
+      active_subscribers_limit: 10,
+      followers_limit: 10,
+      upload_media_limit: 10,
+      model_upload_media_limit: 10,
+      profile_updated_success_message: 'Profile updated successfully.',
+      profile_updated_error_message: 'Failed to update profile.',
+      profile_updating_message: 'Updating profile...',
+      profile_image_updated_success_message: 'Profile image updated successfully.',
+      profile_image_updated_error_message: 'Failed to update profile image.',
+      profile_image_updating_message: 'Updating profile image...',
+      point_purchase_success_message: 'Points purchased successfully.',
+      point_purchase_error_message: 'Failed to purchase points.',
+      point_purchasing_message: 'Purchasing points...',
+      point_purchase_minimum_message: 'Minimum point purchase not met.',
+    }
+  })
 }
 
 

@@ -21,6 +21,7 @@ import LogOutController from "@controllers/LogoutController";
 import withdraw from "@routes/users/withdraw/withdraw";
 import pages from "./users/pages/pages"
 import rates from "./users/rate/rate"
+import configs from "@routes/users/configs/configs";
 const api = express.Router()
 
 // Authentication
@@ -69,4 +70,6 @@ api.post("/logout", LogOutController.Logout)
 api.use("/pages", pages)
 // Rates
 api.use("/rates", rates)
+// Configs
+api.use("/configs", configs)
 export default api
