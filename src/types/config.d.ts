@@ -54,6 +54,6 @@ export type Config = {
     point_purchase_error_message: string
     point_purchasing_message: string
     point_purchase_minimum_message: string
-    created_at: Date
-    updated_at: Date
+    created_at?: Date
+    updated_at?: Date
 }
