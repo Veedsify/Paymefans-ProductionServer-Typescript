@@ -1,5 +1,5 @@
 import query from "@utils/prisma";
-import {redis} from "@libs/RedisStore";
+import { redis } from "@libs/RedisStore";
 
 export default class ConfigService {
     static async Config(): Promise<any> {
@@ -7,10 +7,10 @@ export default class ConfigService {
             const cacheKey = "configs";
             const cachedData = await redis.get(cacheKey);
             if (cachedData) {
-                return cachedData
+                return JSON.parse(cachedData)
             }
             const config = await query.configurations.findFirst({
-                where: {id: 1},
+                where: { id: 1 },
             })
             if (!config) {
                 return {
@@ -28,7 +28,7 @@ export default class ConfigService {
             await redis.set(cacheKey, JSON.stringify(response), "EX", 3600);
             return response
         } catch (error: any) {
-           throw new Error(error.message)
+            throw new Error(error.message)
         }
     }
 }

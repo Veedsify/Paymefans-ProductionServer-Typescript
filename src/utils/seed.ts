@@ -49,44 +49,44 @@ async function main() {
     },
   })
 
-  await prisma.platformExchangeRate.createMany({
-    data: currencyRates.map((rate) => ({
-      buyValue: rate.buy,
-      sellValue: rate.sell,
-      rate: rate.rate,
-      name: rate.currency,
-      symbol: rate.symbol
-    }))
-  })
+  // await prisma.platformExchangeRate.createMany({
+  //   data: currencyRates.map((rate) => ({
+  //     buyValue: rate.buy,
+  //     sellValue: rate.sell,
+  //     rate: rate.rate,
+  //     name: rate.currency,
+  //     symbol: rate.symbol
+  //   }))
+  // })
 
-  for (let point of pointSeeding) {
-    await prisma.globalPointsBuy.create({
-      data: {
-        points_buy_id: point.id,
-        points: point.points,
-        amount: point.amount,
-        currency: point.currency,
-        conversion_rate: point.conversion_rate,
-      },
-    });
-  }
+  // for (let point of pointSeeding) {
+  //   await prisma.globalPointsBuy.create({
+  //     data: {
+  //       points_buy_id: point.id,
+  //       points: point.points,
+  //       amount: point.amount,
+  //       currency: point.currency,
+  //       conversion_rate: point.conversion_rate,
+  //     },
+  //   });
+  // }
 
-  await prisma.outerPages.createMany({
-    data: [
-      {
-        title: "Privacy Policy",
-        page_id: GenerateUniqueId(),
-        slug: "privacy-policy",
-        content: "privacy_policy"
-      },
-      {
-        title: "Terms and Conditions",
-        page_id: GenerateUniqueId(),
-        slug: "terms-and-conditions",
-        content: "terms_and_conditions"
-      },
-    ]
-  })
+  // await prisma.outerPages.createMany({
+  //   data: [
+  //     {
+  //       title: "Privacy Policy",
+  //       page_id: GenerateUniqueId(),
+  //       slug: "privacy-policy",
+  //       content: "privacy_policy"
+  //     },
+  //     {
+  //       title: "Terms and Conditions",
+  //       page_id: GenerateUniqueId(),
+  //       slug: "terms-and-conditions",
+  //       content: "terms_and_conditions"
+  //     },
+  //   ]
+  // })
 
 
   await prisma.configurations.upsert({
@@ -165,25 +165,30 @@ async function main() {
     },
     create: {
       id: 1, // use 1 or whatever your default id is
-      app_name: 'Your App Name',
+      app_name: 'Paymefans',
       app_version: '1.0.0',
-      app_description: 'Your app description',
-      app_logo: '/logo.png',
+      app_description: 'Paymefans is a social media platform that connects models and fans.',
+      app_logo: 'https://api.paymefans.com/site/logo.png',
       app_url: 'https://yourapp.com',
-      // ... all the same fields as above
-      default_currency: 'USD',
-      default_rate: 1.0,
-      default_symbol: '$',
-      point_conversion_rate: 100,
-      point_conversion_rate_ngn: 120,
-      min_withdrawal_amount: 10,
-      min_withdrawal_amount_ngn: 5000,
-      min_deposit_amount: 5,
+      // Currency Settings
+      default_currency: 'NGN',
+      default_rate: 1632.0,
+      default_symbol: '₦',
+      // Point Conversion Settings
+      point_conversion_rate: 1,
+      point_conversion_rate_ngn: 100,
+      // Withdrawal Settings
+      min_withdrawal_amount: 500,
+      min_withdrawal_amount_ngn: 50000,
+      // Deposit Settings
+      min_deposit_amount: 25,
       min_deposit_amount_ngn: 2500,
+      // Theme Settings
       default_mode: 'light',
       primary_color: '#1976d2',
       secondary_color: '#424242',
       accent_color: '#82B1FF',
+      // Pagination Settings
       home_feed_limit: 10,
       personal_profile_limit: 10,
       personal_media_limit: 10,
@@ -195,21 +200,31 @@ async function main() {
       other_user_repost_limit: 10,
       notification_limit: 10,
       transaction_limit: 10,
+      // Model Search Settings
       model_search_limit: 10,
+      // Messaging Settings 
       conversation_limit: 10,
       message_limit: 10,
+      // Group Settings 
       group_message_limit: 10,
       group_participant_limit: 10,
       group_limit: 10,
+      // Hookup Settings 
       hookup_enabled: true,
       hookup_page_limit: 10,
+      // Status Settings 
       status_limit: 10,
+      // Subscription Settings 
       subscription_limit: 10,
       subscribers_limit: 10,
       active_subscribers_limit: 10,
+      // Follower Settings
       followers_limit: 10,
+      // User Media Settings
       upload_media_limit: 10,
+      // Model Media Settings
       model_upload_media_limit: 10,
+      // Success/Error Messages
       profile_updated_success_message: 'Profile updated successfully.',
       profile_updated_error_message: 'Failed to update profile.',
       profile_updating_message: 'Updating profile...',

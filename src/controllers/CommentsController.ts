@@ -1,5 +1,5 @@
-import type {AuthUser} from "types/user"
-import type {Request, Response} from "express"
+import type { AuthUser } from "types/user"
+import type { Request, Response } from "express"
 import CommentsService from "@services/CommentsService"
 
 export default class CommentsController {
@@ -7,14 +7,14 @@ export default class CommentsController {
     // This is for creating a new comment on a post
     static NewComment = async (req: Request, res: Response): Promise<any> => {
         try {
-            const {post_id, postId, comment, parentId} = req.body
-            const {user} = req as { user: AuthUser }
-            const {files} = req.files as { files: Express.Multer.File[] }
+            const { post_id, postId, comment, parentId } = req.body
+            const { user } = req as { user: AuthUser }
+            const { files } = req.files as { files: Express.Multer.File[] }
             const newComment = await CommentsService.NewComment(post_id, comment, user, postId, parentId, files)
             if (newComment.error) {
-                return res.status(401).json({...newComment})
+                return res.status(401).json({ ...newComment })
             }
-            return res.status(200).json({...newComment})
+            return res.status(200).json({ ...newComment })
         } catch (error) {
             console.log(error)
             return res.status(500).json(`An error occured while creating comment`)
@@ -24,13 +24,13 @@ export default class CommentsController {
     // This is for liking a comment
     static LikeComment = async (req: Request, res: Response): Promise<any> => {
         try {
-            const {commentId} = req.body
-            const {user} = req as { user: AuthUser }
+            const { commentId } = req.body
+            const { user } = req as { user: AuthUser }
             const likeComment = await CommentsService.LikeComment(commentId, user)
             if (likeComment.error) {
-                return res.status(401).json({...likeComment})
+                return res.status(401).json({ ...likeComment })
             }
-            return res.status(200).json({...likeComment})
+            return res.status(200).json({ ...likeComment })
         } catch (error) {
             console.log(error)
             return res.status(500).json(`An error occured while liking comment`)

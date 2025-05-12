@@ -1,10 +1,9 @@
-import {UploadImageToS3} from "@libs/UploadImageToS3";
-import {GenerateUniqueId} from "@utils/GenerateUniqueId";
-import {Comments} from "@utils/mongoSchema";
+import { UploadImageToS3 } from "@libs/UploadImageToS3";
+import { GenerateUniqueId } from "@utils/GenerateUniqueId";
+import { Comments } from "@utils/mongoSchema";
 import query from "@utils/prisma";
-import type {LikeCommentResponse, NewCommentResponse} from "types/comments";
-import type {AuthUser} from "types/user";
-
+import type { LikeCommentResponse, NewCommentResponse } from "types/comments";
+import type { AuthUser } from "types/user";
 export default class CommentsService {
     // New Comment
     // This is for creating a new comment on a post
@@ -19,11 +18,9 @@ export default class CommentsService {
     ): Promise<NewCommentResponse> {
         try {
             const comment_id = `COM${GenerateUniqueId()}`;
-
             // Upload files outside the transaction
             let commentAttachments: { name: string; path: string; type: string }[] =
                 [];
-
             if (files && files.length > 0) {
                 const uploadPromises = files.map(async (file: Express.Multer.File) => {
                     return new Promise<string | null>((resolve, reject) => {
@@ -49,7 +46,6 @@ export default class CommentsService {
                         }
                     });
                 });
-
                 try {
                     const uploadedAttachments = await Promise.all(uploadPromises);
                     commentAttachments = uploadedAttachments
@@ -59,25 +55,22 @@ export default class CommentsService {
                             path: url,
                             type: "image",
                         }));
-
                     console.log(commentAttachments);
                 } catch (error) {
                     console.error("Error uploading attachments:", error);
                     throw new Error("Failed to upload comment attachments");
                 }
             }
-
             const commentOwner = await query.user.findUnique({
                 where: {
                     id: user.id
                 }
             })
-
             const newComment = await Comments.insertOne({
                 name: user.name,
                 comment_id: comment_id,
                 username: user.username,
-                userId: user.id,
+                userId: user.user_id,
                 profile_image: commentOwner?.profile_image || `${process.env.SERVER_ORIGINAL_URL}/site/avatar.png`,
                 postId: String(post_id),
                 parentId: parentId && parentId !== "null" ? parentId : null,
@@ -86,14 +79,12 @@ export default class CommentsService {
                 likes: 0,
                 impressions: 0,
             });
-
             if (parentId) {
                 await Comments.updateOne(
-                    {comment_id: parentId},
-                    {$inc: {replies: 1}}
+                    { comment_id: parentId },
+                    { $inc: { replies: 1 } }
                 )
             }
-
             await query.post.update({
                 where: {
                     id: Number(postId),
@@ -104,7 +95,6 @@ export default class CommentsService {
                     },
                 },
             });
-
             return {
                 status: true,
                 error: false,
@@ -121,7 +111,6 @@ export default class CommentsService {
             };
         }
     }
-
     // Like Comment
     // This is for liking a comment
     static async LikeComment(
@@ -137,7 +126,6 @@ export default class CommentsService {
                         user_id: Number(user.id),
                     },
                 });
-
                 if (commentLike) {
                     await prisma.postCommentLikes.deleteMany({
                         where: {
@@ -168,7 +156,6 @@ export default class CommentsService {
                     };
                 }
             });
-
             return result;
         } catch (error) {
             console.log(error);

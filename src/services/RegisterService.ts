@@ -116,24 +116,24 @@ export default class RegisterService {
     if (!userCountry) {
       throw new Error("Invalid country");
     }
-    let currency: any;
+    // let currency: any;
 
-    switch (userCountry) {
-      case "Nigeria":
-        currency = "NGN";
-        break;
-      case "Ghana":
-        currency = "GHS";
-        break;
-      case "Kenya":
-        currency = "KES";
-        break;
-      case "South Africa":
-        currency = "ZAR";
-        break;
-      default:
-        currency = "USD"; // Default to USD if country is not recognized
-    }
+    // switch (userCountry) {
+    //   case "Nigeria":
+    //     currency = "NGN";
+    //     break;
+    //   case "Ghana":
+    //     currency = "GHS";
+    //     break;
+    //   case "Kenya":
+    //     currency = "KES";
+    //     break;
+    //   case "South Africa":
+    //     currency = "ZAR";
+    //     break;
+    //   default:
+    //     currency = "USD"; // Default to USD if country is not recognized
+    // }
 
     return await query.$transaction(async (tx) => {
       const user = await tx.user.create({
@@ -147,7 +147,7 @@ export default class RegisterService {
           profile_banner: `${process.env.SERVER_ORIGINAL_URL}/site/banner.png`,
           profile_image: `${process.env.SERVER_ORIGINAL_URL}/site/avatar.png`,
           location: userCountry,
-          currency: currency,
+          currency: "NGN",
           password: hashPass,
           UserWallet: {
             create: {
