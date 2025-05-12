@@ -45,8 +45,8 @@ app.use(
       "http://192.168.18.126:3009",
       "http://192.168.18.126:3000",
       "http://localhost:8000",
-      "http://54.235.58.196:3000",
-      "http://54.235.58.196:3002"
+      "http://23.20.241.255:3000",
+      "http://23.20.241.255:3002"
     ].filter(Boolean),
     credentials: true,
     optionsSuccessStatus: 200,
