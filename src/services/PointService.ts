@@ -187,7 +187,7 @@ export default class PointService {
       // Apply 10% fee and convert to points (1 USD = 16 points)
       const pointsAfterFee = Math.floor(usd_amount * Number(process.env.PLATFORM_TOPUP_FEE_PERCENTAGE) * POINTS_PER_USD);
       const response = await this.CreatePaystackPayment({
-        amount: Number(approximateAmount),
+        amount: Number(approximateAmount) + platformFee,
         points: pointsAfterFee,
         user: user,
         pointPerUsd: POINTS_PER_USD,

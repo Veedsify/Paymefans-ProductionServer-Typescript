@@ -5,7 +5,8 @@ export default class RateController {
         try {
             const rates = await RateConversionService.GetPlatFormExchangeRate();
             if (rates.error) {
-                return res.status(500).json(rates);
+                console.log("Error in GetPlatformExchangeRate: ", rates);
+                return res.status(400).json(rates);
             }
             return res.status(200).json(rates)
         } catch (error: any) {

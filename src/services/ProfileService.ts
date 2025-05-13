@@ -129,7 +129,7 @@ class ProfileService {
             saveToDb: true,
             onUploadComplete: (AvatarUrl: string) => SaveAvatarToDb(AvatarUrl),
             format: "webp",
-            quality: 80,
+            quality: 100,
         };
 
         await UploadImageToS3(options);

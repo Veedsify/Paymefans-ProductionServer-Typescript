@@ -49,44 +49,44 @@ async function main() {
     },
   })
 
-  // await prisma.platformExchangeRate.createMany({
-  //   data: currencyRates.map((rate) => ({
-  //     buyValue: rate.buy,
-  //     sellValue: rate.sell,
-  //     rate: rate.rate,
-  //     name: rate.currency,
-  //     symbol: rate.symbol
-  //   }))
-  // })
+  await prisma.platformExchangeRate.createMany({
+    data: currencyRates.map((rate) => ({
+      buyValue: rate.buy,
+      sellValue: rate.sell,
+      rate: rate.rate,
+      name: rate.currency,
+      symbol: rate.symbol
+    }))
+  })
 
-  // for (let point of pointSeeding) {
-  //   await prisma.globalPointsBuy.create({
-  //     data: {
-  //       points_buy_id: point.id,
-  //       points: point.points,
-  //       amount: point.amount,
-  //       currency: point.currency,
-  //       conversion_rate: point.conversion_rate,
-  //     },
-  //   });
-  // }
+  for (let point of pointSeeding) {
+    await prisma.globalPointsBuy.create({
+      data: {
+        points_buy_id: point.id,
+        points: point.points,
+        amount: point.amount,
+        currency: point.currency,
+        conversion_rate: point.conversion_rate,
+      },
+    });
+  }
 
-  // await prisma.outerPages.createMany({
-  //   data: [
-  //     {
-  //       title: "Privacy Policy",
-  //       page_id: GenerateUniqueId(),
-  //       slug: "privacy-policy",
-  //       content: "privacy_policy"
-  //     },
-  //     {
-  //       title: "Terms and Conditions",
-  //       page_id: GenerateUniqueId(),
-  //       slug: "terms-and-conditions",
-  //       content: "terms_and_conditions"
-  //     },
-  //   ]
-  // })
+  await prisma.outerPages.createMany({
+    data: [
+      {
+        title: "Privacy Policy",
+        page_id: GenerateUniqueId(),
+        slug: "privacy-policy",
+        content: "privacy_policy"
+      },
+      {
+        title: "Terms and Conditions",
+        page_id: GenerateUniqueId(),
+        slug: "terms-and-conditions",
+        content: "terms_and_conditions"
+      },
+    ]
+  })
 
 
   await prisma.configurations.upsert({
