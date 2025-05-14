@@ -29,9 +29,6 @@ const port = 3009;
 // HTTP request logging
 app.use(logger("dev"));
 
-// Instance Middleware
-app.use(ConfigMiddleware);
-
 // Cors
 app.use(
   cors({
