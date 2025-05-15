@@ -83,7 +83,7 @@ class ProfileService {
             saveToDb: true,
             onUploadComplete: (BannerUrl: string) => SaveBannerToDb(BannerUrl),
             format: "webp",
-            quality: 100,
+            quality: 75,
         };
 
         await UploadImageToS3(options);
@@ -140,18 +140,10 @@ class ProfileService {
     // Update Profile Info
 
     static async ProfileUpdateInfo(
-        { name, location, bio, website, email, username }: ProfileUpdateInfo,
+        { name, location, bio, website, username }: ProfileUpdateInfo,
         userId: string
     ) {
         try {
-            const checkEmail = await query.user.findUnique({
-                where: {
-                    email: email,
-                },
-            });
-            if (checkEmail && checkEmail.user_id !== userId) {
-                return false;
-            }
             const updateUser = await query.user.update({
                 where: {
                     user_id: userId,
@@ -161,7 +153,6 @@ class ProfileService {
                     location: location,
                     bio: bio,
                     username: username,
-                    email: email,
                     website: website,
                 },
             });
