@@ -17,6 +17,7 @@ import { redis } from "@libs/RedisStore";
 import EmailService from "./EmailService";
 import RateConversionService from "./RateConversionService";
 import { BuyCurrencyConvert } from "@utils/RateConverter";
+import ConfigService from "./ConfigService";
 
 export default class PointService {
   static async RetrievePoints(userid: number): Promise<RetrievePointResponse> {
@@ -182,18 +183,12 @@ export default class PointService {
 
       const approximateAmount = Number(Math.floor(ngn_amount));
       const platformFee = Number(process.env.PLATFORM_FEE) * approximateAmount;
-      const POINTS_PER_USD = rate.data.find(rate => rate.name === "POINTS")?.buyValue || 1;
-      const exchangeRate = await BuyCurrencyConvert(rate.data, 1, "USD", user?.currency || "USD");
       // Apply 10% fee and convert to points (1 USD = 16 points)
-      const pointsAfterFee = Math.floor(usd_amount * Number(process.env.PLATFORM_TOPUP_FEE_PERCENTAGE) * POINTS_PER_USD);
       const response = await this.CreatePaystackPayment({
-        amount: Number(approximateAmount) + platformFee,
-        points: pointsAfterFee,
+        amount: Number(approximateAmount),
         user: user,
-        pointPerUsd: POINTS_PER_USD,
-        exchangeRate: exchangeRate,
-        amountInUsd: usd_amount,
-        currency: user?.currency || "USD",
+        usd_amount,
+        platformFee
       });
 
       if (!response.data || response.data.authorization_url == "") {
@@ -203,6 +198,16 @@ export default class PointService {
           message: `Cannot Generate Proceed With Checkout`,
         };
       }
+      const config = await ConfigService.Config()
+      if (config.error) {
+        return {
+          status: false,
+          error: true,
+          message: config.message,
+        };
+      }
+
+      const pointsAfterFee = config.data ? Number(amount) / config.data?.point_conversion_rate_ngn : Number(amount) / 100;
 
       return {
         status: true,
@@ -220,15 +225,21 @@ export default class PointService {
   // Paystack payment
   static async CreatePaystackPayment({
     amount,
-    points,
     user,
-    pointPerUsd,
-    exchangeRate,
-    amountInUsd,
-    currency,
+    usd_amount,
+    platformFee
   }: CreatePaystackPaymentProps): Promise<any> {
     try {
       const referenceId = `PNT${GenerateUniqueId()}`;
+      const config = await ConfigService.Config()
+      if (config.error) {
+        return {
+          status: false,
+          error: true,
+          message: config.message,
+        };
+      }
+      const points = config.data ? amount / config?.data?.point_conversion_rate_ngn : amount / 100;
       await query.userPointsPurchase.create({
         data: {
           purchase_id: referenceId,
@@ -236,14 +247,15 @@ export default class PointService {
           points: points,
           amount: amount,
           success: false,
-          current_buy_value: pointPerUsd,
-          currency: currency,
-          exchange_rate: exchangeRate,
-          usd_equivalent: amountInUsd,
+          current_buy_value: amount + platformFee,
+          currency: "NGN",
+          exchange_rate: config?.data?.point_conversion_rate_ngn,
+          usd_equivalent: usd_amount,
         },
       });
       query.$disconnect();
 
+      const billableAmount = (amount + platformFee) * 100;
       const CreateOrder = await fetch(
         "https://api.paystack.co/transaction/initialize",
         {
@@ -253,8 +265,8 @@ export default class PointService {
             Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}`,
           },
           body: JSON.stringify({
-            amount: amount * 100,
-            email: user.email,
+            amount: billableAmount,
+            email: user?.email,
             reference: referenceId,
             callback_url:
               process.env.SERVER_ORIGINAL_URL + "/api/points/callback",

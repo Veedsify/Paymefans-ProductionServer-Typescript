@@ -1,8 +1,13 @@
 import query from "@utils/prisma";
 import { redis } from "@libs/RedisStore";
+import { Configurations } from "@prisma/client";
 
 export default class ConfigService {
-    static async Config(): Promise<any> {
+    static async Config(): Promise<{
+        error: boolean;
+        message: string;
+        data: Configurations | null;
+    }> {
         try {
             const cacheKey = "configs";
             const cachedData = await redis.get(cacheKey);

@@ -44,12 +44,9 @@ export type PointPurchaseResponse = {
 
 export type CreatePaystackPaymentProps = {
       amount: number;
-      points: number;
       user: AuthUser;
-      pointPerUsd: number;
-      amountInUsd: number;
-      currency: string;
-      exchangeRate: number;
+      usd_amount: number;
+      platformFee: number;
 }
 
 export type PaystackPaymentCallbackResponse = {
