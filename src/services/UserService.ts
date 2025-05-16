@@ -136,7 +136,7 @@ export default class UserService {
       });
 
       const token = await Authenticate(user as AuthUser);
-      await TriggerModels(verify.user_id);
+      await TriggerModels();
       await TriggerHookups(verify.user_id);
 
       // Save Login History
