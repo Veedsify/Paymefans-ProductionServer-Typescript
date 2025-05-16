@@ -8,6 +8,11 @@ import query from "@utils/prisma";
 
 const EmailQueue = new Queue("emailQueues", {
   connection: redis,
+  defaultJobOptions: {
+    removeOnComplete: true,
+    attempts: 3,
+    backoff: 5000,
+  }
 });
 
 const QueueWorker = new Worker(

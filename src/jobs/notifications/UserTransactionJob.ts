@@ -4,6 +4,11 @@ import { Queue, Worker } from "bullmq";
 
 const UserTransactionQueue = new Queue("userTransactionQueue", {
   connection: redis,
+  defaultJobOptions: {
+    removeOnComplete: true,
+    attempts: 3,
+    backoff: 5000,
+  }
 });
 
 const UserTransactionWorker = new Worker(

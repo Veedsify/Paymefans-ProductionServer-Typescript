@@ -5,7 +5,7 @@ import type {AuthUser} from "types/user"
 export default class ModelController {
     static async GetModels(req: Request, res: Response): Promise<any> {
         try {
-            const modelssearch = await ModelService.GetModels(req.body, req.user as AuthUser)
+            const modelssearch = await ModelService.GetModels(req.body)
             if (modelssearch.error) {
                 res.status(401).json({message: modelssearch.message})
                 return

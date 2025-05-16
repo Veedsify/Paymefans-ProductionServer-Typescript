@@ -9,10 +9,16 @@ import query from "@utils/prisma";
 import { UploadImageToS3 } from "@libs/UploadImageToS3";
 import type { UploadOptions } from "@libs/UploadImageToS3";
 import { UpdateAvatarQueue } from "@jobs/comments/UpdateCommentsAvatar";
+import { redis } from "@libs/RedisStore";
 
 class ProfileService {
     // Get Profile
     static async Profile(username: string): Promise<ProfileServiceResponse> {
+        const cacheKey = `user_profile_${username}`;
+        const cachedUser = await redis.get(cacheKey);
+        if (cachedUser) {
+            return { message: "User found", status: true, user: JSON.parse(cachedUser) };
+        }
         const user_name = username.replace(/%40/g, "@");
         const user = await query.user.findFirst({
             where: {
@@ -53,6 +59,8 @@ class ProfileService {
         if (!user) {
             return { message: "User not found", status: false };
         }
+        // Cache the user data for 1 minutes
+        await redis.set(cacheKey, JSON.stringify(user), "EX", 60);
         return { message: "User found", status: true, user };
     }
 
@@ -112,9 +120,10 @@ class ProfileService {
                 },
             });
             // Update comments avatar
-            await UpdateAvatarQueue.add("UpdateAvatarQueue", { userId: user?.id, avatarUrl: AvatarUrl }, {
+            await UpdateAvatarQueue.add("UpdateAvatarQueue", { userId: user?.user_id, avatarUrl: AvatarUrl }, {
                 attempts: 3,
                 backoff: 5000,
+                removeOnComplete: true,
             })
 
             await ProfileService.ProfileUpdateInfo(req.body, user?.user_id!);

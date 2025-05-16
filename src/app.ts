@@ -17,7 +17,7 @@ import type { Request, Response } from "express";
 import EmitActiveUsers from "@jobs/EmitActiveUsers";
 import ModelsJobs from "@jobs/ModelsJobs";
 import { connectDB } from "@utils/mongodb";
-import ConfigMiddleware from "@middleware/ConfigMiddleware";
+import TriggerModels from "@jobs/models";
 
 const { ADMIN_PANEL_URL, VERIFICATION_URL, APP_URL, LIVESTREAM_PORT } =
   process.env;
@@ -50,6 +50,7 @@ app.use(
     optionsSuccessStatus: 200,
   })
 );
+
 
 let activeUsersCron: any;
 // Instance of Socket.IO

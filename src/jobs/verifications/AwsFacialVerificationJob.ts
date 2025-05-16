@@ -8,6 +8,11 @@ import type { AwsRekognitionObject } from "types/verification";
 
 const AwsVerificationQueue = new Queue("aws-verification", {
   connection: redis,
+  defaultJobOptions: {
+    removeOnComplete: true,
+    attempts: 3,
+    backoff: 5000,
+  }
 });
 
 const ProcessFaceComparison = async (

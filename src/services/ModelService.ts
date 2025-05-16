@@ -30,7 +30,6 @@ import { PaystackService } from "./PaystackService";
 export default class ModelService {
   static async GetModels(
     body: { limit: number },
-    user: AuthUser,
   ): Promise<GetModelsResponse> {
     const { limit } = body;
     try {
@@ -41,7 +40,6 @@ export default class ModelService {
                         SELECT * FROM "User"
                         INNER JOIN "Model" ON "User"."id" = "Model"."user_id"
                         WHERE "User"."is_model" = true
-                        AND "User"."id" != ${user.id}
                         AND "Model"."verification_status" = true
                         ORDER BY RANDOM()
                         LIMIT ${limit};
