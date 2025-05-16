@@ -48,55 +48,64 @@ export default class WalletService {
       };
     }
 
-    const createTransferRecipient = await PaystackService.TransferRecipient({
-      account_number: accountNumber,
-      bank_code: bankCode,
-      name: accountName,
-      type: bankType,
-      currency: "NGN",
-    })
-
     // Not using a transaction here, just a simple check and create
     try {
+      const createTransferRecipient = await PaystackService.TransferRecipient({
+        account_number: accountNumber,
+        bank_code: bankCode,
+        name: accountName,
+        type: bankType,
+        currency: "NGN",
+      });
+
       // Check if bank already exists for this user and account number
       const checkBanks = await query.userBanks.findFirst({
-      where: {
-        user_id: user.id,
-        account_number: accountNumber,
-      },
+        where: {
+          user_id: user.id,
+          account_number: accountNumber,
+          bank_id: bankCode,
+        },
       });
 
       if (checkBanks) {
-      return {
-        error: true,
-        status: false,
-        message: "Bank account already exists",
-      };
+        return {
+          error: true,
+          status: false,
+          message: "Bank account already exists",
+        };
+      }
+
+      if (!createTransferRecipient) {
+        return {
+          error: true,
+          status: false,
+          message: createTransferRecipient.message,
+        };
       }
 
       const bank = await query.userBanks.create({
-      data: {
-        user_id: user.id,
-        bank_id: bankCode,
-        bank_type: bankType,
-        bank_name: otherDetails.name,
-        account_name: accountName,
-        account_number: accountNumber,
-        bank_country: country,
-        recipient_code: createTransferRecipient.data.recipient_code,
-      },
+        data: {
+          user_id: user.id,
+          bank_id: bankCode,
+          bank_type: bankType,
+          bank_name: otherDetails.name,
+          account_name: accountName,
+          account_number: accountNumber,
+          bank_country: country,
+          recipient_code: createTransferRecipient.data.recipient_code,
+        },
       });
 
       return {
-      error: false,
-      status: true,
-      message: "Bank added successfully",
-      data: {
-        ...bank,
-        account_number:
-        "*".repeat(bank.account_number.length - 4) +
-        bank.account_number.slice(-4),
-      },
+        error: false,
+        status: true,
+        message: "Bank added successfully",
+        data: {
+          ...bank,
+          account_number:
+            "*".repeat(bank.account_number.length - 4) +
+            bank.account_number.slice(-4),
+        },
       };
     } catch (error: any) {
       console.log(error);
