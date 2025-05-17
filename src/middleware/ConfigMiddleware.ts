@@ -63,7 +63,7 @@ async function ConfigMiddleware(req: Request, _: Response, next: NextFunction) {
     try {
         if (!req.config) {
             const config = await ConfigService.Config()
-            req.config = config.data
+            req.config = config.data ?? undefined
 
             if (process.env.NODE_ENV !== 'production') {
                 console.log("Configuration Loaded")

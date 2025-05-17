@@ -17,7 +17,6 @@ import type { Request, Response } from "express";
 import EmitActiveUsers from "@jobs/EmitActiveUsers";
 import ModelsJobs from "@jobs/ModelsJobs";
 import { connectDB } from "@utils/mongodb";
-import TriggerModels from "@jobs/models";
 
 const { ADMIN_PANEL_URL, VERIFICATION_URL, APP_URL, LIVESTREAM_PORT } =
   process.env;

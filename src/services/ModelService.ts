@@ -319,7 +319,6 @@ export default class ModelService {
 
       const rate = await RateConversionService.GetConversionRate(user.id, 7);
 
-
       if (!rate) {
         return {
           error: true,
@@ -332,7 +331,7 @@ export default class ModelService {
 
       // Initialize a payment link
       const paymentLink = await PaystackService.InitializePayment({
-        amount: rate.amount,
+        amount: Number(10000 * 100),
         currency: rate.currency,
         email: user.email,
         reference: paymentReference,

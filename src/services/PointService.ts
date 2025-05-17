@@ -16,7 +16,6 @@ import { GenerateUniqueId } from "@utils/GenerateUniqueId";
 import { redis } from "@libs/RedisStore";
 import EmailService from "./EmailService";
 import RateConversionService from "./RateConversionService";
-import { BuyCurrencyConvert } from "@utils/RateConverter";
 import ConfigService from "./ConfigService";
 
 export default class PointService {
