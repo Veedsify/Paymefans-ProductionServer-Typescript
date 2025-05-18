@@ -12,4 +12,5 @@ const uploadAvatar = CreateUpload("avatars")
 profile.post("/user", Auth, ProfileController.Profile)
 profile.post("/banner/change", Auth, uploadBanner.single("banner"), ProfileController.BannerChange)
 profile.post("/update", Auth, uploadAvatar.single("profile_image"), ProfileController.ProfileUpdate)
+profile.post("/stats/:userId/:type", Auth, ProfileController.ProfileStats)
 export default profile
