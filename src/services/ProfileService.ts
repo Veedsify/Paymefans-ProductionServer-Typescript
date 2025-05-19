@@ -17,55 +17,80 @@ import { AuthUser } from "types/user";
 
 class ProfileService {
     // Get Profile
-    static async Profile(username: string): Promise<ProfileServiceResponse> {
-        const cacheKey = `user_profile_${username}`;
-        const cachedUser = await redis.get(cacheKey);
-        if (cachedUser) {
-            return { message: "User found", status: true, user: JSON.parse(cachedUser) };
-        }
-        const user_name = username.replace(/%40/g, "@");
-        const user = await query.user.findFirst({
-            where: {
-                username: user_name,
-            },
-            select: {
-                id: true,
-                username: true,
-                name: true,
-                fullname: true,
-                user_id: true,
-                admin: true,
-                role: true,
-                is_active: true,
-                is_verified: true,
-                website: true,
-                country: true,
-                location: true,
-                city: true,
-                zip: true,
-                active_status: true,
-                post_watermark: true,
-                total_followers: true,
-                total_following: true,
-                total_subscribers: true,
-                email: true,
-                profile_image: true,
-                profile_banner: true,
-                bio: true,
-                Subscribers: {
-                    select: {
-                        subscriber_id: true,
+    static async Profile(username: string, authUserId: number): Promise<ProfileServiceResponse> {
+        try {
+            const cacheKey = `user_profile_${username}`;
+            const cachedUser = await redis.get(cacheKey);
+            if (cachedUser) {
+                return { message: "User found", status: true, user: JSON.parse(cachedUser) };
+            }
+            const user_name = username.replace(/%40/g, "@");
+            const user = await query.user.findFirst({
+                where: {
+                    username: user_name,
+                },
+                select: {
+                    id: true,
+                    username: true,
+                    name: true,
+                    fullname: true,
+                    user_id: true,
+                    admin: true,
+                    role: true,
+                    is_active: true,
+                    is_verified: true,
+                    website: true,
+                    country: true,
+                    location: true,
+                    city: true,
+                    zip: true,
+                    active_status: true,
+                    post_watermark: true,
+                    total_followers: true,
+                    total_following: true,
+                    total_subscribers: true,
+                    email: true,
+                    profile_image: true,
+                    profile_banner: true,
+                    bio: true,
+                    Subscribers: {
+                        select: {
+                            subscriber_id: true,
+                        },
                     },
                 },
-            },
-        });
+            });
 
-        if (!user) {
-            return { message: "User not found", status: false };
+            if (!user) {
+                return { message: "User not found", status: false };
+            }
+
+            // Check if the user is following the requested user
+            const [iFollowThem, theyFollowMe] = await Promise.all([
+                query.follow.findFirst({
+                    where: { follower_id: authUserId, user_id: user.id },
+                }),
+                query.follow.findFirst({
+                    where: { user_id: authUserId, follower_id: user.id },
+                }),
+            ]);
+
+            // Cache the user data for 1 minutes
+            const response = {
+                message: "User found",
+                status: true,
+                user: {
+                    ...user,
+                    isFollowing: !!iFollowThem,
+                    followsYou: !!theyFollowMe,
+                }
+            };
+            await redis.set(cacheKey, JSON.stringify(response), "EX", 60);
+            return response
+
+        } catch (error: any) {
+            throw new Error(error.message)
         }
-        // Cache the user data for 1 minutes
-        await redis.set(cacheKey, JSON.stringify(user), "EX", 60);
-        return { message: "User found", status: true, user };
     }
 
     // Change Banner
@@ -182,7 +207,7 @@ class ProfileService {
         type,
         user,
         limit,
-        cursor,
+        cursor: pageCursor,
         searchQuery,
     }: {
         type: ProfileStatsProps["type"];
@@ -195,16 +220,27 @@ class ProfileService {
         let model: any;
         let where: any = {};
         let include: any = undefined;
+        let cursor = pageCursor === 1 ? null : pageCursor;
 
         switch (type) {
             case "followers":
                 model = query.follow;
                 where.user_id = user.id;
-                include = { users: true, followers: true };
+                where.id = cursor ? { lt: cursor } : undefined;
+                include = {
+                    followers: {
+                        select: {
+                            profile_image: true,
+                            profile_banner: true,
+                            id: true,
+                            username: true,
+                            name: true,
+                        }
+                    }
+                };
                 if (searchQuery) {
                     where.OR = [
-                        { users: { username: { contains: searchQuery, mode: "insensitive" } } },
-                        { users: { name: { contains: searchQuery, mode: "insensitive" } } },
+                        { followers: { username: { contains: searchQuery, mode: "insensitive" } } },
                         { followers: { name: { contains: searchQuery, mode: "insensitive" } } },
                     ];
                 }
@@ -213,12 +249,22 @@ class ProfileService {
             case "following":
                 model = query.follow;
                 where.follower_id = user.id;
-                include = { users: true, followers: true };
+                where.id = cursor ? { lt: cursor } : undefined;
+                include = {
+                    users: {
+                        select: {
+                            profile_image: true,
+                            profile_banner: true,
+                            id: true,
+                            username: true,
+                            name: true,
+                        }
+                    },
+                };
                 if (searchQuery) {
                     where.OR = [
                         { users: { username: { contains: searchQuery, mode: "insensitive" } } },
                         { users: { name: { contains: searchQuery, mode: "insensitive" } } },
-                        { followers: { name: { contains: searchQuery, mode: "insensitive" } } },
                     ];
                 }
                 break;
@@ -226,7 +272,18 @@ class ProfileService {
             case "subscribers":
                 model = query.subscribers;
                 where.user_id = user.id;
-                include = { user: true, subscriber: true };
+                where.id = cursor ? { lt: cursor } : undefined;
+                include = {
+                    subscriber: {
+                        select: {
+                            profile_image: true,
+                            profile_banner: true,
+                            id: true,
+                            username: true,
+                            name: true,
+                        }
+                    }
+                };
                 if (searchQuery) {
                     where.OR = [
                         { user: { username: { contains: searchQuery, mode: "insensitive" } } },
@@ -246,7 +303,7 @@ class ProfileService {
                 where,
                 take: limit + 1,
                 orderBy: { created_at: "desc" },
-                ...(cursor && { skip: 1, cursor: { id: Number(cursor) } }),
+                ...(cursor && { skip: 1 }),
                 ...(include && { include }),
             },
         };
@@ -293,7 +350,7 @@ class ProfileService {
 
             if (!data || (searchQuery && data.length === 0)) {
                 return {
-                    error: true,
+                    error: false,
                     message: "No data found",
                     data: [],
                     hasMore: false,
@@ -301,15 +358,50 @@ class ProfileService {
                 };
             }
 
-            console.log("Data fetched from DB:", data);
 
             const hasMore = data.length > limit;
             const cursorId = hasMore ? data.pop()!.id : null;
 
+            // Extract all relevant user IDs from the result
+            const otherUserIds = data.map(item =>
+                type === "followers"
+                    ? item.followers.id
+                    : type === "following"
+                        ? item.users.id
+                        : item.subscriber.id
+            );
+
+            // Query follow relationships where current user follows these users
+            const followingRelations = await query.follow.findMany({
+                where: {
+                    follower_id: user.id,
+                    user_id: { in: otherUserIds },
+                },
+                select: { user_id: true },
+            });
+
+            // Build a Set of followed user IDs for quick lookup
+            const followingSet = new Set(followingRelations.map(f => f.user_id));
+
+            // Add is_following to each user
+            const enrichedData = data.map(item => {
+                const targetUser =
+                    type === "followers"
+                        ? item.followers
+                        : type === "following"
+                            ? item.users
+                            : item.subscriber;
+
+                return {
+                    ...targetUser,
+                    is_following: followingSet.has(targetUser.id),
+                };
+            });
+
             const result: ProfileStatsResponse = {
                 error: false,
                 message: "Data fetched successfully",
-                data,
+                data: enrichedData,
                 hasMore,
                 nextCursor: cursorId,
             };

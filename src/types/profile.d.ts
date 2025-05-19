@@ -26,6 +26,8 @@ export type ProfileServiceResponse = {
             profile_image: string | null;
             profile_banner: string | null;
             bio: string | null;
+            isFollowing: boolean;
+            followsYou: boolean;
             Subscribers: {
                   subscriber_id: number;
             }[];

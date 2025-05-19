@@ -6,7 +6,8 @@ class ProfileController {
     static async Profile(req: Request, res: Response): Promise<any> {
         try {
             const body = req.body
-            const user = await ProfileService.Profile(body.username)
+            const authUserId = req.user?.id as number
+            const user = await ProfileService.Profile(body.username, authUserId)
             res.json(user)
         } catch (error) {
             console.error('Profile error:', error)
