@@ -1,34 +1,34 @@
 import ModelService from "@services/ModelService"
-import type {Request, Response} from "express"
-import type {AuthUser} from "types/user"
+import type { Request, Response } from "express"
+import type { AuthUser } from "types/user"
 
 export default class ModelController {
     static async GetModels(req: Request, res: Response): Promise<any> {
         try {
             const modelssearch = await ModelService.GetModels(req.body)
             if (modelssearch.error) {
-                res.status(401).json({message: modelssearch.message})
+                res.status(400).json({ message: modelssearch.message })
                 return
             }
-            res.status(200).json({...modelssearch})
+            res.status(200).json({ ...modelssearch })
             return
         } catch (error) {
             console.error(error)
-            res.status(500).json({message: "Error fetching models"})
+            res.status(500).json({ message: "Error fetching models" })
         }
     }
 
     static async ModelsSearch(req: Request, res: Response): Promise<any> {
         try {
-            const modelSearch = await ModelService.ModelsSearch({searchQuery: req.query as any, user: req.user as AuthUser})
+            const modelSearch = await ModelService.ModelsSearch({ searchQuery: req.query as any, user: req.user as AuthUser })
             if (modelSearch.error) {
-                res.status(401).json({message: modelSearch.message})
+                res.status(400).json({ message: modelSearch.message })
                 return
             }
-            res.status(200).json({...modelSearch})
+            res.status(200).json({ ...modelSearch })
         } catch (error) {
             console.error(error)
-            res.status(500).json({message: "Error fetching models"})
+            res.status(500).json({ message: "Error fetching models" })
         }
     }
 
@@ -36,14 +36,14 @@ export default class ModelController {
         try {
             const getmodelavailableforhookup = await ModelService.GetModelAvailableForHookup(req.body, req.user as AuthUser)
             if (getmodelavailableforhookup.error) {
-                res.status(401).json({message: getmodelavailableforhookup.message})
+                res.status(400).json({ message: getmodelavailableforhookup.message })
                 return
             }
-            res.status(200).json({...getmodelavailableforhookup})
+            res.status(200).json({ ...getmodelavailableforhookup })
             return
         } catch (error) {
             console.error(error)
-            res.status(500).json({message: "Error fetching models"})
+            res.status(500).json({ message: "Error fetching models" })
         }
     }
 
@@ -51,14 +51,14 @@ export default class ModelController {
         try {
             const signupmodel = await ModelService.SignupModel(req.body, req.user as AuthUser)
             if (signupmodel.error) {
-                res.status(401).json({message: signupmodel.message})
+                res.status(400).json({ message: signupmodel.message })
                 return
             }
-            res.status(200).json({...signupmodel})
+            res.status(200).json({ ...signupmodel })
             return
         } catch (error) {
             console.error(error)
-            res.status(500).json({message: "Error fetching models"})
+            res.status(500).json({ message: "Error fetching models" })
         }
     }
 
@@ -66,7 +66,7 @@ export default class ModelController {
     //       try {
     //             const validatemodelpayment = await ModelService.ValidateModelPayment(req.body)
     //             if (validatemodelpayment.error) {
-    //                   res.status(401).json({ message: validatemodelpayment.message })
+    //                   res.status(400).json({ message: validatemodelpayment.message })
     //                   return
     //             }
     //             res.status(200).json({ ...validatemodelpayment })

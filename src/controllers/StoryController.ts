@@ -28,7 +28,7 @@ export default class StoryController {
       };
       const media = await StoryService.GetMyMedia(options);
       if (media.error) {
-        return res.status(401).json(media);
+        return res.status(400).json(media);
       }
       res.status(200).json({ ...media });
     } catch (error: any) {
@@ -50,7 +50,7 @@ export default class StoryController {
       };
       const media = await StoryService.SaveStory(options);
       if (media.error) {
-        return res.status(401).json(media);
+        return res.status(400).json(media);
       }
       res.status(200).json({ ...media });
     } catch (error: any) {
@@ -69,7 +69,7 @@ export default class StoryController {
         files: req.files as Express.Multer.File[],
       });
       if (storyUpload.error) {
-        return res.status(401).json(storyUpload);
+        return res.status(400).json(storyUpload);
       }
       res.status(200).json({ ...storyUpload });
     } catch (error: any) {

@@ -12,7 +12,7 @@ export default class CommentsController {
             const { files } = req.files as { files: Express.Multer.File[] }
             const newComment = await CommentsService.NewComment(post_id, comment, user, postId, parentId, files)
             if (newComment.error) {
-                return res.status(401).json({ ...newComment })
+                return res.status(400).json({ ...newComment })
             }
             return res.status(200).json({ ...newComment })
         } catch (error) {
@@ -28,7 +28,7 @@ export default class CommentsController {
             const { user } = req as { user: AuthUser }
             const likeComment = await CommentsService.LikeComment(commentId, user)
             if (likeComment.error) {
-                return res.status(401).json({ ...likeComment })
+                return res.status(400).json({ ...likeComment })
             }
             return res.status(200).json({ ...likeComment })
         } catch (error) {

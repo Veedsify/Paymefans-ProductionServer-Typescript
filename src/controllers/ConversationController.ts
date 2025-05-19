@@ -13,7 +13,7 @@ export default class ConversationController {
                 cursor: Number(req.query.cursor) || 0,
             });
             if (conversations.error) {
-                res.status(401).json({ ...conversations });
+                res.status(400).json({ ...conversations });
             }
             res.status(200).json({ ...conversations });
         } catch (error) {
@@ -32,7 +32,7 @@ export default class ConversationController {
                 profileId,
             });
             if (conversation.error) {
-                res.status(401).json({ ...conversation });
+                res.status(400).json({ ...conversation });
             }
             res.status(200).json({ ...conversation });
         } catch (error) {
@@ -50,7 +50,7 @@ export default class ConversationController {
                 limit: req.query.limit as string,
             });
             if (conversations.error) {
-                res.status(401).json({ ...conversations });
+                res.status(400).json({ ...conversations });
             }
             res.status(200).json({ ...conversations });
         } catch (error) {
@@ -68,7 +68,7 @@ export default class ConversationController {
                 files: req.files as { 'attachments[]': Express.Multer.File[] },
             });
             if (attachments.error) {
-                return res.status(401).json({ ...attachments });
+                return res.status(400).json({ ...attachments });
             }
             res.status(200).json(attachments);
         } catch (error) {
@@ -85,7 +85,7 @@ export default class ConversationController {
                 conversationId: req.params.conversationId as string,
             });
             if (searchmessage.error) {
-                res.status(401).json({ ...searchmessage });
+                res.status(400).json({ ...searchmessage });
             }
             res.status(200).json({ ...searchmessage });
         } catch (error) {
@@ -102,7 +102,7 @@ export default class ConversationController {
         })
 
         if (conversations.error) {
-            res.status(401).json(conversations)
+            res.status(400).json(conversations)
         }
         res.status(200).json({ ...conversations });
     }

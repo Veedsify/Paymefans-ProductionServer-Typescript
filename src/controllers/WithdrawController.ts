@@ -13,7 +13,7 @@ export default class WithdrawController {
             })
 
             if (createWithdrawRequest.error) {
-                return res.status(401).json(createWithdrawRequest)
+                return res.status(400).json(createWithdrawRequest)
             }
 
             return res.status(200).json(createWithdrawRequest)

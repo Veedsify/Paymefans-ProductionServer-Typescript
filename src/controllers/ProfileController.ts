@@ -1,4 +1,4 @@
-import type {Request, Response} from 'express'
+import type { Request, Response } from 'express'
 import ProfileService from '@services/ProfileService'
 
 class ProfileController {
@@ -10,7 +10,7 @@ class ProfileController {
             res.json(user)
         } catch (error) {
             console.error('Profile error:', error)
-            res.status(500).json({error: 'Error fetching profile'})
+            res.status(500).json({ error: 'Error fetching profile' })
         }
     }
 
@@ -21,7 +21,7 @@ class ProfileController {
             res.json(user)
         } catch (error) {
             console.error('Banner error:', error)
-            res.status(500).json({error: 'Error changing banner'})
+            res.status(500).json({ error: 'Error changing banner' })
         }
     }
 
@@ -32,7 +32,7 @@ class ProfileController {
             res.json(user)
         } catch (error) {
             console.error('Avatar error:', error)
-            res.status(500).json({error: 'Error changing avatar'})
+            res.status(500).json({ error: 'Error changing avatar' })
         }
     }
 
@@ -40,15 +40,15 @@ class ProfileController {
     static async ProfileStats(req: Request, res: Response): Promise<any> {
         try {
             const stats = await ProfileService.ProfileStats({
-                userId: req.params.userId,
-                type: req.params.type,
-                limit: req.query.limit,
-                cursor: req.query.cursor,
-                query: req.query.query,
+                user: req.user!,
+                type: req.params.type as 'followers' | 'subscribers' | 'following',
+                limit: Number(req.query.limit) as number,
+                cursor: Number(req.query.cursor as string) as number,
+                query: String(req.query.query),
             })
 
             if (stats.error) {
-                res.status(401).json(stats)
+                return res.status(400).json(stats)
             }
 
             res.status(200).json(stats)

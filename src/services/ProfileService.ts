@@ -1,7 +1,10 @@
 import type { Request } from "express";
 import type {
     BannerChangeResponse,
+    ProfileDataItem,
     ProfileServiceResponse,
+    ProfileStatsProps,
+    ProfileStatsResponse,
     ProfileUpdateInfo,
     ProfileUpdateResponse,
 } from "../types/profile";
@@ -10,6 +13,7 @@ import { UploadImageToS3 } from "@libs/UploadImageToS3";
 import type { UploadOptions } from "@libs/UploadImageToS3";
 import { UpdateAvatarQueue } from "@jobs/comments/UpdateCommentsAvatar";
 import { redis } from "@libs/RedisStore";
+import { AuthUser } from "types/user";
 
 class ProfileService {
     // Get Profile
@@ -172,6 +176,154 @@ class ProfileService {
             return false;
         }
     }
+
+
+    static async getProfileQueryArgs({
+        type,
+        user,
+        limit,
+        cursor,
+        searchQuery,
+    }: {
+        type: ProfileStatsProps["type"];
+        user: AuthUser;
+        limit: number;
+        cursor?: string | number | null;
+        searchQuery?: string;
+        // Adjust query type and include as per your Prisma schema
+    }) {
+        let model: any;
+        let where: any = {};
+        let include: any = undefined;
+
+        switch (type) {
+            case "followers":
+                model = query.follow;
+                where.user_id = user.id;
+                include = { users: true, followers: true };
+                if (searchQuery) {
+                    where.OR = [
+                        { users: { username: { contains: searchQuery, mode: "insensitive" } } },
+                        { users: { name: { contains: searchQuery, mode: "insensitive" } } },
+                        { followers: { name: { contains: searchQuery, mode: "insensitive" } } },
+                    ];
+                }
+                break;
+
+            case "following":
+                model = query.follow;
+                where.follower_id = user.id;
+                include = { users: true, followers: true };
+                if (searchQuery) {
+                    where.OR = [
+                        { users: { username: { contains: searchQuery, mode: "insensitive" } } },
+                        { users: { name: { contains: searchQuery, mode: "insensitive" } } },
+                        { followers: { name: { contains: searchQuery, mode: "insensitive" } } },
+                    ];
+                }
+                break;
+
+            case "subscribers":
+                model = query.subscribers;
+                where.user_id = user.id;
+                include = { user: true, subscriber: true };
+                if (searchQuery) {
+                    where.OR = [
+                        { user: { username: { contains: searchQuery, mode: "insensitive" } } },
+                        { user: { name: { contains: searchQuery, mode: "insensitive" } } },
+                        { subscriber: { name: { contains: searchQuery, mode: "insensitive" } } },
+                    ];
+                }
+                break;
+
+            default:
+                throw new Error("Invalid type");
+        }
+
+        return {
+            model,
+            queryArgs: {
+                where,
+                take: limit + 1,
+                orderBy: { created_at: "desc" },
+                ...(cursor && { skip: 1, cursor: { id: Number(cursor) } }),
+                ...(include && { include }),
+            },
+        };
+    }
+    // Profile Stats
+    static async ProfileStats({
+        user,
+        type,
+        limit = 25,
+        cursor,
+        query: searchQuery,
+    }: ProfileStatsProps): Promise<ProfileStatsResponse> {
+        if (!user?.id) {
+            return {
+                error: true,
+                message: "Invalid user",
+                data: [],
+                hasMore: false,
+                nextCursor: 0,
+            };
+        }
+
+        // Compose a unique cache key (watch out for JSON.stringify issues if needed)
+        const cacheKey = `profilestats:${type}:${user.id}:${searchQuery || ""}:${cursor || ""}:${limit}`;
+
+        try {
+            // Get from Redis(returns string | null)
+            const cachedRaw = await redis.get(cacheKey);
+            if (cachedRaw) {
+                const cached: ProfileStatsResponse = JSON.parse(cachedRaw);
+                return cached;
+            }
+
+            // Build and run the query (type safe)
+            const { model, queryArgs } = await this.getProfileQueryArgs({
+                type,
+                user,
+                limit,
+                cursor,
+                searchQuery,
+            });
+
+            const data: ProfileDataItem[] = await model.findMany(queryArgs);
+
+            if (!data || (searchQuery && data.length === 0)) {
+                return {
+                    error: true,
+                    message: "No data found",
+                    data: [],
+                    hasMore: false,
+                    nextCursor: 0,
+                };
+            }
+
+            console.log("Data fetched from DB:", data);
+
+            const hasMore = data.length > limit;
+            const cursorId = hasMore ? data.pop()!.id : null;
+
+            const result: ProfileStatsResponse = {
+                error: false,
+                message: "Data fetched successfully",
+                data,
+                hasMore,
+                nextCursor: cursorId,
+            };
+
+            // Cache for 60 seconds (EX = expiry in seconds)
+            await redis.set(cacheKey, JSON.stringify(result), "EX", 60);
+
+            return result;
+        } catch (error: any) {
+            console.error("Error fetching profile stats:", error);
+            throw new Error("Error fetching profile stats");
+        }
+    }
 }
+
 
 export default ProfileService;

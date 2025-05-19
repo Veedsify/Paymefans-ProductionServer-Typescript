@@ -1,19 +1,19 @@
-import type {Request, Response} from "express";
+import type { Request, Response } from "express";
 import SettingsService from "@services/SettingsService";
-import type {AuthUser} from "types/user";
+import type { AuthUser } from "types/user";
 
 export default class SettingsController {
     static async SettingsProfileChange(req: Request, res: Response): Promise<any> {
         try {
             const profileChange = await SettingsService.SettingsProfileChange(req.body, req.user?.id!)
             if (profileChange.error) {
-                res.status(201).json({status: false, error: true, message: profileChange.message})
+                res.status(201).json({ status: false, error: true, message: profileChange.message })
                 return
             }
-            return res.status(200).json({status: true, error: false, message: profileChange.message})
+            return res.status(200).json({ status: true, error: false, message: profileChange.message })
         } catch (error: any) {
             console.log(error.message)
-            res.status(500).json({message: "Internal Server error"})
+            res.status(500).json({ message: "Internal Server error" })
         }
     }
 
@@ -21,13 +21,13 @@ export default class SettingsController {
         try {
             const hookupStatus = await SettingsService.HookupStatusChange(req.body, req.user!)
             if (hookupStatus.error) {
-                res.status(201).json({...hookupStatus})
+                res.status(201).json({ ...hookupStatus })
                 return
             }
-            return res.status(200).json({...hookupStatus})
+            return res.status(200).json({ ...hookupStatus })
         } catch (error: any) {
             console.log(error.message)
-            res.status(500).json({message: "Internal Server error"})
+            res.status(500).json({ message: "Internal Server error" })
         }
     }
 
@@ -35,13 +35,13 @@ export default class SettingsController {
         try {
             const changePassword = await SettingsService.ChangePassword(req.body, req.user!)
             if (changePassword.error) {
-                res.status(201).json({message: changePassword.message, error: true, status: false})
+                res.status(201).json({ message: changePassword.message, error: true, status: false })
                 return
             }
-            return res.status(200).json({message: changePassword.message, error: false, status: true})
+            return res.status(200).json({ message: changePassword.message, error: false, status: true })
         } catch (error: any) {
             console.log(error.message)
-            res.status(500).json({message: "Internal Server error"})
+            res.status(500).json({ message: "Internal Server error" })
         }
     }
 
@@ -49,13 +49,13 @@ export default class SettingsController {
         try {
             const setMessagePrice = await SettingsService.SetMessagePrice(req.body, req.user as AuthUser)
             if (setMessagePrice.error) {
-                res.status(201).json({...setMessagePrice})
+                res.status(201).json({ ...setMessagePrice })
                 return
             }
-            return res.status(200).json({...setMessagePrice})
+            return res.status(200).json({ ...setMessagePrice })
         } catch (error: any) {
             console.log(error.message)
-            res.status(500).json({message: "Internal Server error"})
+            res.status(500).json({ message: "Internal Server error" })
         }
     }
 
@@ -67,15 +67,15 @@ export default class SettingsController {
 
             console.log(checkUsernameAvailability)
 
-            if(checkUsernameAvailability.error){
-                res.status(401).json(checkUsernameAvailability)
+            if (checkUsernameAvailability.error) {
+                res.status(400).json(checkUsernameAvailability)
             }
 
             return res.status(200).json(checkUsernameAvailability)
 
         } catch (error: any) {
             console.log(error.message)
-            res.status(500).json({message: "Internal Server error"})
+            res.status(500).json({ message: "Internal Server error" })
         }
     }
 }

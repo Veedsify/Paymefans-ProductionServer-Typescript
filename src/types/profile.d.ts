@@ -1,3 +1,5 @@
+import { AuthUser } from "./user";
+
 export type ProfileServiceResponse = {
       message: string;
       status: boolean;
@@ -51,4 +53,26 @@ export type ProfileUpdateInfo = {
       bio: string;
       website: string;
       username: string;
+}
+
+
+export type ProfileStatsProps = {
+      user: AuthUser;
+      type: "followers" | "subscribers" | "following";
+      limit: number;
+      cursor: number | null;
+      query: string;
+}
+
+export type ProfileStatsResponse = {
+      error: boolean;
+      message: string;
+      data: any;
+      hasMore: boolean;
+      nextCursor: number | null
+}
+
+export interface ProfileDataItem {
+      id: number;
+      [key: string]: any; // Extend with actual fields
 }

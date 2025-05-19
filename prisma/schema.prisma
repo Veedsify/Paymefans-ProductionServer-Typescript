@@ -103,6 +103,8 @@ model User {
   Tag                       Tag[]
   SupportTickets            SupportTickets[]
   SupportTicketReplies      SupportTicketReplies[]
+  Followers                 Follow[]                    @relation("Followers")
+  UserSubscribers           Subscribers[]               @relation("Subscribers")
 }
 
 model Participants {
@@ -365,6 +367,7 @@ model Follow {
   created_at  DateTime @default(now())
   updated_at  DateTime @updatedAt
   users       User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  followers   User     @relation("Followers", fields: [follower_id], references: [id], onDelete: Cascade)
 
   @@index([user_id])
 }
@@ -377,6 +380,7 @@ model Subscribers {
   created_at    DateTime @default(now())
   updated_at    DateTime @updatedAt
   user          User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  subscriber    User     @relation("Subscribers", fields: [subscriber_id], references: [id], onDelete: Cascade)
 
   @@index([user_id])
 }
@@ -752,7 +756,7 @@ model UserBanks {
   bank_id        String
   bank_name      String
   account_name   String
-  account_number String  
+  account_number String
   bank_type      String   @default("nuban")
   routing_number String?
   swift_code     String?

@@ -7,14 +7,14 @@ export default async function AdminMiddleware(req: Request, res: Response, next:
     try {
         if (!req.headers) {
             return res
-                .status(401)
+                .status(400)
                 .json({ message: "Authorization token is missing", status: false });
         }
 
         const token = req.headers.authorization?.split(" ")[1];
 
         if (!token) {
-            return res.status(401).json({ message: "No token found", status: false });
+            return res.status(400).json({ message: "No token found", status: false });
         }
 
         if (!process.env.JWT_SECRET) {
@@ -29,6 +29,6 @@ export default async function AdminMiddleware(req: Request, res: Response, next:
         req.user = decoded;
         next();
     } catch (error) {
-        return res.status(401).json({ message: "Unauthorized", status: false });
+        return res.status(400).json({ message: "Unauthorized", status: false });
     }
 };

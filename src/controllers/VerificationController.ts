@@ -20,7 +20,7 @@ export default class VerificationController {
             });
           if (startVerification.error) {
             return res
-              .status(401)
+              .status(400)
               .json({ error: true, message: startVerification.message });
           }
           return res.status(200).json({
@@ -30,7 +30,7 @@ export default class VerificationController {
           });
         default:
           return res
-            .status(401)
+            .status(400)
             .json({ error: true, message: "Invalid action" });
       }
     } catch (error: any) {
@@ -96,13 +96,13 @@ export default class VerificationController {
         });
 
       if (processVerification.error) {
-        return res.status(401).json(processVerification);
+        return res.status(400).json(processVerification);
       }
 
       const verification = processVerification.verification;
       if (!verification) {
         res
-          .status(401)
+          .status(400)
           .json({ error: true, message: "Verification not found" });
         return;
       }
@@ -125,7 +125,7 @@ export default class VerificationController {
       );
 
       if (!processVerification || !ProcessVerification.id) {
-        return res.status(401).json({
+        return res.status(400).json({
           error: true,
           token: token,
           message: "An Error occurred while processing the verification",
@@ -151,7 +151,7 @@ export default class VerificationController {
         token,
       });
       if (verifyToken.error) {
-        return res.status(401).json(verifyToken);
+        return res.status(400).json(verifyToken);
       }
       return res.status(200).json(verifyToken);
     } catch (error: any) {

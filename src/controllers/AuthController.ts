@@ -38,7 +38,7 @@ export default class AuthController {
 
     if (!CheckForUsername.status) {
       console.log(CheckForUsername);
-      return res.status(401).json(CheckForUsername);
+      return res.status(400).json(CheckForUsername);
     }
 
     return res.status(200).json(CheckForUsername);
@@ -87,7 +87,7 @@ export default class AuthController {
     try {
       const user = await UserService.RetrieveUser(req?.user?.id as number);
       if (user.status === false) {
-        return res.status(401).json(user);
+        return res.status(400).json(user);
       }
       return res.status(200).json(user);
     } catch (error: any) {
@@ -108,7 +108,7 @@ export default class AuthController {
       );
 
       if (user.error) {
-        return res.status(401).json(user);
+        return res.status(400).json(user);
       }
 
       return res.status(200).json(user);
@@ -126,7 +126,7 @@ export default class AuthController {
       const user = await UserService.VerifyTwoFactorAuth(code);
 
       if (user.error) {
-        return res.status(401).json(user);
+        return res.status(400).json(user);
       }
 
       return res.status(200).json(user);
