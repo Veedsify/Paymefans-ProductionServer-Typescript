@@ -25,7 +25,7 @@ class ProfileService {
                 return { message: "User not found", status: false, user: undefined };
             }
             if (cachedUser) {
-                return { message: "User found", status: true, user: JSON.parse(cachedUser) };
+                return JSON.parse(cachedUser);
             }
             const user_name = username.replace(/%40/g, "@");
             const user = await query.user.findFirst({
@@ -85,7 +85,7 @@ class ProfileService {
                     followsYou: !!theyFollowMe,
                 }
             };
-            await redis.set(cacheKey, JSON.stringify(response), "EX", 60);
+            await redis.set(cacheKey, JSON.stringify(response), "EX", 30);
             return response
         } catch (error: any) {
             throw new Error(error.message)
@@ -295,8 +295,12 @@ class ProfileService {
         query: searchQuery,
     }: ProfileStatsProps): Promise<ProfileStatsResponse> {
         const count = type === "followers"
-            ? user?.total_followers : type === "following"
-                ? user?.total_following : user?.total_subscribers;
+            ? user?.total_followers
+            : type === "following"
+                ? user?.total_following
+                : user?.total_subscribers;
+
+
         if (!user?.id) {
             return {
                 error: true,
@@ -308,14 +312,8 @@ class ProfileService {
             };
         }
         // Compose a unique cache key (watch out for JSON.stringify issues if needed)
-        const cacheKey = `profilestats:${type}:${user.id}:${searchQuery || ""}:${cursor || ""}:${limit}`;
+
         try {
-            // Get from Redis(returns string | null)
-            const cachedRaw = await redis.get(cacheKey);
-            if (cachedRaw) {
-                const cached: ProfileStatsResponse = JSON.parse(cachedRaw);
-                return cached;
-            }
             // Build and run the query (type safe)
             const { model, queryArgs } = await this.getProfileQueryArgs({
                 type,
@@ -377,7 +375,6 @@ class ProfileService {
                 nextCursor: cursorId,
             };
             // Cache for 60 seconds (EX = expiry in seconds)
-            await redis.set(cacheKey, JSON.stringify(result), "EX", 60);
             return result;
         } catch (error: any) {
             console.error("Error fetching profile stats:", error);
