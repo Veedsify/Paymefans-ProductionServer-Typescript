@@ -7,7 +7,8 @@ class ProfileController {
         try {
             const body = req.body
             const authUserId = req.user?.id as number
-            const user = await ProfileService.Profile(body.username, authUserId)
+            const username = body.username as string
+            const user = await ProfileService.Profile(username, authUserId)
             res.json(user)
         } catch (error) {
             console.error('Profile error:', error)
@@ -59,6 +60,21 @@ class ProfileController {
                 error: true,
                 message: error.message,
             })
+        }
+    }
+
+    // Follow/Unfollow User
+    static async FollowUnfollowUser(req: Request, res: Response): Promise<any> {
+        try {
+            const user = await ProfileService.FollowUnfollowUser(
+                req.user!.id,
+                req.params.action as 'follow' | 'unfollow',
+                Number(req.params.userId) as number,
+            )
+            res.status(200).json(user)
+        } catch (error) {
+            console.error('Follow/Unfollow error:', error)
+            res.status(500).json({ error: 'Error following/unfollowing user' })
         }
     }
 }

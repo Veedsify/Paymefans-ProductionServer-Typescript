@@ -122,11 +122,15 @@ export default class PostController {
   static async GetUserPostByID(req: Request, res: Response): Promise<any> {
     try {
       const UserPost = await PostService.GetUserPostByID({
-        userId: req.params.userId as string,
+        userId: parseInt(req.params.userId) as number,
         page: req.query.page as string,
         limit: req.query.limit as string,
       });
-      console.log(UserPost);
+
+      if (UserPost?.error) {
+        return res.status(400).json({ ...UserPost });
+      }
+
       return res.status(200).json(UserPost);
     } catch (err: any) {
       console.error(err.message);
@@ -139,7 +143,7 @@ export default class PostController {
   static async GetPrivatePostByID(req: Request, res: Response): Promise<any> {
     try {
       const UserPost = await PostService.GetUserPrivatePostByID({
-        userId: req.params.userId as string,
+        userId: parseInt(req.params.userId) as number,
         page: req.query.page as string,
         limit: req.query.limit as string,
       });

@@ -13,4 +13,5 @@ profile.post("/user", Auth, ProfileController.Profile)
 profile.post("/banner/change", Auth, uploadBanner.single("banner"), ProfileController.BannerChange)
 profile.post("/update", Auth, uploadAvatar.single("profile_image"), ProfileController.ProfileUpdate)
 profile.get("/stats/:userId/:type", Auth, ProfileController.ProfileStats)
+profile.post("/action/:action/:userId", Auth, ProfileController.FollowUnfollowUser)
 export default profile

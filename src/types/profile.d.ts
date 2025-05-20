@@ -71,6 +71,7 @@ export type ProfileStatsResponse = {
       message: string;
       data: any;
       hasMore: boolean;
+      total: number;
       nextCursor: number | null
 }
 

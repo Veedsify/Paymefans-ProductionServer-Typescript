@@ -680,6 +680,17 @@ export default class PostService {
     limit,
   }: GetUserPostByIdProps): Promise<GetUserPostByIdResponse> {
     try {
+
+      if (!userId || isNaN(Number(userId))) {
+        return {
+          error: true,
+          status: false,
+          message: "Valid User ID is required",
+          data: [],
+          hasMore: false,
+        };
+      }
+
       // Parse limit to an integer or default to 5 if not provided
       const parsedLimit = limit ? parseInt(limit, 10) : 5;
       const validLimit =
@@ -688,10 +699,11 @@ export default class PostService {
       const parsedPage = page ? parseInt(page, 10) : 1;
       const validPage =
         Number.isNaN(parsedPage) || parsedPage <= 0 ? 1 : parsedPage;
-
+      // Convert userId to number
+      const parsedUserId = Number(userId);
       let posts = await query.post.findMany({
         where: {
-          user_id: Number(userId),
+          user_id: parsedUserId,
           post_status: "approved",
           NOT: {
             post_audience: "private",
@@ -767,6 +779,7 @@ export default class PostService {
       });
       const resolvedPosts = await Promise.all(postsChecked);
       return {
+        error: false,
         status: true,
         message: "Posts retrieved successfully",
         data: resolvedPosts,
@@ -868,6 +881,7 @@ export default class PostService {
       });
       const resolvedPosts = await Promise.all(postsChecked);
       return {
+        error: false,
         status: true,
         message: "Posts retrieved successfully",
         data: resolvedPosts,

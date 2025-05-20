@@ -169,7 +169,7 @@ export type GetMyPostResponse = GetMyPostSuccessResponse;
  * Props for fetching posts by user ID
  */
 export type GetUserPostByIdProps = {
-  userId: string;
+  userId: number;
   page: string;
   limit: string;
 };
@@ -205,6 +205,7 @@ interface GetSinglePost {
  * Response for fetching posts by user ID
  */
 export type GetUserPostByIdResponse = {
+  error: boolean;
   status: boolean;
   message: string;
   data: GetSinglePost[];
