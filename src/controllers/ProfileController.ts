@@ -1,5 +1,6 @@
 import type { Request, Response } from 'express'
 import ProfileService from '@services/ProfileService'
+import { AuthUser } from 'types/user'
 
 class ProfileController {
     // Load Profile
@@ -42,7 +43,7 @@ class ProfileController {
     static async ProfileStats(req: Request, res: Response): Promise<any> {
         try {
             const stats = await ProfileService.ProfileStats({
-                user: req.user!,
+                user: req.user as AuthUser,
                 type: req.params.type as 'followers' | 'subscribers' | 'following',
                 limit: Number(req.query.limit) as number,
                 cursor: Number(req.query.cursor as string) as number,

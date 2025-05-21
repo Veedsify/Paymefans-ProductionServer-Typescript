@@ -126,26 +126,16 @@ class ProfileService {
         const file = req.file; // Use Multer's file object
         let url = "";
         if (!file) {
-            await this.ProfileUpdateInfo(req.body, user?.user_id!);
+            const updateProfile = await this.ProfileUpdateInfo(req.body, user?.user_id!);
+            if (updateProfile.error) {
+                return { message: updateProfile.message, status: false, url: "" };
+            }
             return { message: "Profile updated", status: true, url: "" };
         }
+
+        let AvatarUrl = "";
         const SaveAvatarToDb = async (AvatarUrl: string) => {
             url = AvatarUrl;
-            await query.user.update({
-                where: {
-                    id: user?.id,
-                },
-                data: {
-                    profile_image: AvatarUrl,
-                },
-            });
-            // Update comments avatar
-            await UpdateAvatarQueue.add("UpdateAvatarQueue", { userId: user?.user_id, avatarUrl: AvatarUrl }, {
-                attempts: 3,
-                backoff: 5000,
-                removeOnComplete: true,
-            })
-            await ProfileService.ProfileUpdateInfo(req.body, user?.user_id!);
         };
         const options: UploadOptions = {
             file: file!,
@@ -158,16 +148,52 @@ class ProfileService {
             format: "webp",
             quality: 100,
         };
+        const updateProfile = await ProfileService.ProfileUpdateInfo(req.body, user?.user_id!);
+        if (updateProfile.error) {
+            return { message: updateProfile.message, status: false, url: "" };
+        }
+        await query.user.update({
+            where: {
+                id: user?.id,
+            },
+            data: {
+                profile_image: AvatarUrl ?? "",
+            },
+        });
+        // Update comments avatar
+        await UpdateAvatarQueue.add("UpdateAvatarQueue", { userId: user?.user_id, avatarUrl: AvatarUrl }, {
+            attempts: 3,
+            backoff: 5000,
+            removeOnComplete: true,
+        })
+
         await UploadImageToS3(options);
         return { message: "Avatar updated", status: true, url };
     }
     // Update Profile Info
     static async ProfileUpdateInfo(
-        { name, location, bio, website, username }: ProfileUpdateInfo,
+        { name, location, bio, website, username, instagram,
+            twitter,
+            facebook,
+            tiktok,
+            youtube,
+            snapchat,
+            telegram }: ProfileUpdateInfo,
         userId: string
     ) {
+
+        const user = await query.user.findFirst({
+            where: {
+                username: username,
+            }
+        });
+
+        if (user && user.id !== Number(userId)) {
+            return { error: true, message: "Username already exists" };
+        }
+
         try {
-            const updateUser = await query.user.update({
+            await query.user.update({
                 where: {
                     user_id: userId,
                 },
@@ -177,13 +203,27 @@ class ProfileService {
                     bio: bio,
                     username: username,
                     website: website,
+                    Settings: {
+                        update: {
+                            instagram_url: instagram ?? null,
+                            twitter_url: twitter ?? null,
+                            facebook_url: facebook ?? null,
+                            snapchat_url: snapchat ?? null,
+                            tiktok_url: tiktok ?? null,
+                            telegram_url: telegram ?? null,
+                            youtube_url: youtube ?? null,
+                        }
+                    }
                 },
             });
             query.$disconnect();
-            return !!updateUser;
+            return {
+                error: false,
+                message: "Profile updated successfully",
+            };
         } catch (err) {
             console.log(err);
-            return false;
+            return { error: true, message: "Error updating profile" };
         }
     }
     static async getProfileQueryArgs({
@@ -294,19 +334,43 @@ class ProfileService {
         cursor,
         query: searchQuery,
     }: ProfileStatsProps): Promise<ProfileStatsResponse> {
-        const count = type === "followers"
-            ? user?.total_followers
-            : type === "following"
-                ? user?.total_following
-                : user?.total_subscribers;
+        const authUser = await query.user.findFirst({
+            where: {
+                id: user.id,
+            },
+            select: {
+                id: true,
+                total_followers: true,
+                total_following: true,
+                total_subscribers: true,
+            },
+        });
 
+        if (!authUser) {
+            return {
+                error: true,
+                message: "Invalid user",
+                data: [],
+                total: 0,
+                hasMore: false,
+                nextCursor: 0,
+            };
+        }
+
+        const count = type === "followers"
+            ? authUser?.total_followers
+            : type === "following"
+                ? authUser?.total_following
+                : authUser?.total_subscribers;
+
+        console.log(user?.total_followers, user?.total_following, user?.total_subscribers);
 
         if (!user?.id) {
             return {
                 error: true,
                 message: "Invalid user",
                 data: [],
-                total: count,
+                total: count || 0,
                 hasMore: false,
                 nextCursor: 0,
             };
@@ -328,7 +392,7 @@ class ProfileService {
                     error: false,
                     message: "No data found",
                     data: [],
-                    total: count,
+                    total: count || 0,
                     hasMore: false,
                     nextCursor: 0,
                 };
@@ -371,7 +435,7 @@ class ProfileService {
                 message: "Data fetched successfully",
                 data: enrichedData,
                 hasMore,
-                total: count,
+                total: count || 0,
                 nextCursor: cursorId,
             };
             // Cache for 60 seconds (EX = expiry in seconds)
@@ -390,59 +454,67 @@ class ProfileService {
         try {
             const action = inputAction.toLowerCase() as "follow" | "unfollow";
             const pastTense = action === "follow" ? "followed" : "unfollowed";
+
             if (authUserId === userId) {
                 return { message: `You cannot ${action} yourself`, status: false };
             }
-            const user = await query.user.findFirst({
-                where: {
-                    id: userId,
-                },
-            });
+
+            // Ensure the user exists
+            const user = await query.user.findFirst({ where: { id: userId } });
             if (!user) {
                 return { message: "User not found", status: false };
             }
-            const updates = {
-                follow: {
-                    create: {
+
+            // Prepare DB operations
+            if (action === "follow") {
+                // Check if already following
+                const existing = await query.follow.findFirst({
+                    where: { user_id: userId, follower_id: authUserId }
+                });
+                if (existing) {
+                    return { message: "Already following this user", status: false };
+                }
+
+                await query.$transaction([
+                    query.follow.create({
                         data: {
                             user_id: userId,
                             follow_id: `FOL${GenerateUniqueId()}`,
                             follower_id: authUserId,
-                        },
-                    },
-                    delete: {
-                        where: {
-                            user_id: userId,
-                            follower_id: authUserId,
-                        },
-                    },
-                },
-                user: {
-                    increment: {
-                        follower: { total_followers: { increment: 1 } },
-                        following: { total_following: { increment: 1 } },
-                    },
-                    decrement: {
-                        follower: { total_followers: { decrement: 1 } },
-                        following: { total_following: { decrement: 1 } },
-                    },
-                },
-            };
-            const isFollow = action === "follow";
-            const operation = isFollow ? "increment" : "decrement";
-            await query.$transaction([
-                isFollow
-                    ? query.follow.create(updates.follow.create)
-                    : query.follow.deleteMany(updates.follow.delete),
-                query.user.update({
-                    where: { id: userId },
-                    data: updates.user[operation].follower,
-                }),
-                query.user.update({
-                    where: { id: authUserId },
-                    data: updates.user[operation].following,
-                }),
-            ]);
+                        }
+                    }),
+                    query.user.update({
+                        where: { id: userId },
+                        data: { total_followers: { increment: 1 } }
+                    }),
+                    query.user.update({
+                        where: { id: authUserId },
+                        data: { total_following: { increment: 1 } }
+                    })
+                ]);
+            } else {
+                // "unfollow"
+                const unfollowResult = await query.follow.deleteMany({
+                    where: { user_id: userId, follower_id: authUserId }
+                });
+
+                if (!unfollowResult.count) {
+                    return { message: "You are not following this user", status: false };
+                }
+
+                await query.$transaction([
+                    query.user.update({
+                        where: { id: userId },
+                        data: { total_followers: { decrement: 1 } }
+                    }),
+                    query.user.update({
+                        where: { id: authUserId },
+                        data: { total_following: { decrement: 1 } }
+                    })
+                ]);
+            }
+
+            // Clear relevant Redis cache
             try {
                 const stream = redis.scanStream({
                     match: `profilestats:*:${authUserId}*`,
@@ -458,10 +530,11 @@ class ProfileService {
             } catch (error) {
                 console.error('Error deleting cache keys:', error);
             }
+
             return { message: `You have ${pastTense} the user`, status: true };
         } catch (error) {
             console.error("Error following/unfollowing user:", error);
-            throw new Error("Error following/unfollowing user");
+            return { message: "Error following/unfollowing user", status: false };
         }
     }
 }

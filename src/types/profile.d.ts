@@ -55,6 +55,13 @@ export type ProfileUpdateInfo = {
       bio: string;
       website: string;
       username: string;
+      instagram?: string;
+      twitter?: string;
+      facebook?: string;
+      tiktok?: string;
+      youtube?: string;
+      snapchat?: string;
+      telegram?: string;
 }
 
 
