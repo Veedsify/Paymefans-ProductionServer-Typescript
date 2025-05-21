@@ -11,20 +11,20 @@ import type {
     SettingProfileProps,
     SettingsProfileChangeResponse
 } from "types/settings"
-import type {AuthUser} from "types/user";
-import {passwordStrength} from 'check-password-strength'
-import {CreateHashedPassword} from "@libs/HashPassword";
-import {redis} from "@libs/RedisStore";
+import type { AuthUser } from "types/user";
+import { passwordStrength } from 'check-password-strength'
+import { CreateHashedPassword } from "@libs/HashPassword";
+import { redis } from "@libs/RedisStore";
 
 export default class SettingsService {
     // SettingsProfileChange Function To Change Users Profile Data
     static async SettingsProfileChange(body: SettingProfileProps, userId: number): Promise<SettingsProfileChangeResponse> {
         try {
-            const {name, location, bio, website, email, username} = body;
+            const { name, location, bio, website, email, username } = body;
             return await query.$transaction(async (tx) => {
                 const checkEmail = await tx.user.findUnique({
                     where: {
-                        email: email,
+                        username: username,
                     },
                 });
                 if (checkEmail && checkEmail.id !== userId) {
@@ -59,10 +59,10 @@ export default class SettingsService {
 
     static async HookupStatusChange(body: HookUpStatusProps, user: AuthUser): Promise<HookupStatusChangeResponse> {
         try {
-            const {hookup} = body;
+            const { hookup } = body;
             const result = await query.$transaction(async (tx) => {
                 const changeHookupStatus = await tx.user.update({
-                    where: {id: user.id},
+                    where: { id: user.id },
                     data: {
                         Model: {
                             update: {
@@ -88,12 +88,12 @@ export default class SettingsService {
 
     static async ChangePassword(body: ChangePassWordProps, user: AuthUser): Promise<ChangePasswordResponse> {
         try {
-            const {oldPassword, newPassword} = body;
+            const { oldPassword, newPassword } = body;
 
             const result = await query.$transaction(async (tx) => {
                 const userPassword = await tx.user.findFirst({
-                    where: {user_id: user.user_id},
-                    select: {password: true},
+                    where: { user_id: user.user_id },
+                    select: { password: true },
                 });
 
                 if (!userPassword) {
@@ -124,8 +124,8 @@ export default class SettingsService {
 
                 const hashPass = await CreateHashedPassword(newPassword);
                 await tx.user.update({
-                    where: {user_id: user.user_id},
-                    data: {password: hashPass},
+                    where: { user_id: user.user_id },
+                    data: { password: hashPass },
                 });
 
                 return {
@@ -143,12 +143,12 @@ export default class SettingsService {
     }
 
     static async SetMessagePrice(body: SetMessagePriceProps, user: AuthUser): Promise<SetMessagePriceResponse> {
-        const {price_per_message, enable_free_message, subscription_price} = body;
+        const { price_per_message, enable_free_message, subscription_price } = body;
 
         try {
             const result = await query.$transaction(async (tx) => {
                 await tx.settings.update({
-                    where: {user_id: user.id},
+                    where: { user_id: user.id },
                     data: {
                         subscription_price: parseFloat(subscription_price),
                         price_per_message: parseFloat(price_per_message),
@@ -160,13 +160,13 @@ export default class SettingsService {
                 const PriceKey = `price_per_message:${user.user_id}`;
                 await redis.set(PriceKey, price_per_message);
 
-                return {message: "Message price updated successfully", status: true, error: false};
+                return { message: "Message price updated successfully", status: true, error: false };
             });
 
             return result;
         } catch (error) {
             console.error(error);
-            return {message: "Error updating message price", status: false, error: true};
+            return { message: "Error updating message price", status: false, error: true };
         }
     }
 
@@ -174,7 +174,7 @@ export default class SettingsService {
     static async CheckUserName(username: string, _: AuthUser): Promise<CheckUserNameResponse> {
         try {
 
-            if(!username){
+            if (!username) {
                 return {
                     status: false,
                     error: true,
@@ -185,11 +185,14 @@ export default class SettingsService {
 
             const checkUsername = await query.user.findFirst({
                 where: {
-                    username: username,
+                    username: {
+                        equals: username,
+                        mode: "insensitive",
+                    }
                 },
             });
 
-            if(!checkUsername){
+            if (!checkUsername) {
                 return {
                     status: true,
                     error: false,

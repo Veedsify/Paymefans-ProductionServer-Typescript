@@ -124,106 +124,179 @@ class ProfileService {
     static async ProfileUpdate(req: Request): Promise<ProfileUpdateResponse> {
         const { user } = req;
         const file = req.file; // Use Multer's file object
-        let url = "";
-        if (!file) {
-            const updateProfile = await this.ProfileUpdateInfo(req.body, user?.user_id!);
-            if (updateProfile.error) {
-                return { message: updateProfile.message, status: false, url: "" };
-            }
-            return { message: "Profile updated", status: true, url: "" };
-        }
 
-        let AvatarUrl = "";
-        const SaveAvatarToDb = async (AvatarUrl: string) => {
-            url = AvatarUrl;
-        };
-        const options: UploadOptions = {
-            file: file!,
-            folder: "avatars",
-            contentType: "image/jpeg",
-            resize: { width: 200, height: 200, fit: "cover", position: "center" },
-            deleteLocal: true,
-            saveToDb: true,
-            onUploadComplete: (AvatarUrl: string) => SaveAvatarToDb(AvatarUrl),
-            format: "webp",
-            quality: 100,
-        };
-        const updateProfile = await ProfileService.ProfileUpdateInfo(req.body, user?.user_id!);
-        if (updateProfile.error) {
-            return { message: updateProfile.message, status: false, url: "" };
-        }
-        await query.user.update({
-            where: {
-                id: user?.id,
-            },
-            data: {
-                profile_image: AvatarUrl ?? "",
-            },
-        });
-        // Update comments avatar
-        await UpdateAvatarQueue.add("UpdateAvatarQueue", { userId: user?.user_id, avatarUrl: AvatarUrl }, {
-            attempts: 3,
-            backoff: 5000,
-            removeOnComplete: true,
-        })
-
-        await UploadImageToS3(options);
-        return { message: "Avatar updated", status: true, url };
-    }
-    // Update Profile Info
-    static async ProfileUpdateInfo(
-        { name, location, bio, website, username, instagram,
-            twitter,
-            facebook,
-            tiktok,
-            youtube,
-            snapchat,
-            telegram }: ProfileUpdateInfo,
-        userId: string
-    ) {
-
-        const user = await query.user.findFirst({
-            where: {
-                username: username,
-            }
-        });
-
-        if (user && user.id !== Number(userId)) {
-            return { error: true, message: "Username already exists" };
+        // Check if user exists
+        if (!user?.id) {
+            return { message: "User not authenticated", status: false, url: "" };
         }
 
         try {
+            // Handle profile update without file
+            if (!file) {
+                const updateProfile = await this.ProfileUpdateInfo(req.body, user);
+                return {
+                    message: updateProfile.error ? updateProfile.message : "Profile updated",
+                    status: !updateProfile.error,
+                    url: ""
+                };
+            }
+
+            let AvatarUrl = "";
+
+            const options: UploadOptions = {
+                file: file,
+                folder: "avatars",
+                contentType: "image/jpeg",
+                resize: { width: 200, height: 200, fit: "cover", position: "center" },
+                deleteLocal: true,
+                saveToDb: true,
+                onUploadComplete: (url: string) => {
+                    AvatarUrl = url;
+                },
+                format: "webp",
+                quality: 100,
+            };
+
+            // Upload image to S3
+            await UploadImageToS3(options);
+
+            // Check if AvatarUrl was set by callback
+            if (!AvatarUrl) {
+                return { message: "Failed to upload image", status: false, url: "" };
+            }
+
+            // Update profile info
+            const updateProfile = await this.ProfileUpdateInfo(req.body, user);
+            if (updateProfile.error) {
+                return { message: updateProfile.message, status: false, url: "" };
+            }
+
+            // Update user profile image in database
             await query.user.update({
                 where: {
-                    user_id: userId,
+                    id: user.id,
                 },
                 data: {
-                    name: name,
-                    location: location,
-                    bio: bio,
-                    username: username,
-                    website: website,
-                    Settings: {
-                        update: {
-                            instagram_url: instagram ?? null,
-                            twitter_url: twitter ?? null,
-                            facebook_url: facebook ?? null,
-                            snapchat_url: snapchat ?? null,
-                            tiktok_url: tiktok ?? null,
-                            telegram_url: telegram ?? null,
-                            youtube_url: youtube ?? null,
-                        }
-                    }
+                    profile_image: AvatarUrl || "",
                 },
             });
-            query.$disconnect();
-            return {
-                error: false,
-                message: "Profile updated successfully",
-            };
-        } catch (err) {
-            console.log(err);
-            return { error: true, message: "Error updating profile" };
+
+            // Add to queue for updating comments avatar
+            await UpdateAvatarQueue.add("UpdateAvatarQueue", {
+                userId: user.user_id,
+                avatarUrl: AvatarUrl
+            }, {
+                attempts: 3,
+                backoff: { type: 'fixed', delay: 5000 },
+                removeOnComplete: true,
+            });
+
+            return { message: "Avatar updated", status: true, url: AvatarUrl };
+        } catch (error) {
+            console.error("Profile update error:", error);
+            return { message: "Failed to update profile", status: false, url: "" };
+        }
+    }
+    // Update Profile Info
+    static async ProfileUpdateInfo(
+        { name, location, bio, website, username: bodyUsername, instagram, twitter, facebook, tiktok, youtube, snapchat, telegram }: ProfileUpdateInfo,
+        user: AuthUser
+    ): Promise<{ error: boolean; message: string }> {
+        let username = bodyUsername?.trim();
+        if (!username) {
+            username = user.username
+        }
+        // Validate inputs
+        if (!user.id || isNaN(user.id)) {
+            return { error: true, message: "Invalid user ID" };
+        }
+
+        if (!username || username.trim().length < 3) {
+            return { error: true, message: "Username must be at least 3 characters long" };
+        }
+
+        // Validate social media URLs (basic check)
+        const socialMediaFields = { instagram, twitter, facebook, tiktok, youtube, snapchat, telegram };
+        for (const [platform, url] of Object.entries(socialMediaFields)) {
+            if (url && !this.isValidUrl(url)) {
+                return { error: true, message: `Invalid ${platform} URL` };
+            }
+        }
+
+        try {
+            // Check for username uniqueness
+            const existingUser = await query.user.findFirst({
+                where: {
+                    username: {
+                        equals: username,
+                        mode: 'insensitive', // Case-insensitive username check
+                    },
+                    NOT: {
+                        id: user.id,
+                    },
+                },
+            });
+
+            if (existingUser) {
+                return { error: true, message: "Username already exists" };
+            }
+
+            // Update user and settings in a transaction for consistency
+            // Build user update data with only provided fields
+            const userUpdateData: any = {};
+            if (name !== undefined) userUpdateData.name = name?.trim() || "";
+            if (location !== undefined) userUpdateData.location = location?.trim() || null;
+            if (bio !== undefined) userUpdateData.bio = bio?.trim() || null;
+            if (username !== undefined) userUpdateData.username = username.trim();
+            if (website !== undefined) userUpdateData.website = website?.trim() || null;
+
+            // Build settings update data with only provided fields
+            const settingsUpdateData: any = {};
+            if (instagram !== undefined) settingsUpdateData.instagram_url = instagram?.trim() || null;
+            if (twitter !== undefined) settingsUpdateData.twitter_url = twitter?.trim() || null;
+            if (facebook !== undefined) settingsUpdateData.facebook_url = facebook?.trim() || null;
+            if (tiktok !== undefined) settingsUpdateData.tiktok_url = tiktok?.trim() || null;
+            if (youtube !== undefined) settingsUpdateData.youtube_url = youtube?.trim() || null;
+            if (snapchat !== undefined) settingsUpdateData.snapchat_url = snapchat?.trim() || null;
+            if (telegram !== undefined) settingsUpdateData.telegram_url = telegram?.trim() || null;
+
+            // Only update if there are fields to update
+            const queries = [];
+            if (Object.keys(userUpdateData).length > 0) {
+                queries.push(
+                    query.user.update({
+                        where: { id: user.id },
+                        data: userUpdateData,
+                    })
+                );
+            }
+            if (Object.keys(settingsUpdateData).length > 0) {
+                queries.push(
+                    query.settings.update({
+                        where: { id: user.id },
+                        data: settingsUpdateData,
+                    })
+                );
+            }
+            if (queries.length > 0) {
+                await query.$transaction(queries);
+            }
+
+            return { error: false, message: "Profile updated successfully" };
+        } catch (error: any) {
+            console.error("ProfileUpdateInfo error:", error);
+            return { error: true, message: `Error updating profile: ${error.message || 'Unknown error'}` };
+        }
+    }
+
+    // Helper function to validate URLs
+    static isValidUrl(url: string | undefined): boolean {
+        if (!url) return true; // Allow empty URLs
+        try {
+            new URL(url);
+            return true;
+        } catch {
+            return false;
         }
     }
     static async getProfileQueryArgs({
