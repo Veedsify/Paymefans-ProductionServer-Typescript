@@ -171,7 +171,7 @@ export default class SettingsService {
     }
 
     // Check Username Before Change
-    static async CheckUserName(username: string, _: AuthUser): Promise<CheckUserNameResponse> {
+    static async CheckUserName(username: string, user: AuthUser): Promise<CheckUserNameResponse> {
         try {
 
             if (!username) {
@@ -190,9 +190,21 @@ export default class SettingsService {
                         mode: "insensitive",
                     }
                 },
+                select: {
+                    username: true
+                }
             });
 
             if (!checkUsername) {
+                return {
+                    status: true,
+                    error: false,
+                    username: username,
+                    message: "Username is available"
+                }
+            }
+
+            if(checkUsername.username === user?.username){
                 return {
                     status: true,
                     error: false,

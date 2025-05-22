@@ -15,6 +15,8 @@ import { UpdateAvatarQueue } from "@jobs/comments/UpdateCommentsAvatar";
 import { redis } from "@libs/RedisStore";
 import { AuthUser } from "types/user";
 import { GenerateUniqueId } from "@utils/GenerateUniqueId";
+import { UserNotificationQueue } from "@jobs/notifications/UserNotificaton";
+import getSingleName from "@utils/GetSingleName";
 class ProfileService {
     // Get Profile
     static async Profile(username: string, authUserId: number): Promise<ProfileServiceResponse> {
@@ -56,6 +58,18 @@ class ProfileService {
                     profile_image: true,
                     profile_banner: true,
                     bio: true,
+                    created_at: true,
+                    Settings: {
+                        select: {
+                            telegram_url: true,
+                            facebook_url: true,
+                            instagram_url: true,
+                            twitter_url: true,
+                            tiktok_url: true,
+                            youtube_url: true,
+                            snapchat_url: true,
+                        }
+                    },
                     Subscribers: {
                         select: {
                             subscriber_id: true,
@@ -520,7 +534,7 @@ class ProfileService {
     }
     // Follow/Unfollow User
     static async FollowUnfollowUser(
-        authUserId: number,
+        authUser: AuthUser,
         inputAction: "follow" | "unfollow",
         userId: number,
     ): Promise<{ message: string; status: boolean }> {
@@ -528,7 +542,7 @@ class ProfileService {
             const action = inputAction.toLowerCase() as "follow" | "unfollow";
             const pastTense = action === "follow" ? "followed" : "unfollowed";
 
-            if (authUserId === userId) {
+            if (authUser.id === userId) {
                 return { message: `You cannot ${action} yourself`, status: false };
             }
 
@@ -542,9 +556,17 @@ class ProfileService {
             if (action === "follow") {
                 // Check if already following
                 const existing = await query.follow.findFirst({
-                    where: { user_id: userId, follower_id: authUserId }
+                    where: { user_id: userId, follower_id: authUser.id }
                 });
                 if (existing) {
+                    await UserNotificationQueue.add("new-follow-notification", {
+                        user_id: userId,
+                        url: `/${authUser?.username}`,
+                        message: `Hi ${getSingleName(user.name)}, <strong><a href="/${authUser?.username}">${authUser?.username}</a> </strong> has just followed you`,
+                        action: "follow",
+                        notification_id: `NTF${GenerateUniqueId()}`,
+                        read: false,
+                    })
                     return { message: "Already following this user", status: false };
                 }
 
@@ -553,7 +575,7 @@ class ProfileService {
                         data: {
                             user_id: userId,
                             follow_id: `FOL${GenerateUniqueId()}`,
-                            follower_id: authUserId,
+                            follower_id: authUser.id,
                         }
                     }),
                     query.user.update({
@@ -561,14 +583,22 @@ class ProfileService {
                         data: { total_followers: { increment: 1 } }
                     }),
                     query.user.update({
-                        where: { id: authUserId },
+                        where: { id: authUser.id },
                         data: { total_following: { increment: 1 } }
-                    })
+                    }),
                 ]);
+                await UserNotificationQueue.add("new-follow-notification", {
+                    user_id: userId,
+                    url: `/${authUser?.username}`,
+                    message: `Hi ${getSingleName(user.name)}, <strong><a href="/${authUser?.username}">${authUser?.username}</a> </strong> has just followed you`,
+                    action: "follow",
+                    notification_id: `NTF${GenerateUniqueId()}`,
+                    read: false,
+                })
             } else {
                 // "unfollow"
                 const unfollowResult = await query.follow.deleteMany({
-                    where: { user_id: userId, follower_id: authUserId }
+                    where: { user_id: userId, follower_id: authUser.id }
                 });
 
                 if (!unfollowResult.count) {
@@ -581,7 +611,7 @@ class ProfileService {
                         data: { total_followers: { decrement: 1 } }
                     }),
                     query.user.update({
-                        where: { id: authUserId },
+                        where: { id: authUser.id },
                         data: { total_following: { decrement: 1 } }
                     })
                 ]);
@@ -590,7 +620,7 @@ class ProfileService {
             // Clear relevant Redis cache
             try {
                 const stream = redis.scanStream({
-                    match: `profilestats:*:${authUserId}*`,
+                    match: `profilestats:*:${authUser.id}*`,
                     count: 100,
                 });
                 const keysToDelete: string[] = [];

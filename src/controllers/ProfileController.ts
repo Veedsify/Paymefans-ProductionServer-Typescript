@@ -68,7 +68,7 @@ class ProfileController {
     static async FollowUnfollowUser(req: Request, res: Response): Promise<any> {
         try {
             const user = await ProfileService.FollowUnfollowUser(
-                req.user!.id,
+                req.user!,
                 req.params.action as 'follow' | 'unfollow',
                 Number(req.params.userId) as number,
             )

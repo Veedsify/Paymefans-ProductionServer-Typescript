@@ -105,6 +105,8 @@ model User {
   SupportTicketReplies      SupportTicketReplies[]
   Followers                 Follow[]                    @relation("Followers")
   UserSubscribers           Subscribers[]               @relation("Subscribers")
+  Gifter                    PostGift[]                  @relation("Gifter")
+  GiftReciver               PostGift[]                  @relation("GiftReceiver")
 }
 
 model Participants {
@@ -1109,25 +1111,25 @@ model Configurations {
   app_url                               String   @map("app_url")
   app_description                       String   @map("app_description")
   app_logo                              String   @map("app_logo")
-  // Currency Settings 
+  // Currency Settings
   default_currency                      String   @default("USD") @map("default_currency")
   default_rate                          Float    @default(1.0) @map("default_rate")
   default_symbol                        String   @default("$") @map("default_symbol")
-  // Point Conversion Settings 
+  // Point Conversion Settings
   point_conversion_rate                 Float    @default(1.0) @map("point_conversion_rate")
   point_conversion_rate_ngn             Float    @default(1.0) @map("point_conversion_rate_ngn")
-  // Withdrawal Settings 
+  // Withdrawal Settings
   min_withdrawal_amount                 Float    @default(0.0) @map("min_withdrawal_amount")
   min_withdrawal_amount_ngn             Float    @default(0.0) @map("min_withdrawal_amount_ngn")
-  // Deposit Settings 
+  // Deposit Settings
   min_deposit_amount                    Float    @default(0.0) @map("min_deposit_amount")
   min_deposit_amount_ngn                Float    @default(0.0) @map("min_deposit_amount_ngn")
-  // Theme Settings 
+  // Theme Settings
   default_mode                          String   @default("light") @map("default_mode")
   primary_color                         String   @default("#000000") @map("primary_color")
   secondary_color                       String   @default("#FFFFFF") @map("secondary_color")
   accent_color                          String   @default("#0000FF") @map("accent_color")
-  // Pagination Settings 
+  // Pagination Settings
   home_feed_limit                       Int      @default(20) @map("home_feed_limit")
   personal_profile_limit                Int      @default(10) @map("personal_profile_limit")
   personal_media_limit                  Int      @default(10) @map("personal_media_limit")
@@ -1139,21 +1141,21 @@ model Configurations {
   other_user_repost_limit               Int      @default(10) @map("other_user_repost_limit")
   notification_limit                    Int      @default(20) @map("notification_limit")
   transaction_limit                     Int      @default(20) @map("transaction_limit")
-  // Model Search Settings 
+  // Model Search Settings
   model_search_limit                    Int      @default(20) @map("model_search_limit")
-  // Messaging Settings 
+  // Messaging Settings
   conversation_limit                    Int      @default(20) @map("conversation_limit")
   message_limit                         Int      @default(50) @map("message_limit")
-  // Group Settings 
+  // Group Settings
   group_message_limit                   Int      @default(50) @map("group_message_limit")
   group_participant_limit               Int      @default(100) @map("group_participant_limit")
   group_limit                           Int      @default(20) @map("group_limit")
-  // Hookup Settings 
+  // Hookup Settings
   hookup_enabled                        Boolean  @default(false) @map("hookup_enabled")
   hookup_page_limit                     Int      @default(20) @map("hookup_page_limit")
-  // Status Settings 
+  // Status Settings
   status_limit                          Int      @default(20) @map("status_limit")
-  // Subscription Settings 
+  // Subscription Settings
   subscription_limit                    Int      @default(20) @map("subscription_limit")
   subscribers_limit                     Int      @default(1000) @map("subscribers_limit")
   active_subscribers_limit              Int      @default(1000) @map("active_subscribers_limit")
@@ -1179,6 +1181,17 @@ model Configurations {
   updated_at                            DateTime @updatedAt @map("updated_at")
 
   @@index([app_name]) // Optimize queries filtering by app_name }
+}
+
+model PostGift {
+  id          Int      @id @default(autoincrement())
+  gifter_id   Int
+  receiver_id Int
+  post_id     Int
+  gifter      User     @relation("Gifter", fields: [gifter_id], references: [id], onDelete: Cascade)
+  receiver    User     @relation("GiftReceiver", fields: [receiver_id], references: [id], onDelete: Cascade)
+  created_at  DateTime @default(now()) @map("created_at")
+  updated_at  DateTime @updatedAt @map("updated_at")
 }
 
 // ENUMS DECLARATION
