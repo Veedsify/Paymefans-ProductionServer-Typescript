@@ -258,7 +258,8 @@ model Post {
   PostImpression   PostImpression[]
   UserMedia        UserMedia[]
 
-  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  user     User       @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  PostGift PostGift[]
 }
 
 model PostImpression {
@@ -1188,8 +1189,10 @@ model PostGift {
   gifter_id   Int
   receiver_id Int
   post_id     Int
+  points      Float    @default(0)
   gifter      User     @relation("Gifter", fields: [gifter_id], references: [id], onDelete: Cascade)
   receiver    User     @relation("GiftReceiver", fields: [receiver_id], references: [id], onDelete: Cascade)
+  post        Post     @relation(fields: [post_id], references: [id], onDelete: Cascade)
   created_at  DateTime @default(now()) @map("created_at")
   updated_at  DateTime @updatedAt @map("updated_at")
 }

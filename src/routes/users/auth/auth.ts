@@ -6,6 +6,7 @@ const auth = express.Router()
 
 // Authentication
 auth.post("/signup", AuthController.Register)
+auth.post("/signup/validate-registration-details", AuthController.ValidateRegistration)
 auth.post("/signup/username", AuthController.Username)
 auth.post("/login", AuthController.Login);
 

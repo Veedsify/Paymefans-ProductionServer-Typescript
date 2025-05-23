@@ -30,6 +30,30 @@ export default class AuthController {
     }
   }
 
+  static async ValidateRegistration(req: Request, res: Response): Promise<any> {
+    try {
+      const ValidateAccount = await RegisterService.ValidateRegistration({
+        email: req.body.email,
+        phone: req.body.phone,
+      });
+      if(!ValidateAccount.status) {
+        return res.status(400).json(ValidateAccount);
+      }
+
+      return res.status(200).json({
+        message: "Account verified successfully",
+        status: true,
+      });
+
+    } catch (error) {
+      console.log(error);
+      res.status(500).json({
+        message: "Internal server error",
+        status: false,
+      })
+    }
+  }
+
   //  Username Checker
   static async Username(req: Request, res: Response): Promise<any> {
     const CheckForUsername = await UsernameService.CheckUsername({
@@ -86,7 +110,7 @@ export default class AuthController {
   static async Retrieve(req: Request, res: Response): Promise<any> {
     try {
       const user = await UserService.RetrieveUser(req?.user?.id as number);
-      if (user.status === false) {
+      if (!user.status) {
         return res.status(400).json(user);
       }
       return res.status(200).json(user);
