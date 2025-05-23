@@ -1,5 +1,4 @@
 import type { AuthUser } from "types/user";
-import RateConversionService from "./RateConversionService";
 import type {
   ModelsSearchResponse,
   GetModelAvailableForHookupResponse,
@@ -13,6 +12,8 @@ import type {
   GetModelsResponse,
   Hookups,
   CreateStreamProps,
+  ValidateModelPaymentProps,
+  ValidateModelPaymentResponse,
 } from "../types/models";
 
 const apiKey = process.env.GETSTREAM_API_KEY as string;
@@ -23,8 +24,6 @@ const client = new StreamClient(apiKey, secret, { timeout: 6000 });
 import query from "@utils/prisma";
 import { GenerateUniqueId } from "@utils/GenerateUniqueId";
 import { redis } from "@libs/RedisStore";
-import EmailService from "./EmailService";
-import GetSinglename from "@utils/GetSingleName";
 import { PaystackService } from "./PaystackService";
 
 export default class ModelService {
@@ -228,6 +227,7 @@ export default class ModelService {
         return {
           error: true,
           status: false,
+          errorTitle: "Already a model",
           message: `You are already signed up as a model`,
         };
       }
@@ -238,6 +238,7 @@ export default class ModelService {
       if (dateOfBirth >= currentDate) {
         return {
           error: true,
+          errorTitle: "Invalid date of birth",
           status: false,
           message: "Invalid date of birth",
         };
@@ -247,6 +248,7 @@ export default class ModelService {
         return {
           error: true,
           status: false,
+          errorTitle: "Age restriction",
           message: "You must be 18 years and above to sign up as a model",
         };
       }
@@ -259,7 +261,7 @@ export default class ModelService {
           firstname,
           lastname,
           dob: new Date(dob),
-          gender: gender,
+          gender: String(gender).toLowerCase(),
           country,
           hookup: available === "yes",
           verification_status: false,
@@ -279,105 +281,23 @@ export default class ModelService {
       if (!signUpUserAsModel) {
         return {
           error: true,
+          errorTitle: "Error signing up",
           status: false,
           message: "An error occurred while signing you up",
         };
       }
 
-      const getUser = await query.user.findUnique({
-        where: {
-          id: user.id,
-        },
-        select: {
-          username: true,
-          name: true,
-          user_id: true,
-          email: true,
-          profile_image: true,
-          Model: true,
-          Settings: true,
-        },
-      });
-
-      try {
-        // Create A Stream Id
-        if (getUser) {
-          // await this.CreateStreamUser({
-          //     id: getUser?.user_id,
-          //     username: getUser.username,
-          //     name: getUser.name,
-          //     image: getUser.profile_image
-          // });
-          await EmailService.ModelWelcomeEmail(
-            GetSinglename(getUser.name),
-            getUser.email,
-          );
-        }
-      } catch (e) {
-        console.log(`Error creating stream user: ${e}`);
-      }
-
-      const rate = await RateConversionService.GetConversionRate(user.id, 7);
-
-      if (!rate) {
-        return {
-          error: true,
-          status: false,
-          message: "An error occurred while fetching conversion rate",
-        };
-      }
-
-      const paymentReference = GenerateUniqueId();
-
-      // Initialize a payment link
-      const paymentLink = await PaystackService.InitializePayment({
-        amount: Number(10000 * 100),
-        currency: rate.currency,
-        email: user.email,
-        reference: paymentReference,
-        callback_url: `${process.env.SERVER_ORIGINAL_URL}/api/webhooks/model-signup-callback`,
-      });
-
-      if (!paymentLink) {
-        return {
-          error: true,
-          status: false,
-          message: "An error occurred while initializing payment",
-        };
-      }
-
-      // Update the model with the payment reference
-      await query.model.update({
-        where: {
-          id: signUpUserAsModel.id,
-        },
-        data: {
-          payment_reference: paymentReference,
-          payment_status: false,
-        },
-      });
-
-      if (paymentLink.status === false) {
-        return {
-          error: true,
-          status: false,
-          message: paymentLink.message,
-        };
-      }
-
-      const { authorization_url, reference } = paymentLink.data;
-
       query.$disconnect();
       return {
+        errorTitle: "You are now a model",
         message: "You have been signed up as a model",
         status: true,
-        reference,
-        url: authorization_url,
         error: false,
       };
     } catch (e) {
       console.log(e);
       return {
+        errorTitle: "Error signing up",
         message: "An error occurred while signing you up",
         status: false,
         error: true,
@@ -409,57 +329,30 @@ export default class ModelService {
     return { newUser, create: true };
   }
 
-  // static async ValidateModelPayment(queryParams: ValidateModelPaymentProps): Promise<ValidateModelPaymentResponse> {
-  //       try {
-  //             const { reference } = queryParams;
-  //             const getUserWithRef = await query.model.findFirst({
-  //                   where: {
-  //                         payment_reference: reference
-  //                   },
-  //                   select: {
-  //                         user_id: true
-  //                   }
-  //             });
-  //             if (!getUserWithRef.user_id) {
-  //                   return {
-  //                         status: false,
-  //                         error: true,
-  //                         message: `Invalid reference`
-  //                   }
-  //             }
-  //             const updateUserAsModel = await query.model.update({
-  //                   where: {
-  //                         user_id: getUserWithRef.user_id
-  //                   },
-  //                   data: {
-  //                         verification_status: true
-  //                   }
-  //             });
+  static async ValidateModelPayment(data: ValidateModelPaymentProps): Promise<ValidateModelPaymentResponse> {
+    try {
+      const { reference } = data;
 
-  //             if (updateUserAsModel) {
-  //                   await query.user.update({
-  //                         where: {
-  //                               id: getUserWithRef.user_id
-  //                         },
-  //                         data: {
-  //                               is_model: true
-  //                         }
-  //                   })
+      const verifyPayment = await PaystackService.ValidatePayment(reference)
 
-  //                   query.$disconnect();
-  //             }
-  //             return {
-  //                   status: true,
-  //                   error: false,
-  //                   message: `Payment validated successfully`
-  //             }
-  //       } catch (err) {
-  //             console.log(err)
-  //             return {
-  //                   status: false,
-  //                   error: true,
-  //                   message: `An error occurred while validating payment`
-  //             }
-  //       }
-  // }
+      if (verifyPayment.error) {
+        return {
+          error: true,
+          status: false,
+          message: verifyPayment.message,
+          errorTitle: "Payment verification failed",
+        };
+      }
+
+      return {
+        error: false,
+        status: true,
+        message: "Payment verification successful",
+      }
+
+    } catch (err) {
+      console.log(err);
+      throw new Error("Error validating model payment");
+    }
+  }
 }

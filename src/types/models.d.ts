@@ -19,10 +19,12 @@ export interface GetModelAvailableForHookupResponse {
 }
 export interface SignupModelResponse {
       error: boolean;
+      errorTitle: string;
       message: string;
       status?: boolean;
       url?: string;
       reference?: string;
+      access_code?: string;
 }
 export interface ValidateModelPaymentResponse {
       error: boolean;
@@ -56,7 +58,16 @@ export interface CreateStreamProps {
       username: string;
       image: string | null;
 }
+
 export interface ValidateModelPaymentProps {
       reference: string;
-      trxref: string;
+      status: string;
+      user: AuthUser;
 }
+
+export interface ValidateModelPaymentResponse {
+      error: boolean;
+      message: string;
+      status?: boolean;
+      errorTitle?: string;
+} 

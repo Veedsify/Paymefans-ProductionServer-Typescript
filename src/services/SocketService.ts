@@ -8,7 +8,7 @@ import type {
 } from "types/socket";
 import MessageService from "./MessageService";
 import ConversationService from "./ConversationService";
-import _ from "lodash";
+import _, { last } from "lodash";
 import FollowerService from "./FollowerService";
 import query from "@utils/prisma";
 import NotificationService from "./NotificationService";
@@ -54,7 +54,6 @@ export default class SocketService {
   static async HandleUserInactive(username: string) {
     const userKey = `user:${username}`;
     await redis.hdel("activeUsers", userKey);
-    await this.EmitActiveUsers();
   }
 
   //  Handle user active status
@@ -65,10 +64,10 @@ export default class SocketService {
     const userData = {
       username,
       socket_id: socket.id,
+      last_active: Date.now(),
     };
     await redis.hdel("activeUsers", userKey);
     await redis.hset("activeUsers", userKey, JSON.stringify(userData));
-    await this.EmitActiveUsers();
   }
 
   // Handle join room
@@ -325,4 +324,17 @@ export default class SocketService {
     socket.join(`notifications-${userId}`);
     socket.emit(`notifications-${userId}`, notifications);
   }
+
+  // Handle Still Active
+  static async HandleStillActive(username: string, socket: Socket) {
+    if (!username) return; // don't do anything if username is falsy
+    const userKey = `user:${username}`;
+    const userData = {
+      username,
+      socket_id: socket.id,
+      last_active: Date.now(),
+    };
+    await redis.hset("activeUsers", userKey, JSON.stringify(userData));
+  }
+
 }

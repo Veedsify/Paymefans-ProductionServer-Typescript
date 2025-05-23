@@ -62,18 +62,23 @@ export default class ModelController {
         }
     }
 
-    // static async ValidateModelPayment(req: Request, res: Response): Promise<any> {
-    //       try {
-    //             const validatemodelpayment = await ModelService.ValidateModelPayment(req.body)
-    //             if (validatemodelpayment.error) {
-    //                   res.status(400).json({ message: validatemodelpayment.message })
-    //                   return
-    //             }
-    //             res.status(200).json({ ...validatemodelpayment })
-    //             return
-    //       } catch (error) {
-    //             console.error(error)
-    //             res.status(500).json({ message: "Error fetching models" })
-    //       }
-    // }
+    static async ValidateModelPayment(req: Request, res: Response): Promise<any> {
+        try {
+            const validatemodelpayment = await ModelService.ValidateModelPayment({
+                reference: req.body.reference,
+                status: req.body.status,
+                user: req.user as AuthUser,
+            })
+
+            if (validatemodelpayment.error) {
+                res.status(400).json(validatemodelpayment)
+                return
+            }
+            res.status(200).json({ ...validatemodelpayment })
+            return
+        } catch (error) {
+            console.error(error)
+            res.status(500).json({ message: "Error validating model payment" })
+        }
+    }
 }

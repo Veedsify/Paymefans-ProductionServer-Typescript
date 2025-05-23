@@ -9,14 +9,13 @@ import AppSocket from "@libs/AppSocket";
 import { RegisterCloudflareStreamWebhook } from "@libs/RegisterCloudflareStreamWebhook";
 import cors from "cors";
 import logger from "morgan";
-import cron from "node-cron";
 import ModelsRedisPubSub from "@libs/ModelsRedisPubSub";
 import IoInstance from "@libs/io";
 import HookupRedisPubSub from "@libs/HookupRedisPubSub";
 import type { Request, Response } from "express";
-import EmitActiveUsers from "@jobs/EmitActiveUsers";
 import ModelsJobs from "@jobs/ModelsJobs";
 import { connectDB } from "@utils/mongodb";
+import { activeUsersQueue, pruneInactiveUsersQueue } from "@jobs/ActiveUsers/activeUserJobs";
 
 const { ADMIN_PANEL_URL, VERIFICATION_URL, APP_URL, LIVESTREAM_PORT } =
   process.env;
@@ -51,19 +50,24 @@ app.use(
 );
 
 
-let activeUsersCron: any;
 // Instance of Socket.IO
 IoInstance.init(server).then((instance) => {
-  // Socket
-  AppSocket(instance).then();
-  // Active Users
-  activeUsersCron = cron.schedule("* * * * * *", async () => {
-    try {
-      await EmitActiveUsers(instance);
-    } catch (err) {
-      console.log(err);
-    }
+  // Emit active users to the socket
+  activeUsersQueue.add("activeUsersQueue", {}, {
+    repeat: {
+      every: 30000, // 30 seconds
+    },
+    jobId: "activeUsersJob",
   });
+  // Prunde inactive users
+  pruneInactiveUsersQueue.add("pruneInactiveUsersQueue", {}, {
+    repeat: {
+      every: 60000, // 1 minute
+    },
+    jobId: "pruneInactiveUsersJob",
+  });
+  // Socket.IO instance
+  AppSocket(instance).then();
   // Redis Model PubSub
   ModelsRedisPubSub(instance);
   // Hookup Redis PubSub
@@ -109,10 +113,6 @@ app.use((err: any, _: Request, res: Response, next: NextFunction) => {
 // Graceful shutdown
 process.on("SIGINT", () => {
   console.log("Shutting down gracefully...");
-  if (activeUsersCron) {
-    activeUsersCron.stop();
-    console.log("Active Cron Stopped");
-  }
   server.close(() => {
     console.log("Server closed.");
     process.exit(0);

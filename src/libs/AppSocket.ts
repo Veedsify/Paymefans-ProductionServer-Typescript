@@ -14,7 +14,6 @@ async function AppSocket(io: any) {
 
     const AddToUserRoom = async (data: any) => {
       userRoom = data;
-
       // Store mapping in Redis
       await redis.hset(`room:${data}`, user.userId, JSON.stringify(user));
       await redis.set(`user:${user.userId}:room`, data);
@@ -47,6 +46,9 @@ async function AppSocket(io: any) {
     );
     socket.on("notifications-join", (userId: string) =>
       SocketService.HandleNotificationJoin(userId, socket)
+    );
+    socket.on("still-active", (username: string) =>
+      SocketService.HandleStillActive(username, socket)
     );
     // socket.on("conversations-opened", (conversationId: string) =>
     //   SocketService.HandleConversationsOpened(conversationId, socket)

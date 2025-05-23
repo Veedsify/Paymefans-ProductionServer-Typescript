@@ -8,6 +8,6 @@ model.post("/all", Auth, ModelController.GetModels);
 model.get("/search-models", Auth, ModelController.ModelsSearch);
 model.post("/hookups", Auth, ModelController.GetModelAvailableForHookup);
 model.post("/signup", Auth, ModelController.SignupModel);
-// model.get("/callback/signup", ModelController.ValidateModelPayment);
+model.post("/validate-model-payment", Auth, ModelController.ValidateModelPayment);
 
 export default model
