@@ -49,6 +49,7 @@ model User {
   total_subscribers         Int                         @default(0)
   active_status             Boolean                     @default(true)
   max_post_count            Int                         @default(0)
+  hasPin                    Boolean                     @default(false)
   created_at                DateTime                    @default(now())
   updated_at                DateTime                    @updatedAt
   Follow                    Follow[]
@@ -108,6 +109,7 @@ model User {
   UserSubscribers           Subscribers[]               @relation("Subscribers")
   Gifter                    PostGift[]                  @relation("Gifter")
   GiftReciver               PostGift[]                  @relation("GiftReceiver")
+  UserWithdrawalPin         UserWithdrawalPin[]
 }
 
 model Participants {
@@ -1196,6 +1198,17 @@ model PostGift {
   post        Post     @relation(fields: [post_id], references: [id], onDelete: Cascade)
   created_at  DateTime @default(now()) @map("created_at")
   updated_at  DateTime @updatedAt @map("updated_at")
+}
+
+model UserWithdrawalPin {
+  id         Int      @id @default(autoincrement())
+  user_id    Int
+  pin        String
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+  user       User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id])
 }
 
 // ENUMS DECLARATION
