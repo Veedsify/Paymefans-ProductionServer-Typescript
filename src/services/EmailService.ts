@@ -841,4 +841,64 @@ export default class EmailService {
             throw new Error(err.message);
         }
     }
+
+    // Confirm Withdrawal Email To User
+
+    static async ConfirmWithdrawalEmail(
+        { name,
+            email,
+            amount,
+            bankName,
+            accountNumber,
+            accountName, }: {
+                name: string;
+                email: string;
+                amount: string;
+                bankName: string;
+                accountNumber: string;
+                accountName: string;
+            }
+    ): Promise<{
+        message: string;
+        error: boolean;
+    }> {
+
+        try {
+            if (!name || !email || !amount || !bankName || !accountNumber || !accountName) {
+                return { message: "Invalid Request", error: true };
+            }
+
+            const options = {
+                emailData: {
+                    subject: `Withdrawal Request Confirmation`,
+                    email,
+                },
+                template: "confirmWithdrawal.ejs",
+                templateData: {
+                    name,
+                    amount,
+                    bankName,
+                    accountNumber,
+                    accountName,
+                    title: "Withdrawal Request Confirmation",
+                },
+            };
+
+            const sendEmail = await EmailQueue.add("confirmWithdrawal", options, {
+                attempts: 3,
+                backoff: 5000,
+                removeOnComplete: true,
+            });
+
+            if (sendEmail) {
+                return { message: "Email sent successfully", error: false };
+            }
+            return { message: "Email Not Sent", error: true };
+        }
+        catch (err: any) {
+            throw new Error(err.message);
+        }
+
+    }
+
 }
