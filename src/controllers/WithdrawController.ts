@@ -52,7 +52,7 @@ export default class WithdrawController {
                 amount: req.body.amount,
                 bankId: req.body.bankId,
                 action: req.body.action,
-                pin: Number(req.body.pin),
+                pin: String(req.body.pin),
             })
 
             if (withdraw.error) {

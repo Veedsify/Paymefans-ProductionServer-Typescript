@@ -149,7 +149,7 @@ export default class PointService {
   // Purchase points
   static async PurchasePoints(
     user: AuthUser,
-    amount: string,
+    amount: number,
     ngn_amount: number,
     usd_amount: number,
   ): Promise<PointPurchaseResponse> {
@@ -180,7 +180,7 @@ export default class PointService {
         };
       }
 
-      const approximateAmount = Number(Math.floor(ngn_amount));
+      const approximateAmount = Number(Math.floor(amount));
       const platformFee = Number(process.env.PLATFORM_FEE) * approximateAmount;
       // Apply 10% fee and convert to points (1 USD = 16 points)
       const response = await this.CreatePaystackPayment({
