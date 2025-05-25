@@ -196,6 +196,7 @@ export default class WithdrawService {
                 user_id: user.id,
                 amount: Number(amount),
                 recipient_code: recipient.recipient_code!,
+                bank_account_id: recipient.id,
                 reason: `Withdrawal of ${amount} initiate by ${user.username}`,
                 status: "pending",
             }
