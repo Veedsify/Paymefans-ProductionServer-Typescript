@@ -109,6 +109,7 @@ export default class PostController {
         userId: req.params.userId as string,
         page: req.query.page as string,
         limit: req.query.limit as string,
+        authUserId: req.user?.id!,
       });
       return res.status(200).json(Media);
     } catch (err: any) {
@@ -125,6 +126,7 @@ export default class PostController {
         userId: parseInt(req.params.userId) as number,
         page: req.query.page as string,
         limit: req.query.limit as string,
+        authUserId: req.user?.id!,
       });
 
       if (UserPost?.error) {
@@ -146,6 +148,7 @@ export default class PostController {
         userId: parseInt(req.params.userId) as number,
         page: req.query.page as string,
         limit: req.query.limit as string,
+        authUserId: req.user?.id!,
       });
       return res.status(200).json({ ...UserPost });
     } catch (err: any) {
@@ -160,6 +163,7 @@ export default class PostController {
     try {
       const SinglePost = await PostService.GetSinglePost({
         postId: req.params.postId as string,
+        authUserId: req.user?.id!,
       });
       if (SinglePost.error) {
         return res.status(400).json({ ...SinglePost });

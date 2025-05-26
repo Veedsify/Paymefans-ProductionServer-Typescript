@@ -150,7 +150,6 @@ export default class PointService {
   static async PurchasePoints(
     user: AuthUser,
     amount: number,
-    ngn_amount: number,
     usd_amount: number,
   ): Promise<PointPurchaseResponse> {
     try {

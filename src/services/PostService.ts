@@ -22,14 +22,14 @@ import type {
     RepostProps,
     RepostResponse,
 } from "../types/post";
-import {v4 as uuid} from "uuid";
+import { v4 as uuid } from "uuid";
 import query from "@utils/prisma";
-import {PostAudience} from "@prisma/client";
+import { PostAudience } from "@prisma/client";
 import RemoveCloudflareMedia from "@libs/RemoveCloudflareMedia";
-import {Comments} from "@utils/mongoSchema";
-import {redis} from "@libs/RedisStore";
-import {GenerateUniqueId} from "@utils/GenerateUniqueId";
-import {UserTransactionQueue} from "@jobs/notifications/UserTransactionJob";
+import { Comments } from "@utils/mongoSchema";
+import { redis } from "@libs/RedisStore";
+import { GenerateUniqueId } from "@utils/GenerateUniqueId";
+import { UserTransactionQueue } from "@jobs/notifications/UserTransactionJob";
 import EmailService from "./EmailService";
 import GetSinglename from "@utils/GetSingleName";
 
@@ -39,7 +39,7 @@ export default class PostService {
         try {
             const postId = uuid();
             const user = data.user;
-            const {content, visibility, media, removedMedia} = data;
+            const { content, visibility, media, removedMedia } = data;
             if (removedMedia) {
                 const removeMedia = await RemoveCloudflareMedia(removedMedia);
                 if ("error" in removeMedia && removeMedia.error) {
@@ -123,10 +123,10 @@ export default class PostService {
 
     // Get Current User Posts
     static async GetMyPosts({
-                                userId,
-                                page,
-                                limit,
-                            }: GetMyPostProps): Promise<GetMyPostResponse> {
+        userId,
+        page,
+        limit,
+    }: GetMyPostProps): Promise<GetMyPostResponse> {
         try {
             // Parse limit to an integer or default to 5 if not provided
             const parsedLimit = limit ? parseInt(limit, 10) : 5;
@@ -204,6 +204,7 @@ export default class PostService {
                 });
                 return {
                     ...post,
+                    isSubscribed: true,
                     likedByme: postLike ? true : false,
                 };
             });
@@ -222,10 +223,10 @@ export default class PostService {
 
     // Get Current Private User Posts
     static async GetMyPrivatePosts({
-                                       userId,
-                                       page,
-                                       limit,
-                                   }: GetMyPostProps): Promise<GetMyPostResponse> {
+        userId,
+        page,
+        limit,
+    }: GetMyPostProps): Promise<GetMyPostResponse> {
         try {
             // Parse limit to an integer or default to 5 if not provided
             const parsedLimit = limit ? parseInt(limit, 10) : 5;
@@ -239,9 +240,9 @@ export default class PostService {
                 where: {
                     user_id: userId,
                     OR: [
-                        {post_audience: "price"},
-                        {post_audience: "subscribers"},
-                        {post_audience: "private"},
+                        { post_audience: "price" },
+                        { post_audience: "subscribers" },
+                        { post_audience: "private" },
                     ],
                 },
                 select: {
@@ -310,6 +311,7 @@ export default class PostService {
                 return {
                     ...post,
                     likedByme: postLike ? true : false,
+                    isSubscribed: true,
                 };
             });
             const resolvedPosts = await Promise.all(postsChecked);
@@ -327,10 +329,10 @@ export default class PostService {
 
     // Get Current User Reposts
     static async MyReposts({
-                               userId,
-                               page = "1",
-                               limit = "20",
-                           }: GetMyPostProps): Promise<GetMyPostResponse> {
+        userId,
+        page = "1",
+        limit = "20",
+    }: GetMyPostProps): Promise<GetMyPostResponse> {
         try {
             // Parse limit to an integer or default to 5 if not provided
             const parsedLimit = limit ? parseInt(limit, 10) : 5;
@@ -438,6 +440,7 @@ export default class PostService {
                 return {
                     ...post,
                     likedByme: postLike ? true : false,
+                    isSubscribed: true,
                 };
             });
             const resolvedPosts = await Promise.all(postsChecked);
@@ -456,10 +459,10 @@ export default class PostService {
 
     // Get Reposts
     static async Reposts({
-                             userId,
-                             page,
-                             limit,
-                         }: RepostProps): Promise<GetMyPostResponse> {
+        userId,
+        page,
+        limit,
+    }: RepostProps): Promise<GetMyPostResponse> {
         try {
             // Parse limit to an integer or default to 5 if not provided
             const parsedLimit = limit ? parseInt(limit, 10) : 5;
@@ -542,6 +545,7 @@ export default class PostService {
                 return {
                     ...post,
                     likedByme: postLike ? true : false,
+                    isSubscribed: true,
                 };
             });
             const resolvedPosts = await Promise.all(postsChecked);
@@ -559,10 +563,10 @@ export default class PostService {
 
     // Get My Media
     static async GetMedia({
-                              userId,
-                              page,
-                              limit,
-                          }: GetMyMediaProps): Promise<GetMyMediaResponse> {
+        userId,
+        page,
+        limit,
+    }: GetMyMediaProps): Promise<GetMyMediaResponse> {
         try {
             // Parse limit to an integer or default to 5 if not provided
             const parsedLimit = limit ? parseInt(limit, 10) : 6;
@@ -579,12 +583,12 @@ export default class PostService {
             });
             const mediaCount = await query.userMedia.count({
                 where: {
-                    OR: [...postCount.map((post) => ({post_id: post.id}))],
+                    OR: [...postCount.map((post) => ({ post_id: post.id }))],
                 },
             });
             const media = await query.userMedia.findMany({
                 where: {
-                    OR: [...postCount.map((post) => ({post_id: post.id}))],
+                    OR: [...postCount.map((post) => ({ post_id: post.id }))],
                 },
                 skip: (validPage - 1) * validLimit,
                 take: validLimit,
@@ -592,10 +596,19 @@ export default class PostService {
                     created_at: "desc",
                 },
             });
+
+
+            const mediaChecked = await Promise.all(media.map(async (mediaFile) => {
+                return {
+                    ...mediaFile,
+                    isSubscribed: true,
+                };
+            }));
+
             return {
                 status: true,
                 message: "Media retrieved successfully",
-                data: media,
+                data: mediaChecked,
                 total: mediaCount,
             };
         } catch (error: any) {
@@ -606,12 +619,12 @@ export default class PostService {
 
     // Get Other Media
     static async GetOtherMedia({
-                                   userId,
-                                   page,
-                                   limit,
-                               }: GetOtherMediaProps): Promise<GetOtherMediaResponse> {
+        userId,
+        page,
+        limit,
+        authUserId,
+    }: GetOtherMediaProps): Promise<GetOtherMediaResponse> {
         try {
-            // Parse limit to an integer or default to 5 if not provided
             // Parse limit to an integer or default to 5 if not provided
             const parsedLimit = limit ? parseInt(limit, 10) : 6;
             const validLimit =
@@ -631,7 +644,7 @@ export default class PostService {
                         accessible_to: "private",
                     },
                     media_state: "completed",
-                    OR: [...postCount.map((post) => ({post_id: post.id}))],
+                    OR: [...postCount.map((post) => ({ post_id: post.id }))],
                 },
                 select: {
                     id: true,
@@ -669,10 +682,26 @@ export default class PostService {
                 media.pop();
             }
 
+            const isSubscribed = await query.subscribers.findFirst({
+                where: {
+                    subscriber_id: Number(authUserId),
+                    user_id: Number(userId),
+                },
+            });
+
+            const mediaChecked = media.map(async (mediaFile) => {
+                return {
+                    ...mediaFile,
+                    isSubscribed: mediaFile.post.user.id === Number(authUserId) || !!isSubscribed,
+                }
+            })
+
+            const resolvedMedia = await Promise.all(mediaChecked);
+
             return {
                 status: true,
                 message: "Media retrieved successfully",
-                data: media,
+                data: resolvedMedia,
                 hasMore,
             };
         } catch (error: any) {
@@ -683,10 +712,11 @@ export default class PostService {
 
     // Get User Post By User ID
     static async GetUserPostByID({
-                                     userId,
-                                     page,
-                                     limit,
-                                 }: GetUserPostByIdProps): Promise<GetUserPostByIdResponse> {
+        userId,
+        page,
+        limit,
+        authUserId
+    }: GetUserPostByIdProps): Promise<GetUserPostByIdResponse> {
         try {
 
             if (!userId || isNaN(Number(userId))) {
@@ -773,6 +803,14 @@ export default class PostService {
                 hasMore = true;
             }
 
+            const isSubscribed = await query.subscribers.findFirst({
+                where: {
+                    subscriber_id: authUserId,
+                    user_id: parsedUserId
+                }
+            })
+
+
             const postsChecked = posts.map(async (post) => {
                 const postLike = await query.postLike.findFirst({
                     where: {
@@ -783,6 +821,7 @@ export default class PostService {
                 return {
                     ...post,
                     likedByme: postLike ? true : false,
+                    isSubscribed: isSubscribed ? true : false,
                 };
             });
             const resolvedPosts = await Promise.all(postsChecked);
@@ -801,10 +840,11 @@ export default class PostService {
 
     // Get User Post By User ID
     static async GetUserPrivatePostByID({
-                                            userId,
-                                            page,
-                                            limit,
-                                        }: GetUserPostByIdProps): Promise<GetUserPostByIdResponse> {
+        userId,
+        page,
+        limit,
+        authUserId,
+    }: GetUserPostByIdProps): Promise<GetUserPostByIdResponse> {
         try {
             // Parse limit to an integer or default to 5 if not provided
             const parsedLimit = limit ? parseInt(limit, 10) : 5;
@@ -818,7 +858,7 @@ export default class PostService {
                 where: {
                     user_id: Number(userId),
                     post_status: "approved",
-                    OR: [{post_audience: "price"}, {post_audience: "subscribers"}],
+                    OR: [{ post_audience: "price" }, { post_audience: "subscribers" }],
                 },
                 select: {
                     id: true,
@@ -876,6 +916,13 @@ export default class PostService {
                 hasMore = true;
             }
 
+            const isSubscribed = await query.subscribers.findFirst({
+                where: {
+                    subscriber_id: authUserId,
+                    user_id: Number(userId),
+                }
+            })
+
             const postsChecked = posts.map(async (post) => {
                 const postLike = await query.postLike.findFirst({
                     where: {
@@ -886,6 +933,7 @@ export default class PostService {
                 return {
                     ...post,
                     likedByme: postLike ? true : false,
+                    isSubscribed: !!isSubscribed || post.user.id === authUserId,
                 };
             });
             const resolvedPosts = await Promise.all(postsChecked);
@@ -904,9 +952,11 @@ export default class PostService {
 
     // Get Single Post By ID:
     static async GetSinglePost({
-                                   postId,
-                               }: {
+        postId,
+        authUserId
+    }: {
         postId: string;
+        authUserId: number
     }): Promise<GetSinglePostResponse> {
         try {
             const post = await query.post.findFirst({
@@ -975,11 +1025,21 @@ export default class PostService {
                 },
             });
             const likedByme = postLike ? true : false;
+            const isSubscribed = await query.subscribers.findFirst({
+                where: {
+                    user_id: post.user_id,
+                    subscriber_id: authUserId
+                }
+            })
             return {
                 error: false,
                 status: true,
                 message: "Post retrieved successfully",
-                data: {...post, likedByme},
+                data: {
+                    ...post,
+                    likedByme,
+                    isSubscribed: !!isSubscribed || post.user_id === authUserId,
+                },
             };
         } catch (error: any) {
             console.log(error);
@@ -988,7 +1048,7 @@ export default class PostService {
     }
 
     // Edit Post
-    static async EditPost({postId}: EditPostProps): Promise<EditPostResponse> {
+    static async EditPost({ postId }: EditPostProps): Promise<EditPostResponse> {
         try {
             const post = await query.post.findFirst({
                 where: {
@@ -1030,10 +1090,10 @@ export default class PostService {
 
     // Update PostAudience
     static async UpdatePostAudience({
-                                        postId,
-                                        userId,
-                                        visibility,
-                                    }: {
+        postId,
+        userId,
+        visibility,
+    }: {
         postId: string;
         userId: number;
         visibility: string;
@@ -1046,7 +1106,7 @@ export default class PostService {
                 },
             });
             if (!findPost) {
-                return {error: true, message: "Post not found"};
+                return { error: true, message: "Post not found" };
             }
             const [updatePost, updateMedia] = await query.$transaction([
                 query.post.update({
@@ -1069,9 +1129,9 @@ export default class PostService {
                 }),
             ]);
             if (!updatePost || !updateMedia) {
-                return {error: true, message: "Could not update post audience"};
+                return { error: true, message: "Could not update post audience" };
             }
-            return {error: false, message: "Post audience updated"};
+            return { error: false, message: "Post audience updated" };
         } catch (error: any) {
             throw new Error(error.message);
         }
@@ -1079,9 +1139,9 @@ export default class PostService {
 
     // Create Repost
     static async CreateRepost({
-                                  postId,
-                                  userId,
-                              }: CreateRepostProps): Promise<RepostResponse> {
+        postId,
+        userId,
+    }: CreateRepostProps): Promise<RepostResponse> {
         try {
             const audienceTypes = ["private", "subscribers", "followers"];
             // Repost the post
@@ -1167,10 +1227,10 @@ export default class PostService {
 
     // Get Post Comments
     static async GetPostComments({
-                                     postId,
-                                     page = "1",
-                                     limit = "10",
-                                 }: GetPostCommentsProps): Promise<GetPostCommentsResponse> {
+        postId,
+        page = "1",
+        limit = "10",
+    }: GetPostCommentsProps): Promise<GetPostCommentsResponse> {
         const countComments = await Comments.countDocuments({
             postId: String(postId),
         });
@@ -1178,7 +1238,7 @@ export default class PostService {
             postId: String(postId),
             parentId: null
         })
-            .sort({date: -1})
+            .sort({ date: -1 })
             .skip((parseInt(page) - 1) * parseInt(limit))
             .limit(parseInt(limit) + 1); // Fetch one extra for pagination check
         const hasMore = comments.length > parseInt(limit);
@@ -1205,9 +1265,9 @@ export default class PostService {
 
     // Like A Post
     static async LikePost({
-                              postId,
-                              userId,
-                          }: LikePostProps): Promise<LikePostResponse> {
+        postId,
+        userId,
+    }: LikePostProps): Promise<LikePostResponse> {
         try {
             let postHasBeenLiked = false;
             let postLike = null;
@@ -1270,9 +1330,9 @@ export default class PostService {
 
     // Delete Post
     static async DeletePost({
-                                postId,
-                                userId,
-                            }: {
+        postId,
+        userId,
+    }: {
         postId: string;
         userId: number;
     }): Promise<DeletePostResponse> {
@@ -1340,7 +1400,7 @@ export default class PostService {
                     error: true,
                 };
             }
-            const {points, userId, postId, receiver_id} = options;
+            const { points, userId, postId, receiver_id } = options;
             const findPost = await query.post.findFirst({
                 where: {
                     post_id: postId,

@@ -8,7 +8,7 @@ import type {
 } from "types/socket";
 import MessageService from "./MessageService";
 import ConversationService from "./ConversationService";
-import _, { last } from "lodash";
+import _ from "lodash";
 import FollowerService from "./FollowerService";
 import query from "@utils/prisma";
 import NotificationService from "./NotificationService";

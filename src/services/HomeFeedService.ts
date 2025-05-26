@@ -43,7 +43,7 @@ class FeedService {
 
     let relevanceScore = 0;
     if (followsCreator) relevanceScore += 0.3;
-    if (isSubscribed) relevanceScore += 0.5;
+    if (isSubscribed || userId === post.user_id) relevanceScore += 0.5;
 
     const similarContentInteraction = userInteractions.filter(
       (interaction) => interaction.post.user_id === post.user_id
@@ -54,7 +54,7 @@ class FeedService {
   }
 
   public async getHomeFeed(
-    userId: number,
+    authUserid: number,
     page: number
   ): Promise<{
     posts: Array<Post & { score: number; likedByme: boolean }>;
@@ -71,18 +71,12 @@ class FeedService {
           active_status: true,
         },
         OR: [
+          // Public post
           { post_audience: "public" },
+          { post_audience: "followers" },
+          { post_audience: "subscribers" },
           {
-            AND: [
-              { post_audience: "followers" },
-              { user: { Follow: { some: { follower_id: userId } } } },
-            ],
-          },
-          {
-            AND: [
-              { post_audience: "subscribers" },
-              { user: { Subscribers: { some: { subscriber_id: userId } } } },
-            ],
+            user_id: authUserid,
           },
         ],
       },
@@ -110,6 +104,9 @@ class FeedService {
       orderBy: { created_at: "desc" },
     });
 
+
+
+
     const postsChecked = posts.map(async (post) => {
       const postLike = await query.postLike.findFirst({
         where: {
@@ -117,9 +114,18 @@ class FeedService {
           post_id: post.id,
         },
       });
+
+      const isSubscribed = await query.subscribers.findFirst({
+        where: {
+          user_id: post.user.id,
+          subscriber_id: authUserid,
+        },
+      })
+
       return {
         ...post,
         likedByme: postLike ? true : false,
+        isSubscribed: authUserid === post.user.id || !!isSubscribed,
       };
     });
 
@@ -129,7 +135,7 @@ class FeedService {
       resolvedPosts.map(async (post) => {
         const engagementScore = this.calculateEngagementScore(post);
         const recencyScore = this.calculateRecencyScore(post.created_at);
-        const relevanceScore = await this.calculateRelevanceScore(post, userId);
+        const relevanceScore = await this.calculateRelevanceScore(post, authUserid);
 
         const totalScore =
           engagementScore * FeedService.ENGAGEMENT_WEIGHT +

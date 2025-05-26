@@ -42,22 +42,22 @@ export default class UserService {
       });
 
       // Fetch subscriptions
-      const getMySubscriptions = await query.subscribers.findMany({
-        where: {
-          subscriber_id: userid,
-        },
-        select: {
-          user_id: true,
-        },
-      });
+      // const getMySubscriptions = await query.subscribers.findMany({
+      //   where: {
+      //     subscriber_id: userid,
+      //   },
+      //   select: {
+      //     user_id: true,
+      //   },
+      // });
 
+      // const subscriptions = getMySubscriptions.map((sub) => sub.user_id);
       const { password, ...rest } = user;
-      const subscriptions = getMySubscriptions.map((sub) => sub.user_id);
       const purchasedPosts: number[] = [2];
 
       const result = {
         message: "User retrieved successfully",
-        user: { ...rest, following, subscriptions, purchasedPosts },
+        user: { ...rest, following, purchasedPosts },
         status: true,
       };
 

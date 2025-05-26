@@ -33,7 +33,7 @@ interface RemovedMedia {
 export type GetMyMediaResponse = {
   status: boolean;
   message: string;
-  data: UserMedia[];
+  data: (UserMedia & { isSubscribed: boolean })[];
   total: number;
 };
 /**
@@ -51,6 +51,7 @@ export type GetOtherMediaProps = {
   userId: string;
   page: string;
   limit: string;
+  authUserId: number;
 };
 /**
  * Response type for fetching another user's media
@@ -70,6 +71,7 @@ export type GetOtherMediaResponse = {
     media_type: string;
     locked: boolean;
     accessible_to: string;
+    isSubscribed: boolean;
     post: {
       user: {
         id: number;
@@ -136,6 +138,7 @@ export interface MyPost {
   repost_username: string | null;
   UserMedia?: UserMedia[];
   likedByme: boolean;
+  isSubscribed: boolean;
   user: {
     username: string;
     profile_image: string | null;
@@ -172,6 +175,7 @@ export type GetUserPostByIdProps = {
   userId: number;
   page: string;
   limit: string;
+  authUserId: number;
 };
 /**
  * Single post data structure
@@ -193,6 +197,7 @@ interface GetSinglePost {
   repost_username: string | null;
   UserMedia?: UserMedia[];
   likedByme: boolean;
+  isSubscribed: boolean;
   user: {
     username: string;
     profile_image: string | null;
