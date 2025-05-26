@@ -22,7 +22,7 @@ export default class UploadService {
               "Content-Type": "application/json",
               "Tus-Resumable": "1.0.0",
               "Upload-Length": `${fileSize}`,
-              "Upload-Metadata": `maxDurationSeconds ${maxDuration},name ${fileName},filetype ${fileType}`,
+              "Upload-Metadata": `maxDurationSeconds ${maxDuration},name ${fileName},filetype ${fileType}, allowedorigins ${btoa("*.paymefans.com,paymefans.com,localhost:3000")},`,
             },
           }
         );
@@ -31,7 +31,7 @@ export default class UploadService {
           const errorData = await response.json().catch(() => ({}));
           throw new Error(
             errorData?.errors?.[0]?.message ||
-              `Failed to get upload URL: ${response.statusText}`
+            `Failed to get upload URL: ${response.statusText}`
           );
         }
 

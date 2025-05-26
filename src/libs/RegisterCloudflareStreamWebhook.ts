@@ -3,7 +3,6 @@ const { CLOUDFLARE_WEBHOOK_URL, CLOUDFLARE_ACCOUNT_TOKEN, CLOUDFLARE_WEBHOOK_CAL
 export function RegisterCloudflareStreamWebhook(): void {
     try {
         async function register(): Promise<void> {
-            return
             const data = {
                 notificationUrl: `${CLOUDFLARE_WEBHOOK_CALLBACK}/api/webhooks/cloudflare/processed-post-media`,
             }

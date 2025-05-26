@@ -59,6 +59,8 @@ CREATE TABLE "User" (
     "total_following" INTEGER NOT NULL DEFAULT 0,
     "total_subscribers" INTEGER NOT NULL DEFAULT 0,
     "active_status" BOOLEAN NOT NULL DEFAULT true,
+    "max_post_count" INTEGER NOT NULL DEFAULT 0,
+    "hasPin" BOOLEAN NOT NULL DEFAULT false,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMP(3) NOT NULL,
 
@@ -544,8 +546,12 @@ CREATE TABLE "UserTransaction" (
     "amount" DOUBLE PRECISION NOT NULL,
     "transaction_message" TEXT NOT NULL,
     "transaction" TEXT NOT NULL,
-    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "transaction_type" "TransactionType" NOT NULL,
+    "currency" TEXT,
+    "exchange_rate" DOUBLE PRECISION,
+    "usd_equivalent" DOUBLE PRECISION,
+    "current_buy_value" DOUBLE PRECISION NOT NULL DEFAULT 0,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMP(3) NOT NULL,
 
     CONSTRAINT "UserTransaction_pkey" PRIMARY KEY ("id")
@@ -640,9 +646,13 @@ CREATE TABLE "UserPointsPurchase" (
     "id" SERIAL NOT NULL,
     "purchase_id" TEXT NOT NULL,
     "user_id" INTEGER NOT NULL,
-    "points" INTEGER NOT NULL,
+    "points" INTEGER NOT NULL DEFAULT 0,
     "amount" DOUBLE PRECISION NOT NULL,
-    "success" BOOLEAN NOT NULL,
+    "currency" TEXT,
+    "exchange_rate" DOUBLE PRECISION,
+    "usd_equivalent" DOUBLE PRECISION,
+    "current_buy_value" DOUBLE PRECISION NOT NULL DEFAULT 0,
+    "success" BOOLEAN NOT NULL DEFAULT false,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMP(3) NOT NULL,
     "userPointsId" INTEGER,
@@ -677,6 +687,7 @@ CREATE TABLE "UserBanks" (
     "routing_number" TEXT,
     "swift_code" TEXT,
     "bank_country" TEXT NOT NULL,
+    "recipient_code" TEXT,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMP(3) NOT NULL,
 
@@ -979,27 +990,6 @@ CREATE TABLE "ResetPasswordRequests" (
 );
 
 -- CreateTable
-CREATE TABLE "sessions" (
-    "id" TEXT NOT NULL,
-    "user_id" INTEGER,
-    "ip_address" TEXT,
-    "user_agent" TEXT,
-    "payload" TEXT NOT NULL,
-    "last_activity" INTEGER NOT NULL,
-
-    CONSTRAINT "sessions_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
-CREATE TABLE "migrations" (
-    "id" SERIAL NOT NULL,
-    "migration" TEXT NOT NULL,
-    "batch" INTEGER NOT NULL,
-
-    CONSTRAINT "migrations_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
 CREATE TABLE "WithdrawalRequestCode" (
     "id" SERIAL NOT NULL,
     "user_id" INTEGER NOT NULL,
@@ -1016,6 +1006,7 @@ CREATE TABLE "WithdrawalRequest" (
     "user_id" INTEGER NOT NULL,
     "amount" INTEGER NOT NULL,
     "recipient_code" TEXT NOT NULL,
+    "bank_account_id" INTEGER NOT NULL,
     "reason" TEXT NOT NULL DEFAULT 'Paymefans Model Withdrawal',
     "status" "WithdrawalRequestStatus" NOT NULL,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -1028,8 +1019,10 @@ CREATE TABLE "WithdrawalRequest" (
 CREATE TABLE "PlatformExchangeRate" (
     "id" SERIAL NOT NULL,
     "name" TEXT NOT NULL,
-    "rate" INTEGER NOT NULL,
-    "value" DOUBLE PRECISION NOT NULL DEFAULT 0,
+    "buyValue" DOUBLE PRECISION NOT NULL DEFAULT 0,
+    "sellValue" DOUBLE PRECISION NOT NULL DEFAULT 0,
+    "rate" DOUBLE PRECISION NOT NULL DEFAULT 0,
+    "symbol" TEXT NOT NULL DEFAULT '$',
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMP(3) NOT NULL,
 
@@ -1047,6 +1040,119 @@ CREATE TABLE "OuterPages" (
     "updated_at" TIMESTAMP(3) NOT NULL,
 
     CONSTRAINT "OuterPages_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "SupportTickets" (
+    "id" SERIAL NOT NULL,
+    "ticket_id" TEXT NOT NULL,
+    "user_id" INTEGER NOT NULL,
+    "subject" TEXT NOT NULL,
+    "message" TEXT NOT NULL,
+    "status" TEXT NOT NULL DEFAULT 'open',
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "SupportTickets_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "SupportTicketReplies" (
+    "id" SERIAL NOT NULL,
+    "ticket_id" TEXT NOT NULL,
+    "user_id" INTEGER NOT NULL,
+    "message" TEXT NOT NULL,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "SupportTicketReplies_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "Configurations" (
+    "id" SERIAL NOT NULL,
+    "app_name" TEXT NOT NULL,
+    "app_version" TEXT NOT NULL,
+    "app_url" TEXT NOT NULL,
+    "app_description" TEXT NOT NULL,
+    "app_logo" TEXT NOT NULL,
+    "default_currency" TEXT NOT NULL DEFAULT 'USD',
+    "default_rate" DOUBLE PRECISION NOT NULL DEFAULT 1.0,
+    "default_symbol" TEXT NOT NULL DEFAULT '$',
+    "point_conversion_rate" DOUBLE PRECISION NOT NULL DEFAULT 1.0,
+    "point_conversion_rate_ngn" DOUBLE PRECISION NOT NULL DEFAULT 1.0,
+    "min_withdrawal_amount" DOUBLE PRECISION NOT NULL DEFAULT 0.0,
+    "min_withdrawal_amount_ngn" DOUBLE PRECISION NOT NULL DEFAULT 0.0,
+    "min_deposit_amount" DOUBLE PRECISION NOT NULL DEFAULT 0.0,
+    "min_deposit_amount_ngn" DOUBLE PRECISION NOT NULL DEFAULT 0.0,
+    "default_mode" TEXT NOT NULL DEFAULT 'light',
+    "primary_color" TEXT NOT NULL DEFAULT '#000000',
+    "secondary_color" TEXT NOT NULL DEFAULT '#FFFFFF',
+    "accent_color" TEXT NOT NULL DEFAULT '#0000FF',
+    "home_feed_limit" INTEGER NOT NULL DEFAULT 20,
+    "personal_profile_limit" INTEGER NOT NULL DEFAULT 10,
+    "personal_media_limit" INTEGER NOT NULL DEFAULT 10,
+    "personal_repost_limit" INTEGER NOT NULL DEFAULT 10,
+    "post_page_comment_limit" INTEGER NOT NULL DEFAULT 20,
+    "post_page_comment_reply_limit" INTEGER NOT NULL DEFAULT 10,
+    "other_user_profile_limit" INTEGER NOT NULL DEFAULT 10,
+    "other_user_media_limit" INTEGER NOT NULL DEFAULT 10,
+    "other_user_repost_limit" INTEGER NOT NULL DEFAULT 10,
+    "notification_limit" INTEGER NOT NULL DEFAULT 20,
+    "transaction_limit" INTEGER NOT NULL DEFAULT 20,
+    "model_search_limit" INTEGER NOT NULL DEFAULT 20,
+    "conversation_limit" INTEGER NOT NULL DEFAULT 20,
+    "message_limit" INTEGER NOT NULL DEFAULT 50,
+    "group_message_limit" INTEGER NOT NULL DEFAULT 50,
+    "group_participant_limit" INTEGER NOT NULL DEFAULT 100,
+    "group_limit" INTEGER NOT NULL DEFAULT 20,
+    "hookup_enabled" BOOLEAN NOT NULL DEFAULT false,
+    "hookup_page_limit" INTEGER NOT NULL DEFAULT 20,
+    "status_limit" INTEGER NOT NULL DEFAULT 20,
+    "subscription_limit" INTEGER NOT NULL DEFAULT 20,
+    "subscribers_limit" INTEGER NOT NULL DEFAULT 1000,
+    "active_subscribers_limit" INTEGER NOT NULL DEFAULT 1000,
+    "followers_limit" INTEGER NOT NULL DEFAULT 1000,
+    "upload_media_limit" INTEGER NOT NULL DEFAULT 10,
+    "model_upload_media_limit" INTEGER NOT NULL DEFAULT 10,
+    "profile_updated_success_message" TEXT NOT NULL DEFAULT 'Profile updated successfully',
+    "profile_updated_error_message" TEXT NOT NULL DEFAULT 'Failed to update profile',
+    "profile_updating_message" TEXT NOT NULL DEFAULT 'Updating profile...',
+    "profile_image_updated_success_message" TEXT NOT NULL DEFAULT 'Profile image updated successfully',
+    "profile_image_updated_error_message" TEXT NOT NULL DEFAULT 'Failed to update profile image',
+    "profile_image_updating_message" TEXT NOT NULL DEFAULT 'Updating profile image...',
+    "point_purchase_success_message" TEXT NOT NULL DEFAULT 'Points purchased successfully',
+    "point_purchase_error_message" TEXT NOT NULL DEFAULT 'Failed to purchase points',
+    "point_purchasing_message" TEXT NOT NULL DEFAULT 'Purchasing points...',
+    "point_purchase_minimum_message" TEXT NOT NULL DEFAULT 'Minimum purchase amount not met',
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "Configurations_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "PostGift" (
+    "id" SERIAL NOT NULL,
+    "gifter_id" INTEGER NOT NULL,
+    "receiver_id" INTEGER NOT NULL,
+    "post_id" INTEGER NOT NULL,
+    "points" DOUBLE PRECISION NOT NULL DEFAULT 0,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "PostGift_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "UserWithdrawalPin" (
+    "id" SERIAL NOT NULL,
+    "user_id" INTEGER NOT NULL,
+    "pin" TEXT NOT NULL,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "UserWithdrawalPin_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -1240,9 +1346,6 @@ CREATE UNIQUE INDEX "UserPointsPurchase_purchase_id_key" ON "UserPointsPurchase"
 CREATE INDEX "UserPointsPurchase_userPointsId_idx" ON "UserPointsPurchase"("userPointsId");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "UserBanks_account_number_key" ON "UserBanks"("account_number");
-
--- CreateIndex
 CREATE INDEX "UserBanks_user_id_idx" ON "UserBanks"("user_id");
 
 -- CreateIndex
@@ -1261,13 +1364,19 @@ CREATE UNIQUE INDEX "HelpArticles_article_id_key" ON "HelpArticles"("article_id"
 CREATE UNIQUE INDEX "GroupSettings_group_id_key" ON "GroupSettings"("group_id");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "sessions_user_id_key" ON "sessions"("user_id");
-
--- CreateIndex
 CREATE UNIQUE INDEX "PlatformExchangeRate_name_key" ON "PlatformExchangeRate"("name");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "OuterPages_page_id_key" ON "OuterPages"("page_id");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "SupportTickets_ticket_id_key" ON "SupportTickets"("ticket_id");
+
+-- CreateIndex
+CREATE INDEX "Configurations_app_name_idx" ON "Configurations"("app_name");
+
+-- CreateIndex
+CREATE INDEX "UserWithdrawalPin_user_id_idx" ON "UserWithdrawalPin"("user_id");
 
 -- CreateIndex
 CREATE INDEX "_ConversationsToParticipants_B_index" ON "_ConversationsToParticipants"("B");
@@ -1351,7 +1460,13 @@ ALTER TABLE "PostShared" ADD CONSTRAINT "PostShared_user_id_fkey" FOREIGN KEY ("
 ALTER TABLE "Follow" ADD CONSTRAINT "Follow_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
+ALTER TABLE "Follow" ADD CONSTRAINT "Follow_follower_id_fkey" FOREIGN KEY ("follower_id") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
 ALTER TABLE "Subscribers" ADD CONSTRAINT "Subscribers_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Subscribers" ADD CONSTRAINT "Subscribers_subscriber_id_fkey" FOREIGN KEY ("subscriber_id") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "LiveStream" ADD CONSTRAINT "LiveStream_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "User"("user_id") ON DELETE CASCADE ON UPDATE CASCADE;
@@ -1543,7 +1658,31 @@ ALTER TABLE "ResetPasswordRequests" ADD CONSTRAINT "ResetPasswordRequests_user_i
 ALTER TABLE "WithdrawalRequestCode" ADD CONSTRAINT "WithdrawalRequestCode_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
+ALTER TABLE "WithdrawalRequest" ADD CONSTRAINT "WithdrawalRequest_bank_account_id_fkey" FOREIGN KEY ("bank_account_id") REFERENCES "UserBanks"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
 ALTER TABLE "WithdrawalRequest" ADD CONSTRAINT "WithdrawalRequest_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "SupportTickets" ADD CONSTRAINT "SupportTickets_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "SupportTicketReplies" ADD CONSTRAINT "SupportTicketReplies_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "SupportTicketReplies" ADD CONSTRAINT "SupportTicketReplies_ticket_id_fkey" FOREIGN KEY ("ticket_id") REFERENCES "SupportTickets"("ticket_id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "PostGift" ADD CONSTRAINT "PostGift_gifter_id_fkey" FOREIGN KEY ("gifter_id") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "PostGift" ADD CONSTRAINT "PostGift_receiver_id_fkey" FOREIGN KEY ("receiver_id") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "PostGift" ADD CONSTRAINT "PostGift_post_id_fkey" FOREIGN KEY ("post_id") REFERENCES "Post"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "UserWithdrawalPin" ADD CONSTRAINT "UserWithdrawalPin_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "_ConversationsToParticipants" ADD CONSTRAINT "_ConversationsToParticipants_A_fkey" FOREIGN KEY ("A") REFERENCES "Conversations"("id") ON DELETE CASCADE ON UPDATE CASCADE;

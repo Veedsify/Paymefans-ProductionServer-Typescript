@@ -56,7 +56,8 @@ async function main() {
       rate: rate.rate,
       name: rate.currency,
       symbol: rate.symbol
-    }))
+    })),
+    skipDuplicates: true
   })
 
   for (let point of pointSeeding) {
@@ -85,7 +86,8 @@ async function main() {
         slug: "terms-and-conditions",
         content: "terms_and_conditions"
       },
-    ]
+    ],
+    skipDuplicates: true
   })
 
 

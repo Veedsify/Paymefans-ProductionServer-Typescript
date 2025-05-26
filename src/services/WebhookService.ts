@@ -54,7 +54,7 @@ export class WebhookService {
 
       const ImageBuffer = await sharp(await fetchImageFile(thumbnail))
         .resize(640)
-        .blur(50)
+        .blur(30)
         .webp({ quality: 80 })
         .toBuffer();
 
