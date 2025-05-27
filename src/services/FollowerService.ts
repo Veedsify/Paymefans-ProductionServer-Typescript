@@ -39,7 +39,7 @@ export default class FollowerService {
     }
 
     // Get All Followers
-    static async GetAllFollowers({ query: bodyQuery, user }: GetAllFollowersProps): Promise<GetAllFollowersResponse> {
+    static async GetAllFollowers({ query: bodyQuery, user, authUserId }: GetAllFollowersProps): Promise<GetAllFollowersResponse> {
         try {
             const min = parseInt(bodyQuery.min)
             const max = parseInt(bodyQuery.max);
@@ -77,16 +77,17 @@ export default class FollowerService {
                         profile_image: true,
                     }
                 });
+
                 const meFollowing = await query.follow.findFirst({
                     where: {
                         user_id: user?.id,
-                        follower_id: user?.id
+                        follower_id: authUserId
                     }
                 });
 
                 followers.push({
                     user,
-                    iAmFollowing: meFollowing ? true : false
+                    iAmFollowing: !!meFollowing
                 });
             }
 

@@ -18,7 +18,7 @@ export default class FollowerController {
     // Get All Followers
     static async GetAllFollowers(req: Request, res: Response): Promise<any> {
         try {
-            const getAllFollowers = await FollowerService.GetAllFollowers({ query: req.query as any, user: req?.user as AuthUser })
+            const getAllFollowers = await FollowerService.GetAllFollowers({ query: req.query as any, user: req?.user as AuthUser, authUserId: req?.user?.id as number })
             if (getAllFollowers.error) {
                 res.status(400).json({ ...getAllFollowers })
             }

@@ -139,6 +139,7 @@ export interface MyPost {
   UserMedia?: UserMedia[];
   likedByme: boolean;
   isSubscribed: boolean;
+  wasReposted: boolean;
   user: {
     username: string;
     profile_image: string | null;
@@ -198,6 +199,7 @@ interface GetSinglePost {
   UserMedia?: UserMedia[];
   likedByme: boolean;
   isSubscribed: boolean;
+  wasReposted: boolean;
   user: {
     username: string;
     profile_image: string | null;
@@ -290,7 +292,7 @@ export interface EditPostResponse {
  * Props for reposting
  */
 export type RepostProps = {
-  userId: string;
+  userId: number;
   page: string;
   limit: string;
 };

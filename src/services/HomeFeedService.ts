@@ -122,9 +122,17 @@ class FeedService {
         },
       })
 
+      const isReposted = await query.userRepost.findFirst({
+        where: {
+          user_id: authUserid,
+          post_id: post.id,
+        },
+      });
+
       return {
         ...post,
         likedByme: postLike ? true : false,
+        wasReposted: !!isReposted,
         isSubscribed: authUserid === post.user.id || !!isSubscribed,
       };
     });

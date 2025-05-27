@@ -17,23 +17,21 @@ import { AuthUser } from "types/user";
 import { GenerateUniqueId } from "@utils/GenerateUniqueId";
 import { UserNotificationQueue } from "@jobs/notifications/UserNotificaton";
 import getSingleName from "@utils/GetSingleName";
+
 class ProfileService {
     // Get Profile
     static async Profile(username: string, authUserId: number): Promise<ProfileServiceResponse> {
         try {
+            if (!username) return { message: "User not found", status: false, user: undefined };
+
             const cacheKey = `user_profile_${username}`;
-            const cachedUser = await redis.get(cacheKey);
-            if (!username) {
-                return { message: "User not found", status: false, user: undefined };
-            }
-            if (cachedUser) {
-                return JSON.parse(cachedUser);
-            }
+            const cached = await redis.get(cacheKey);
+            if (cached) return JSON.parse(cached);
+
             const user_name = username.replace(/%40/g, "@");
+
             const user = await query.user.findFirst({
-                where: {
-                    username: user_name,
-                },
+                where: { username: user_name },
                 select: {
                     id: true,
                     username: true,
@@ -71,55 +69,38 @@ class ProfileService {
                         }
                     },
                     Subscribers: {
-                        select: {
-                            subscriber_id: true,
-                        },
+                        select: { subscriber_id: true },
                     },
                 },
             });
-            if (!user) {
-                return { message: "User not found", status: false };
-            }
-            // Check if the user is following the requested user
+
+            if (!user) return { message: "User not found", status: false };
+            // Batch follow checks
             const [iFollowThem, theyFollowMe] = await Promise.all([
-                query.follow.findFirst({
-                    where: { follower_id: authUserId, user_id: user.id },
-                }),
-                query.follow.findFirst({
-                    where: { user_id: authUserId, follower_id: user.id },
-                }),
+                query.follow.findFirst({ where: { follower_id: authUserId, user_id: user.id } }),
+                query.follow.findFirst({ where: { user_id: authUserId, follower_id: user.id } }),
             ]);
-            // Cache the user data for 1 minutes
             const response = {
                 message: "User found",
                 status: true,
-                user: {
-                    ...user,
-                    isFollowing: !!iFollowThem,
-                    followsYou: !!theyFollowMe,
-                }
+                user: { ...user, isFollowing: !!iFollowThem, followsYou: !!theyFollowMe }
             };
             await redis.set(cacheKey, JSON.stringify(response), "EX", 30);
-            return response
+            return response;
         } catch (error: any) {
-            throw new Error(error.message)
+            throw new Error(error.message);
         }
     }
+
     // Change Banner
     static async BannerChange(req: Request): Promise<BannerChangeResponse> {
         const { user } = req;
-        const file = req.file; // Use Multer's file object
+        const file = req.file;
         let url = "";
+
         async function SaveBannerToDb(BannerUrl: string) {
             url = BannerUrl;
-            await query.user.update({
-                where: {
-                    id: user?.id,
-                },
-                data: {
-                    profile_banner: BannerUrl,
-                },
-            });
+            await query.user.update({ where: { id: user?.id }, data: { profile_banner: BannerUrl } });
         }
         const options: UploadOptions = {
             file: file!,
@@ -135,17 +116,13 @@ class ProfileService {
         await UploadImageToS3(options);
         return { message: "Banner updated", status: true, url };
     }
+
     static async ProfileUpdate(req: Request): Promise<ProfileUpdateResponse> {
         const { user } = req;
-        const file = req.file; // Use Multer's file object
-
-        // Check if user exists
-        if (!user?.id) {
-            return { message: "User not authenticated", status: false, url: "" };
-        }
+        const file = req.file;
+        if (!user?.id) return { message: "User not authenticated", status: false, url: "" };
 
         try {
-            // Handle profile update without file
             if (!file) {
                 const updateProfile = await this.ProfileUpdateInfo(req.body, user);
                 return {
@@ -154,9 +131,7 @@ class ProfileService {
                     url: ""
                 };
             }
-
             let AvatarUrl = "";
-
             const options: UploadOptions = {
                 file: file,
                 folder: "avatars",
@@ -164,38 +139,17 @@ class ProfileService {
                 resize: { width: 200, height: 200, fit: "cover", position: "center" },
                 deleteLocal: true,
                 saveToDb: true,
-                onUploadComplete: (url: string) => {
-                    AvatarUrl = url;
-                },
+                onUploadComplete: (url: string) => { AvatarUrl = url; },
                 format: "webp",
                 quality: 100,
             };
-
-            // Upload image to S3
             await UploadImageToS3(options);
-
-            // Check if AvatarUrl was set by callback
-            if (!AvatarUrl) {
-                return { message: "Failed to upload image", status: false, url: "" };
-            }
-
-            // Update profile info
+            if (!AvatarUrl) return { message: "Failed to upload image", status: false, url: "" };
             const updateProfile = await this.ProfileUpdateInfo(req.body, user);
-            if (updateProfile.error) {
-                return { message: updateProfile.message, status: false, url: "" };
-            }
+            if (updateProfile.error) return { message: updateProfile.message, status: false, url: "" };
 
-            // Update user profile image in database
-            await query.user.update({
-                where: {
-                    id: user.id,
-                },
-                data: {
-                    profile_image: AvatarUrl || "",
-                },
-            });
+            await query.user.update({ where: { id: user.id }, data: { profile_image: AvatarUrl } });
 
-            // Add to queue for updating comments avatar
             await UpdateAvatarQueue.add("UpdateAvatarQueue", {
                 userId: user.user_id,
                 avatarUrl: AvatarUrl
@@ -211,52 +165,32 @@ class ProfileService {
             return { message: "Failed to update profile", status: false, url: "" };
         }
     }
+
     // Update Profile Info
     static async ProfileUpdateInfo(
         { name, location, bio, website, username: bodyUsername, instagram, twitter, facebook, tiktok, youtube, snapchat, telegram }: ProfileUpdateInfo,
         user: AuthUser
     ): Promise<{ error: boolean; message: string }> {
-        let username = bodyUsername?.trim();
-        if (!username) {
-            username = user.username
-        }
-        // Validate inputs
-        if (!user.id || isNaN(user.id)) {
-            return { error: true, message: "Invalid user ID" };
-        }
+        let username = bodyUsername?.trim() || user.username;
+        if (!user.id || isNaN(user.id)) return { error: true, message: "Invalid user ID" };
+        if (!username || username.length < 3) return { error: true, message: "Username must be at least 3 characters long" };
 
-        if (!username || username.trim().length < 3) {
-            return { error: true, message: "Username must be at least 3 characters long" };
-        }
-
-        // Validate social media URLs (basic check)
+        // Validate social media URLs
         const socialMediaFields = { instagram, twitter, facebook, tiktok, youtube, snapchat, telegram };
         for (const [platform, url] of Object.entries(socialMediaFields)) {
-            if (url && !this.isValidUrl(url)) {
-                return { error: true, message: `Invalid ${platform} URL` };
-            }
+            if (url && !this.isValidUrl(url)) return { error: true, message: `Invalid ${platform} URL` };
         }
-
         try {
-            // Check for username uniqueness
+            // Username uniqueness
             const existingUser = await query.user.findFirst({
                 where: {
-                    username: {
-                        equals: username,
-                        mode: 'insensitive', // Case-insensitive username check
-                    },
-                    NOT: {
-                        id: user.id,
-                    },
+                    username: { equals: username, mode: 'insensitive' },
+                    NOT: { id: user.id },
                 },
             });
+            if (existingUser) return { error: true, message: "Username already exists" };
 
-            if (existingUser) {
-                return { error: true, message: "Username already exists" };
-            }
-
-            // Update user and settings in a transaction for consistency
-            // Build user update data with only provided fields
+            // Selective update only if data is present (more efficient)
             const userUpdateData: any = {};
             if (name !== undefined) userUpdateData.name = name?.trim() || "";
             if (location !== undefined) userUpdateData.location = location?.trim() || null;
@@ -264,7 +198,6 @@ class ProfileService {
             if (username !== undefined) userUpdateData.username = username.trim();
             if (website !== undefined) userUpdateData.website = website?.trim() || null;
 
-            // Build settings update data with only provided fields
             const settingsUpdateData: any = {};
             if (instagram !== undefined) settingsUpdateData.instagram_url = instagram?.trim() || null;
             if (twitter !== undefined) settingsUpdateData.twitter_url = twitter?.trim() || null;
@@ -274,27 +207,14 @@ class ProfileService {
             if (snapchat !== undefined) settingsUpdateData.snapchat_url = snapchat?.trim() || null;
             if (telegram !== undefined) settingsUpdateData.telegram_url = telegram?.trim() || null;
 
-            // Only update if there are fields to update
             const queries = [];
             if (Object.keys(userUpdateData).length > 0) {
-                queries.push(
-                    query.user.update({
-                        where: { id: user.id },
-                        data: userUpdateData,
-                    })
-                );
+                queries.push(query.user.update({ where: { id: user.id }, data: userUpdateData }));
             }
             if (Object.keys(settingsUpdateData).length > 0) {
-                queries.push(
-                    query.settings.update({
-                        where: { id: user.id },
-                        data: settingsUpdateData,
-                    })
-                );
+                queries.push(query.settings.update({ where: { id: user.id }, data: settingsUpdateData }));
             }
-            if (queries.length > 0) {
-                await query.$transaction(queries);
-            }
+            if (queries.length) await query.$transaction(queries);
 
             return { error: false, message: "Profile updated successfully" };
         } catch (error: any) {
@@ -305,14 +225,10 @@ class ProfileService {
 
     // Helper function to validate URLs
     static isValidUrl(url: string | undefined): boolean {
-        if (!url) return true; // Allow empty URLs
-        try {
-            new URL(url);
-            return true;
-        } catch {
-            return false;
-        }
+        if (!url) return true;
+        try { new URL(url); return true; } catch { return false; }
     }
+
     static async getProfileQueryArgs({
         type,
         user,
@@ -325,17 +241,14 @@ class ProfileService {
         limit: number;
         cursor?: string | number | null;
         searchQuery?: string;
-        // Adjust query type and include as per your Prisma schema
     }) {
-        let model: any;
-        let where: any = {};
-        let include: any = undefined;
+        let model: any, where: any = {}, include: any = undefined;
         let cursor = pageCursor === 1 ? null : pageCursor;
         switch (type) {
             case "followers":
                 model = query.follow;
                 where.user_id = user.id;
-                where.id = cursor ? { lt: cursor } : undefined;
+                if (cursor) where.id = { lt: cursor };
                 include = {
                     followers: {
                         select: {
@@ -357,7 +270,7 @@ class ProfileService {
             case "following":
                 model = query.follow;
                 where.follower_id = user.id;
-                where.id = cursor ? { lt: cursor } : undefined;
+                if (cursor) where.id = { lt: cursor };
                 include = {
                     users: {
                         select: {
@@ -379,7 +292,7 @@ class ProfileService {
             case "subscribers":
                 model = query.subscribers;
                 where.user_id = user.id;
-                where.id = cursor ? { lt: cursor } : undefined;
+                if (cursor) where.id = { lt: cursor };
                 include = {
                     subscriber: {
                         select: {
@@ -413,6 +326,7 @@ class ProfileService {
             },
         };
     }
+
     // Profile Stats
     static async ProfileStats({
         user,
@@ -422,9 +336,7 @@ class ProfileService {
         query: searchQuery,
     }: ProfileStatsProps): Promise<ProfileStatsResponse> {
         const authUser = await query.user.findFirst({
-            where: {
-                id: user.id,
-            },
+            where: { id: user.id },
             select: {
                 id: true,
                 total_followers: true,
@@ -432,7 +344,6 @@ class ProfileService {
                 total_subscribers: true,
             },
         });
-
         if (!authUser) {
             return {
                 error: true,
@@ -443,14 +354,12 @@ class ProfileService {
                 nextCursor: 0,
             };
         }
-
-        const count = type === "followers"
-            ? authUser?.total_followers
-            : type === "following"
-                ? authUser?.total_following
-                : authUser?.total_subscribers;
-
-        console.log(user?.total_followers, user?.total_following, user?.total_subscribers);
+        const count =
+            type === "followers"
+                ? authUser.total_followers
+                : type === "following"
+                    ? authUser.total_following
+                    : authUser.total_subscribers;
 
         if (!user?.id) {
             return {
@@ -462,10 +371,8 @@ class ProfileService {
                 nextCursor: 0,
             };
         }
-        // Compose a unique cache key (watch out for JSON.stringify issues if needed)
 
         try {
-            // Build and run the query (type safe)
             const { model, queryArgs } = await this.getProfileQueryArgs({
                 type,
                 user,
@@ -486,7 +393,8 @@ class ProfileService {
             }
             const hasMore = data.length > limit;
             const cursorId = hasMore ? data.pop()!.id : null;
-            // Extract all relevant user IDs from the result
+
+            // Prepare user ids for fast follow check
             const otherUserIds = data.map(item =>
                 type === "followers"
                     ? item.followers.id
@@ -494,30 +402,23 @@ class ProfileService {
                         ? item.users.id
                         : item.subscriber.id
             );
-            // Query follow relationships where current user follows these users
-            const followingRelations = await query.follow.findMany({
-                where: {
-                    follower_id: user.id,
-                    user_id: { in: otherUserIds },
-                },
-                select: { user_id: true },
-            });
-            // Build a Set of followed user IDs for quick lookup
+            const followingRelations = otherUserIds.length
+                ? await query.follow.findMany({
+                    where: { follower_id: user.id, user_id: { in: otherUserIds } },
+                    select: { user_id: true },
+                })
+                : [];
+
             const followingSet = new Set(followingRelations.map(f => f.user_id));
-            // Add is_following to each user
             const enrichedData = data.map(item => {
                 const targetUser =
-                    type === "followers"
-                        ? item.followers
-                        : type === "following"
-                            ? item.users
+                    type === "followers" ? item.followers
+                        : type === "following" ? item.users
                             : item.subscriber;
-                return {
-                    ...targetUser,
-                    is_following: followingSet.has(targetUser.id),
-                };
+                return { ...targetUser, is_following: followingSet.has(targetUser.id) };
             });
-            const result: ProfileStatsResponse = {
+
+            return {
                 error: false,
                 message: "Data fetched successfully",
                 data: enrichedData,
@@ -525,13 +426,12 @@ class ProfileService {
                 total: count || 0,
                 nextCursor: cursorId,
             };
-            // Cache for 60 seconds (EX = expiry in seconds)
-            return result;
         } catch (error: any) {
             console.error("Error fetching profile stats:", error);
             throw new Error("Error fetching profile stats");
         }
     }
+
     // Follow/Unfollow User
     static async FollowUnfollowUser(
         authUser: AuthUser,
@@ -541,23 +441,13 @@ class ProfileService {
         try {
             const action = inputAction.toLowerCase() as "follow" | "unfollow";
             const pastTense = action === "follow" ? "followed" : "unfollowed";
+            if (authUser.id === userId) return { message: `You cannot ${action} yourself`, status: false };
 
-            if (authUser.id === userId) {
-                return { message: `You cannot ${action} yourself`, status: false };
-            }
-
-            // Ensure the user exists
             const user = await query.user.findFirst({ where: { id: userId } });
-            if (!user) {
-                return { message: "User not found", status: false };
-            }
+            if (!user) return { message: "User not found", status: false };
 
-            // Prepare DB operations
             if (action === "follow") {
-                // Check if already following
-                const existing = await query.follow.findFirst({
-                    where: { user_id: userId, follower_id: authUser.id }
-                });
+                const existing = await query.follow.findFirst({ where: { user_id: userId, follower_id: authUser.id } });
                 if (existing) {
                     await UserNotificationQueue.add("new-follow-notification", {
                         user_id: userId,
@@ -566,10 +456,9 @@ class ProfileService {
                         action: "follow",
                         notification_id: `NTF${GenerateUniqueId()}`,
                         read: false,
-                    })
+                    });
                     return { message: "Already following this user", status: false };
                 }
-
                 await query.$transaction([
                     query.follow.create({
                         data: {
@@ -578,14 +467,8 @@ class ProfileService {
                             follower_id: authUser.id,
                         }
                     }),
-                    query.user.update({
-                        where: { id: userId },
-                        data: { total_followers: { increment: 1 } }
-                    }),
-                    query.user.update({
-                        where: { id: authUser.id },
-                        data: { total_following: { increment: 1 } }
-                    }),
+                    query.user.update({ where: { id: userId }, data: { total_followers: { increment: 1 } } }),
+                    query.user.update({ where: { id: authUser.id }, data: { total_following: { increment: 1 } } }),
                 ]);
                 await UserNotificationQueue.add("new-follow-notification", {
                     user_id: userId,
@@ -594,46 +477,25 @@ class ProfileService {
                     action: "follow",
                     notification_id: `NTF${GenerateUniqueId()}`,
                     read: false,
-                })
+                });
             } else {
                 // "unfollow"
-                const unfollowResult = await query.follow.deleteMany({
-                    where: { user_id: userId, follower_id: authUser.id }
-                });
-
-                if (!unfollowResult.count) {
-                    return { message: "You are not following this user", status: false };
-                }
-
+                const unfollowResult = await query.follow.deleteMany({ where: { user_id: userId, follower_id: authUser.id } });
+                if (!unfollowResult.count) return { message: "You are not following this user", status: false };
                 await query.$transaction([
-                    query.user.update({
-                        where: { id: userId },
-                        data: { total_followers: { decrement: 1 } }
-                    }),
-                    query.user.update({
-                        where: { id: authUser.id },
-                        data: { total_following: { decrement: 1 } }
-                    })
+                    query.user.update({ where: { id: userId }, data: { total_followers: { decrement: 1 } } }),
+                    query.user.update({ where: { id: authUser.id }, data: { total_following: { decrement: 1 } } })
                 ]);
             }
-
-            // Clear relevant Redis cache
+            // Clear profile stats cache (for relevant patterns)
             try {
-                const stream = redis.scanStream({
-                    match: `profilestats:*:${authUser.id}*`,
-                    count: 100,
-                });
+                const stream = redis.scanStream({ match: `profilestats:*:${authUser.id}*`, count: 100 });
                 const keysToDelete: string[] = [];
-                for await (const keys of stream) {
-                    keysToDelete.push(...keys);
-                }
-                if (keysToDelete.length) {
-                    await redis.del(...keysToDelete);
-                }
+                for await (const keys of stream) keysToDelete.push(...keys);
+                if (keysToDelete.length) await redis.del(...keysToDelete);
             } catch (error) {
                 console.error('Error deleting cache keys:', error);
             }
-
             return { message: `You have ${pastTense} the user`, status: true };
         } catch (error) {
             console.error("Error following/unfollowing user:", error);
@@ -641,4 +503,5 @@ class ProfileService {
         }
     }
 }
+
 export default ProfileService;

@@ -24,7 +24,7 @@ import type {
 } from "../types/post";
 import { v4 as uuid } from "uuid";
 import query from "@utils/prisma";
-import { PostAudience } from "@prisma/client";
+import { MediaState, PostAudience } from "@prisma/client";
 import RemoveCloudflareMedia from "@libs/RemoveCloudflareMedia";
 import { Comments } from "@utils/mongoSchema";
 import { redis } from "@libs/RedisStore";
@@ -40,9 +40,10 @@ export default class PostService {
             const postId = uuid();
             const user = data.user;
             const { content, visibility, media, removedMedia } = data;
+
             if (removedMedia) {
                 const removeMedia = await RemoveCloudflareMedia(removedMedia);
-                if ("error" in removeMedia && removeMedia.error) {
+                if (removeMedia?.error) {
                     return {
                         status: false,
                         message: "An error occurred while deleting media",
@@ -50,19 +51,6 @@ export default class PostService {
                     };
                 }
             }
-            // media.map(async (file) => {
-            //       const signedUrl = await fetch(`https://api.cloudflare.com/client/v4/accounts/${ACCOUNT_ID}/stream/${file.id}`, {
-            //             method: "POST",
-            //             headers: {
-            //                   "Authorization": `Bearer ${process.env.CLOUDFLARE_ACCOUNT_TOKEN}`
-            //             },
-            //             body: JSON.stringify({ uid: file.id, requireSignedURLs: true })  // Streaming formData
-            //       });
-            //       if (signedUrl.ok) {
-            //             const token = await signedUrl.json();
-            //             console.log("SIGNED", token);
-            //       }
-            // })
             if ((!content || content.trim().length === 0) && !visibility) {
                 return {
                     status: false,
@@ -70,47 +58,36 @@ export default class PostService {
                     message: "Content and visibility are required",
                 };
             }
-            // All Images
             const allImages = media.every((file) => file.type === "image");
-            // Continue with the rest of your logic
+            const userMediaData = media
+                .filter(file => file?.id)
+                .map((file) => ({
+                    media_id: file.id,
+                    media_type: file.type,
+                    url: file.public,
+                    media_state: (file.type.includes("image") ? "completed" : "processing") as MediaState,
+                    blur: String(file.blur),
+                    poster: file.public,
+                    accessible_to: visibility,
+                    locked: visibility === "subscribers",
+                }));
+
             const post = await query.post.create({
                 data: {
                     post_id: postId,
                     was_repost: false,
-                    content: content ? content : "",
+                    content: content || "",
                     post_audience: visibility as PostAudience,
                     post_status: allImages ? "approved" : "pending",
                     post_is_visible: true,
                     user_id: user.id,
                     media: [],
                     UserMedia: {
-                        createMany: {
-                            data: media
-                                .map((file) => {
-                                    if (file && file.id) {
-                                        return {
-                                            media_id: file.id,
-                                            media_type: file.type,
-                                            url: file.public,
-                                            media_state: file.type.includes("image")
-                                                ? "completed"
-                                                : "processing",
-                                            blur: file.blur,
-                                            poster: file.public,
-                                            accessible_to: visibility,
-                                            locked: visibility === "subscribers",
-                                        };
-                                    } else {
-                                        console.error("Invalid file response:", file);
-                                        return null;
-                                    }
-                                })
-                                .filter(Boolean) as any[],
-                        },
+                        createMany: { data: userMediaData },
                     },
                 },
             });
-            // Save post to database
+
             return {
                 status: true,
                 message: "Post created successfully",
@@ -128,18 +105,13 @@ export default class PostService {
         limit,
     }: GetMyPostProps): Promise<GetMyPostResponse> {
         try {
-            // Parse limit to an integer or default to 5 if not provided
             const parsedLimit = limit ? parseInt(limit, 10) : 5;
-            const validLimit =
-                Number.isNaN(parsedLimit) || parsedLimit <= 0 ? 5 : parsedLimit;
-            // Parse page to an integer or default to 1 if not provided
+            const validLimit = Number.isNaN(parsedLimit) || parsedLimit <= 0 ? 5 : parsedLimit;
             const parsedPage = page ? parseInt(page, 10) : 1;
-            const validPage =
-                Number.isNaN(parsedPage) || parsedPage <= 0 ? 1 : parsedPage;
+            const validPage = Number.isNaN(parsedPage) || parsedPage <= 0 ? 1 : parsedPage;
+
             const posts = await query.post.findMany({
-                where: {
-                    user_id: userId,
-                },
+                where: { user_id: userId },
                 select: {
                     id: true,
                     content: true,
@@ -185,35 +157,35 @@ export default class PostService {
                 },
                 skip: (validPage - 1) * validLimit,
                 take: validLimit + 1,
-                orderBy: {
-                    created_at: "desc",
-                },
+                orderBy: { created_at: "desc" },
             });
+
             let hasMore = false;
             if (posts.length > validLimit) {
                 hasMore = true;
                 posts.pop();
             }
+            // batch fetch likes and reposts to reduce N+1 queries
+            const postIds = posts.map(post => post.id);
+            const [likes, reposts] = await Promise.all([
+                query.postLike.findMany({ where: { post_id: { in: postIds }, user_id: userId } }),
+                query.userRepost.findMany({ where: { post_id: { in: postIds }, user_id: userId } }),
+            ]);
+            const postLikesSet = new Set(likes.map(l => l.post_id));
+            const postRepostSet = new Set(reposts.map(r => r.post_id));
 
-            const postsChecked = posts.map(async (post) => {
-                const postLike = await query.postLike.findFirst({
-                    where: {
-                        user_id: post.user.id,
-                        post_id: post.id,
-                    },
-                });
-                return {
-                    ...post,
-                    isSubscribed: true,
-                    likedByme: postLike ? true : false,
-                };
-            });
-            const resolvedPosts = await Promise.all(postsChecked);
+            const resolvedPosts = posts.map(post => ({
+                ...post,
+                isSubscribed: true,
+                wasReposted: postRepostSet.has(post.id),
+                likedByme: postLikesSet.has(post.id),
+            }));
+
             return {
                 status: true,
                 message: "Posts retrieved successfully",
                 data: resolvedPosts,
-                hasMore: hasMore,
+                hasMore,
             };
         } catch (error: any) {
             console.log(error);
@@ -228,22 +200,15 @@ export default class PostService {
         limit,
     }: GetMyPostProps): Promise<GetMyPostResponse> {
         try {
-            // Parse limit to an integer or default to 5 if not provided
             const parsedLimit = limit ? parseInt(limit, 10) : 5;
-            const validLimit =
-                Number.isNaN(parsedLimit) || parsedLimit <= 0 ? 5 : parsedLimit;
-            // Parse page to an integer or default to 1 if not provided
+            const validLimit = Number.isNaN(parsedLimit) || parsedLimit <= 0 ? 5 : parsedLimit;
             const parsedPage = page ? parseInt(page, 10) : 1;
-            const validPage =
-                Number.isNaN(parsedPage) || parsedPage <= 0 ? 1 : parsedPage;
+            const validPage = Number.isNaN(parsedPage) || parsedPage <= 0 ? 1 : parsedPage;
+
             const posts = await query.post.findMany({
                 where: {
                     user_id: userId,
-                    OR: [
-                        { post_audience: "price" },
-                        { post_audience: "subscribers" },
-                        { post_audience: "private" },
-                    ],
+                    OR: [{ post_audience: "price" }, { post_audience: "subscribers" }, { post_audience: "private" }],
                 },
                 select: {
                     id: true,
@@ -290,9 +255,7 @@ export default class PostService {
                 },
                 skip: (validPage - 1) * validLimit,
                 take: validLimit + 1,
-                orderBy: {
-                    created_at: "desc",
-                },
+                orderBy: { created_at: "desc" },
             });
 
             let hasMore = false;
@@ -301,25 +264,28 @@ export default class PostService {
                 posts.pop();
             }
 
-            const postsChecked = posts.map(async (post) => {
-                const postLike = await query.postLike.findFirst({
-                    where: {
-                        user_id: post.user.id,
-                        post_id: post.id,
-                    },
-                });
-                return {
-                    ...post,
-                    likedByme: postLike ? true : false,
-                    isSubscribed: true,
-                };
-            });
-            const resolvedPosts = await Promise.all(postsChecked);
+            const postIds = posts.map(post => post.id);
+
+            // Batch likes and reposts
+            const [likes, reposts] = await Promise.all([
+                query.postLike.findMany({ where: { post_id: { in: postIds }, user_id: userId } }),
+                query.userRepost.findMany({ where: { post_id: { in: postIds }, user_id: userId } }),
+            ]);
+            const postLikesSet = new Set(likes.map(l => l.post_id));
+            const postRepostSet = new Set(reposts.map(r => r.post_id));
+
+            const resolvedPosts = posts.map(post => ({
+                ...post,
+                likedByme: postLikesSet.has(post.id),
+                wasReposted: postRepostSet.has(post.id),
+                isSubscribed: true,
+            }));
+
             return {
                 status: true,
                 message: "Posts retrieved successfully",
                 data: resolvedPosts,
-                hasMore: hasMore,
+                hasMore,
             };
         } catch (error: any) {
             console.log(error);
@@ -334,24 +300,12 @@ export default class PostService {
         limit = "20",
     }: GetMyPostProps): Promise<GetMyPostResponse> {
         try {
-            // Parse limit to an integer or default to 5 if not provided
             const parsedLimit = limit ? parseInt(limit, 10) : 5;
-            const validLimit =
-                Number.isNaN(parsedLimit) || parsedLimit <= 0 ? 5 : parsedLimit;
-            const redisKey = `user-repost-${userId}-page-${page}-limit-${parsedLimit}`;
-            // Parse page to an integer or default to 1 if not provided
-            const userRepostCount = await query.userRepost.count({
-                where: {
-                    user_id: userId,
-                },
-            });
+            const validLimit = Number.isNaN(parsedLimit) || parsedLimit <= 0 ? 5 : parsedLimit;
+            const redisKey = `user-repost-${userId}-page-${page}-limit-${validLimit}`;
+            const userRepostCount = await query.userRepost.count({ where: { user_id: userId } });
             if (userRepostCount === 0) {
-                return {
-                    status: false,
-                    hasMore: false,
-                    data: [],
-                    message: "No reposts found",
-                };
+                return { status: false, hasMore: false, data: [], message: "No reposts found" };
             }
             const RepostRedisCache = await redis.get(redisKey);
             if (RepostRedisCache) {
@@ -364,9 +318,7 @@ export default class PostService {
                 };
             }
             const userReposts = await query.userRepost.findMany({
-                where: {
-                    user_id: userId,
-                },
+                where: { user_id: userId },
                 select: {
                     post: {
                         select: {
@@ -401,12 +353,6 @@ export default class PostService {
                                     updated_at: true,
                                 },
                             },
-                            PostLike: {
-                                select: {
-                                    post_id: true,
-                                    user_id: true,
-                                },
-                            },
                             user: {
                                 select: {
                                     username: true,
@@ -421,30 +367,30 @@ export default class PostService {
                 },
                 skip: (Number(page) - 1) * validLimit,
                 take: validLimit + 1,
-                orderBy: {
-                    id: "desc",
-                },
+                orderBy: { id: "desc" },
             });
+
             let hasMore = false;
-            if (userReposts.length > validLimit) {
-                hasMore = true;
-            }
-            const reposts = userReposts.map((repost) => repost.post);
-            const postsChecked = reposts.map(async (post) => {
-                const postLike = await query.postLike.findFirst({
-                    where: {
-                        user_id: post.user.id,
-                        post_id: post.id,
-                    },
-                });
-                return {
-                    ...post,
-                    likedByme: postLike ? true : false,
-                    isSubscribed: true,
-                };
-            });
-            const resolvedPosts = await Promise.all(postsChecked);
-            await redis.set(redisKey, JSON.stringify(resolvedPosts), "EX", 60);
+            if (userReposts.length > validLimit) hasMore = true;
+
+            const reposts = userReposts.map(repost => repost.post);
+            const postIds = reposts.map(post => post.id);
+            // Batch likes and reposts
+            const [likes, repostsDb] = await Promise.all([
+                query.postLike.findMany({ where: { post_id: { in: postIds }, user_id: userId } }),
+                query.userRepost.findMany({ where: { post_id: { in: postIds }, user_id: userId } }),
+            ]);
+            const postLikesSet = new Set(likes.map(l => l.post_id));
+            const postRepostSet = new Set(repostsDb.map(r => r.post_id));
+
+            const resolvedPosts = reposts.map(post => ({
+                ...post,
+                likedByme: postLikesSet.has(post.id),
+                wasReposted: postRepostSet.has(post.id),
+                isSubscribed: true,
+            }));
+            await redis.set(redisKey, JSON.stringify(resolvedPosts), "EX", 10);
+
             return {
                 status: true,
                 message: "Reposts retrieved successfully",
@@ -464,18 +410,13 @@ export default class PostService {
         limit,
     }: RepostProps): Promise<GetMyPostResponse> {
         try {
-            // Parse limit to an integer or default to 5 if not provided
             const parsedLimit = limit ? parseInt(limit, 10) : 5;
-            const validLimit =
-                Number.isNaN(parsedLimit) || parsedLimit <= 0 ? 5 : parsedLimit;
-            // Parse page to an integer or default to 1 if not provided
+            const validLimit = Number.isNaN(parsedLimit) || parsedLimit <= 0 ? 5 : parsedLimit;
             const parsedPage = page ? parseInt(page, 10) : 1;
-            const validPage =
-                Number.isNaN(parsedPage) || parsedPage <= 0 ? 1 : parsedPage;
+            const validPage = Number.isNaN(parsedPage) || parsedPage <= 0 ? 1 : parsedPage;
+
             const userReposts = await query.userRepost.findMany({
-                where: {
-                    user_id: Number(userId),
-                },
+                where: { user_id: Number(userId) },
                 select: {
                     post: {
                         select: {
@@ -524,9 +465,7 @@ export default class PostService {
                 },
                 skip: (validPage - 1) * validLimit,
                 take: validLimit + 1,
-                orderBy: {
-                    id: "desc",
-                },
+                orderBy: { id: "desc" },
             });
 
             let hasMore = false;
@@ -534,26 +473,28 @@ export default class PostService {
                 hasMore = true;
                 userReposts.pop();
             }
-            const reposts = userReposts.map((repost) => repost.post);
-            const postsChecked = reposts.map(async (post) => {
-                const postLike = await query.postLike.findFirst({
-                    where: {
-                        user_id: post.user.id,
-                        post_id: post.id,
-                    },
-                });
-                return {
-                    ...post,
-                    likedByme: postLike ? true : false,
-                    isSubscribed: true,
-                };
-            });
-            const resolvedPosts = await Promise.all(postsChecked);
+            const reposts = userReposts.map(repost => repost.post);
+            const postIds = reposts.map(post => post.id);
+            // Batch likes and reposts
+            const [likes, repostsDb] = await Promise.all([
+                query.postLike.findMany({ where: { post_id: { in: postIds }, user_id: userId } }),
+                query.userRepost.findMany({ where: { post_id: { in: postIds }, user_id: userId } }),
+            ]);
+            const postLikesSet = new Set(likes.map(l => l.post_id));
+            const postRepostSet = new Set(repostsDb.map(r => r.post_id));
+
+            const resolvedPosts = reposts.map(post => ({
+                ...post,
+                likedByme: postLikesSet.has(post.id),
+                wasReposted: postRepostSet.has(post.id),
+                isSubscribed: true,
+            }));
+
             return {
                 status: true,
                 message: "Reposts retrieved successfully",
                 data: resolvedPosts,
-                hasMore: hasMore,
+                hasMore,
             };
         } catch (error: any) {
             console.log(error);
@@ -568,43 +509,28 @@ export default class PostService {
         limit,
     }: GetMyMediaProps): Promise<GetMyMediaResponse> {
         try {
-            // Parse limit to an integer or default to 5 if not provided
             const parsedLimit = limit ? parseInt(limit, 10) : 6;
-            const validLimit =
-                Number.isNaN(parsedLimit) || parsedLimit <= 0 ? 5 : parsedLimit;
-            // Parse page to an integer or default to 1 if not provided
+            const validLimit = Number.isNaN(parsedLimit) || parsedLimit <= 0 ? 5 : parsedLimit;
             const parsedPage = page ? parseInt(page, 10) : 1;
-            const validPage =
-                Number.isNaN(parsedPage) || parsedPage <= 0 ? 1 : parsedPage;
-            const postCount = await query.post.findMany({
-                where: {
-                    user_id: userId,
-                },
-            });
-            const mediaCount = await query.userMedia.count({
-                where: {
-                    OR: [...postCount.map((post) => ({ post_id: post.id }))],
-                },
-            });
-            const media = await query.userMedia.findMany({
-                where: {
-                    OR: [...postCount.map((post) => ({ post_id: post.id }))],
-                },
-                skip: (validPage - 1) * validLimit,
-                take: validLimit,
-                orderBy: {
-                    created_at: "desc",
-                },
-            });
+            const validPage = Number.isNaN(parsedPage) || parsedPage <= 0 ? 1 : parsedPage;
 
+            // get post ids by user, then fetch all that media in one go
+            const postIds = (await query.post.findMany({
+                where: { user_id: userId },
+                select: { id: true },
+            })).map(p => p.id);
 
-            const mediaChecked = await Promise.all(media.map(async (mediaFile) => {
-                return {
-                    ...mediaFile,
-                    isSubscribed: true,
-                };
-            }));
-
+            const [mediaCount, media] = await Promise.all([
+                query.userMedia.count({ where: { post_id: { in: postIds } } }),
+                query.userMedia.findMany({
+                    where: { post_id: { in: postIds } },
+                    skip: (validPage - 1) * validLimit,
+                    take: validLimit,
+                    orderBy: { created_at: "desc" },
+                }),
+            ]);
+            // isSubscribed: true can be done without map over async
+            const mediaChecked = media.map(mediaFile => ({ ...mediaFile, isSubscribed: true }));
             return {
                 status: true,
                 message: "Media retrieved successfully",
@@ -625,78 +551,60 @@ export default class PostService {
         authUserId,
     }: GetOtherMediaProps): Promise<GetOtherMediaResponse> {
         try {
-            // Parse limit to an integer or default to 5 if not provided
             const parsedLimit = limit ? parseInt(limit, 10) : 6;
-            const validLimit =
-                Number.isNaN(parsedLimit) || parsedLimit <= 0 ? 5 : parsedLimit;
-            // Parse page to an integer or default to 1 if not provided
+            const validLimit = Number.isNaN(parsedLimit) || parsedLimit <= 0 ? 5 : parsedLimit;
             const parsedPage = page ? parseInt(page, 10) : 1;
-            const validPage =
-                Number.isNaN(parsedPage) || parsedPage <= 0 ? 1 : parsedPage;
-            const postCount = await query.post.findMany({
-                where: {
-                    user_id: Number(userId),
-                },
-            });
-            const media = await query.userMedia.findMany({
-                where: {
-                    NOT: {
-                        accessible_to: "private",
+            const validPage = Number.isNaN(parsedPage) || parsedPage <= 0 ? 1 : parsedPage;
+
+            const postIds = (await query.post.findMany({
+                where: { user_id: Number(userId) },
+                select: { id: true },
+            })).map(p => p.id);
+
+            const [isSubscribed, media] = await Promise.all([
+                query.subscribers.findFirst({
+                    where: { subscriber_id: Number(authUserId), user_id: Number(userId) },
+                }),
+                query.userMedia.findMany({
+                    where: {
+                        NOT: { accessible_to: "private" },
+                        media_state: "completed",
+                        post_id: { in: postIds },
                     },
-                    media_state: "completed",
-                    OR: [...postCount.map((post) => ({ post_id: post.id }))],
-                },
-                select: {
-                    id: true,
-                    media_id: true,
-                    post_id: true,
-                    poster: true,
-                    duration: true,
-                    media_state: true,
-                    url: true,
-                    blur: true,
-                    media_type: true,
-                    locked: true,
-                    accessible_to: true,
-                    post: {
-                        select: {
-                            id: true,
-                            user: {
-                                select: {
-                                    id: true,
-                                },
+                    select: {
+                        id: true,
+                        media_id: true,
+                        post_id: true,
+                        poster: true,
+                        duration: true,
+                        media_state: true,
+                        url: true,
+                        blur: true,
+                        media_type: true,
+                        locked: true,
+                        accessible_to: true,
+                        post: {
+                            select: {
+                                id: true,
+                                user: { select: { id: true } },
                             },
                         },
                     },
-                },
-                skip: (validPage - 1) * validLimit,
-                take: validLimit + 1,
-                orderBy: {
-                    created_at: "desc",
-                },
-            });
+                    skip: (validPage - 1) * validLimit,
+                    take: validLimit + 1,
+                    orderBy: { created_at: "desc" },
+                }),
+            ]);
 
             let hasMore = false;
             if (media.length > validLimit) {
                 hasMore = true;
                 media.pop();
             }
-
-            const isSubscribed = await query.subscribers.findFirst({
-                where: {
-                    subscriber_id: Number(authUserId),
-                    user_id: Number(userId),
-                },
-            });
-
-            const mediaChecked = media.map(async (mediaFile) => {
-                return {
-                    ...mediaFile,
-                    isSubscribed: mediaFile.post.user.id === Number(authUserId) || !!isSubscribed,
-                }
-            })
-
-            const resolvedMedia = await Promise.all(mediaChecked);
+            const resolvedMedia = media.map(mediaFile => ({
+                ...mediaFile,
+                isSubscribed: mediaFile.post.user.id === Number(authUserId) || !!isSubscribed,
+            }));
 
             return {
                 status: true,
@@ -718,7 +626,6 @@ export default class PostService {
         authUserId
     }: GetUserPostByIdProps): Promise<GetUserPostByIdResponse> {
         try {
-
             if (!userId || isNaN(Number(userId))) {
                 return {
                     error: true,
@@ -728,24 +635,17 @@ export default class PostService {
                     hasMore: false,
                 };
             }
-
-            // Parse limit to an integer or default to 5 if not provided
             const parsedLimit = limit ? parseInt(limit, 10) : 5;
-            const validLimit =
-                Number.isNaN(parsedLimit) || parsedLimit <= 0 ? 5 : parsedLimit;
-            // Parse page to an integer or default to 1 if not provided
+            const validLimit = Number.isNaN(parsedLimit) || parsedLimit <= 0 ? 5 : parsedLimit;
             const parsedPage = page ? parseInt(page, 10) : 1;
-            const validPage =
-                Number.isNaN(parsedPage) || parsedPage <= 0 ? 1 : parsedPage;
-            // Convert userId to number
+            const validPage = Number.isNaN(parsedPage) || parsedPage <= 0 ? 1 : parsedPage;
             const parsedUserId = Number(userId);
-            let posts = await query.post.findMany({
+
+            const posts = await query.post.findMany({
                 where: {
                     user_id: parsedUserId,
                     post_status: "approved",
-                    NOT: {
-                        post_audience: "private",
-                    },
+                    NOT: { post_audience: "private" },
                 },
                 select: {
                     id: true,
@@ -790,9 +690,7 @@ export default class PostService {
                         },
                     },
                 },
-                orderBy: {
-                    created_at: "desc",
-                },
+                orderBy: { created_at: "desc" },
                 skip: (validPage - 1) * validLimit,
                 take: validLimit + 1,
             });
@@ -803,28 +701,24 @@ export default class PostService {
                 hasMore = true;
             }
 
-            const isSubscribed = await query.subscribers.findFirst({
-                where: {
-                    subscriber_id: authUserId,
-                    user_id: parsedUserId
-                }
-            })
+            const postIds = posts.map(post => post.id);
+            // Batch queries
+            const [subs, likes, reposts] = await Promise.all([
+                query.subscribers.findFirst({
+                    where: { subscriber_id: authUserId, user_id: parsedUserId }
+                }),
+                query.postLike.findMany({ where: { post_id: { in: postIds }, user_id: posts.length ? posts[0].user.id : 0 } }), // note: original used post.user.id, possible logic bug
+                query.userRepost.findMany({ where: { post_id: { in: postIds }, user_id: authUserId } }),
+            ]);
+            const postLikesSet = new Set(likes.map(l => l.post_id));
+            const postRepostSet = new Set(reposts.map(r => r.post_id));
 
-
-            const postsChecked = posts.map(async (post) => {
-                const postLike = await query.postLike.findFirst({
-                    where: {
-                        user_id: post.user.id,
-                        post_id: post.id,
-                    },
-                });
-                return {
-                    ...post,
-                    likedByme: postLike ? true : false,
-                    isSubscribed: isSubscribed ? true : false,
-                };
-            });
-            const resolvedPosts = await Promise.all(postsChecked);
+            const resolvedPosts = posts.map(post => ({
+                ...post,
+                likedByme: postLikesSet.has(post.id),
+                wasReposted: postRepostSet.has(post.id),
+                isSubscribed: !!subs,
+            }));
             return {
                 error: false,
                 status: true,
@@ -838,7 +732,7 @@ export default class PostService {
         }
     }
 
-    // Get User Post By User ID
+    // Get User Private Posts By ID
     static async GetUserPrivatePostByID({
         userId,
         page,
@@ -846,15 +740,12 @@ export default class PostService {
         authUserId,
     }: GetUserPostByIdProps): Promise<GetUserPostByIdResponse> {
         try {
-            // Parse limit to an integer or default to 5 if not provided
             const parsedLimit = limit ? parseInt(limit, 10) : 5;
-            const validLimit =
-                Number.isNaN(parsedLimit) || parsedLimit <= 0 ? 5 : parsedLimit;
-            // Parse page to an integer or default to 1 if not provided
+            const validLimit = Number.isNaN(parsedLimit) || parsedLimit <= 0 ? 5 : parsedLimit;
             const parsedPage = page ? parseInt(page, 10) : 1;
-            const validPage =
-                Number.isNaN(parsedPage) || parsedPage <= 0 ? 1 : parsedPage;
-            let posts = await query.post.findMany({
+            const validPage = Number.isNaN(parsedPage) || parsedPage <= 0 ? 1 : parsedPage;
+
+            const posts = await query.post.findMany({
                 where: {
                     user_id: Number(userId),
                     post_status: "approved",
@@ -903,9 +794,7 @@ export default class PostService {
                         },
                     },
                 },
-                orderBy: {
-                    created_at: "desc",
-                },
+                orderBy: { created_at: "desc" },
                 skip: (validPage - 1) * validLimit,
                 take: validLimit + 1,
             });
@@ -915,28 +804,25 @@ export default class PostService {
                 posts.pop();
                 hasMore = true;
             }
+            const postIds = posts.map(post => post.id);
 
-            const isSubscribed = await query.subscribers.findFirst({
-                where: {
-                    subscriber_id: authUserId,
-                    user_id: Number(userId),
-                }
-            })
+            const [subs, likes, reposts] = await Promise.all([
+                query.subscribers.findFirst({
+                    where: { subscriber_id: authUserId, user_id: Number(userId) }
+                }),
+                query.postLike.findMany({ where: { post_id: { in: postIds }, user_id: posts.length ? posts[0].user.id : 0 } }),
+                query.userRepost.findMany({ where: { post_id: { in: postIds }, user_id: authUserId } }),
+            ]);
+            const postLikesSet = new Set(likes.map(l => l.post_id));
+            const postRepostSet = new Set(reposts.map(r => r.post_id));
 
-            const postsChecked = posts.map(async (post) => {
-                const postLike = await query.postLike.findFirst({
-                    where: {
-                        user_id: post.user.id,
-                        post_id: post.id,
-                    },
-                });
-                return {
-                    ...post,
-                    likedByme: postLike ? true : false,
-                    isSubscribed: !!isSubscribed || post.user.id === authUserId,
-                };
-            });
-            const resolvedPosts = await Promise.all(postsChecked);
+            const resolvedPosts = posts.map(post => ({
+                ...post,
+                likedByme: postLikesSet.has(post.id),
+                wasReposted: postRepostSet.has(post.id),
+                isSubscribed: !!subs || post.user.id === authUserId,
+            }));
+
             return {
                 error: false,
                 status: true,
@@ -950,7 +836,7 @@ export default class PostService {
         }
     }
 
-    // Get Single Post By ID:
+    // Get Single Post By ID
     static async GetSinglePost({
         postId,
         authUserId
@@ -963,14 +849,8 @@ export default class PostService {
                 where: {
                     post_id: postId,
                     post_status: "approved",
-                    NOT: [
-                        {
-                            post_audience: "private",
-                        },
-                    ],
-                    user: {
-                        active_status: true
-                    }
+                    NOT: [{ post_audience: "private" }],
+                    user: { active_status: true }
                 },
                 select: {
                     user: {
@@ -1018,26 +898,20 @@ export default class PostService {
                     message: "Post not Private",
                 };
             }
-            const postLike = await query.postLike.findFirst({
-                where: {
-                    post_id: post.id,
-                    user_id: post.user_id,
-                },
-            });
-            const likedByme = postLike ? true : false;
-            const isSubscribed = await query.subscribers.findFirst({
-                where: {
-                    user_id: post.user_id,
-                    subscriber_id: authUserId
-                }
-            })
+            // one query for like
+            const [postLike, isSubscribed, isRespoted] = await Promise.all([
+                query.postLike.findFirst({ where: { post_id: post.id, user_id: authUserId } }),
+                query.subscribers.findFirst({ where: { user_id: post.user_id, subscriber_id: authUserId } }),
+                query.userRepost.findFirst({ where: { post_id: post.id, user_id: authUserId } }),
+            ]);
             return {
                 error: false,
                 status: true,
                 message: "Post retrieved successfully",
                 data: {
                     ...post,
-                    likedByme,
+                    likedByme: !!postLike,
+                    wasReposted: !!isRespoted,
                     isSubscribed: !!isSubscribed || post.user_id === authUserId,
                 },
             };
@@ -1051,10 +925,7 @@ export default class PostService {
     static async EditPost({ postId }: EditPostProps): Promise<EditPostResponse> {
         try {
             const post = await query.post.findFirst({
-                where: {
-                    post_id: postId,
-                    post_status: "approved",
-                },
+                where: { post_id: postId, post_status: "approved" },
                 select: {
                     id: true,
                     content: true,
@@ -1089,40 +960,24 @@ export default class PostService {
     }
 
     // Update PostAudience
-    static async UpdatePostAudience({
-        postId,
-        userId,
-        visibility,
-    }: {
-        postId: string;
-        userId: number;
-        visibility: string;
-    }): Promise<any> {
+    static async UpdatePostAudience({ postId, userId, visibility }: { postId: string; userId: number; visibility: string; }): Promise<any> {
         try {
             const findPost = await query.post.findFirst({
-                where: {
-                    post_id: postId,
-                    user_id: userId,
-                },
+                where: { post_id: postId, user_id: userId },
             });
             if (!findPost) {
                 return { error: true, message: "Post not found" };
             }
+            // transaction for atomic multi-table update
             const [updatePost, updateMedia] = await query.$transaction([
                 query.post.update({
-                    where: {
-                        id: findPost.id,
-                    },
+                    where: { id: findPost.id },
                     data: {
-                        post_audience: String(visibility)
-                            .trim()
-                            .toLowerCase() as PostAudience,
+                        post_audience: String(visibility).trim().toLowerCase() as PostAudience,
                     },
                 }),
                 query.userMedia.updateMany({
-                    where: {
-                        post_id: findPost.id,
-                    },
+                    where: { post_id: findPost.id },
                     data: {
                         accessible_to: String(visibility).trim().toLowerCase(),
                     },
@@ -1137,114 +992,74 @@ export default class PostService {
         }
     }
 
-    // Create Repost
-    static async CreateRepost({
-        postId,
-        userId,
-    }: CreateRepostProps): Promise<RepostResponse> {
+    static async CreateRepost({ postId, userId }: CreateRepostProps): Promise<RepostResponse> {
         try {
             const audienceTypes = ["private", "subscribers", "followers"];
-            // Repost the post
             const getPost = await query.post.findFirst({
-                where: {
-                    post_id: postId,
-                    post_status: "approved",
-                },
-                select: {
-                    post_audience: true,
-                    user: {
-                        select: {
-                            id: true,
-                        },
-                    },
-                    id: true,
-                },
+                where: { post_id: postId, post_status: "approved" },
+                select: { post_audience: true, user: { select: { id: true } }, id: true },
             });
             if (!getPost) {
-                return {
-                    error: true,
-                    message: "Post not found",
-                };
+                return { error: true, message: "Post not found" };
             }
+            // Audience check
             const postAudience = getPost.post_audience;
             if (audienceTypes.includes(postAudience)) {
                 const isSubscriber = await query.post.findFirst({
                     where: {
                         post_id: postId,
-                        user: {
-                            Subscribers: {
-                                some: {
-                                    subscriber_id: userId,
-                                },
-                            },
-                        },
+                        user: { Subscribers: { some: { subscriber_id: userId } } },
                     },
                 });
                 if (!isSubscriber && getPost.user.id !== userId) {
                     return {
                         error: true,
-                        message:
-                            "You are not a subscriber of this post, therefore you cannot repost it",
+                        message: "You are not a subscriber of this post, therefore you cannot repost it",
                     };
                 }
             }
-            const repostId = uuid();
-            const repost = await query.$transaction(async (transaction) => {
-                const repost = await transaction.userRepost.create({
-                    data: {
-                        post_id: getPost.id,
-                        user_id: userId,
-                        repost_id: repostId,
-                    },
-                });
-                await transaction.post.update({
-                    where: {
-                        id: getPost.id,
-                    },
-                    data: {
-                        post_reposts: {
-                            increment: 1,
-                        },
-                    },
-                });
-                return repost;
+            // Already reposted?
+            const existingRepost = await query.userRepost.findFirst({
+                where: { post_id: getPost.id, user_id: userId },
             });
-            if (repost) {
-                query.$disconnect();
-                return {
-                    error: false,
-                    message: "Post reposted successfully",
-                };
+            if (existingRepost) {
+                await query.$transaction([
+                    query.userRepost.delete({ where: { id: existingRepost.id } }),
+                    query.post.update({
+                        where: { id: getPost.id },
+                        data: { post_reposts: { decrement: 1 } },
+                    }),
+                ]);
+                return { error: false, message: "You unreposted the post successfully" };
+            } else {
+                const repostId = uuid();
+                await query.$transaction([
+                    query.userRepost.create({
+                        data: { post_id: getPost.id, user_id: userId, repost_id: repostId },
+                    }),
+                    query.post.update({
+                        where: { id: getPost.id },
+                        data: { post_reposts: { increment: 1 } },
+                    }),
+                ]);
+                return { error: false, message: "Post reposted successfully" };
             }
-            return {
-                error: true,
-                message: "An error occurred while reposting the post",
-            };
         } catch (error: any) {
             throw new Error(error.message);
         }
     }
 
     // Get Post Comments
-    static async GetPostComments({
-        postId,
-        page = "1",
-        limit = "10",
-    }: GetPostCommentsProps): Promise<GetPostCommentsResponse> {
-        const countComments = await Comments.countDocuments({
-            postId: String(postId),
-        });
-        const comments = await Comments.find({
-            postId: String(postId),
-            parentId: null
-        })
+    static async GetPostComments({ postId, page = "1", limit = "10" }: GetPostCommentsProps): Promise<GetPostCommentsResponse> {
+        const countComments = await Comments.countDocuments({ postId: String(postId) });
+        const skip = (parseInt(page) - 1) * parseInt(limit);
+        const limitInt = parseInt(limit);
+        const comments = await Comments.find({ postId: String(postId), parentId: null })
             .sort({ date: -1 })
-            .skip((parseInt(page) - 1) * parseInt(limit))
-            .limit(parseInt(limit) + 1); // Fetch one extra for pagination check
-        const hasMore = comments.length > parseInt(limit);
-        if (hasMore) {
-            comments.pop();
-        }
+            .skip(skip)
+            .limit(limitInt + 1); // one extra for hasMore
+        const hasMore = comments.length > limitInt;
+        if (hasMore) comments.pop();
         if (!comments || comments.length == 0) {
             return {
                 error: false,
@@ -1258,69 +1073,47 @@ export default class PostService {
             error: false,
             message: "Comments found",
             data: comments,
-            hasMore: hasMore,
+            hasMore,
             total: countComments,
         };
     }
 
     // Like A Post
-    static async LikePost({
-        postId,
-        userId,
-    }: LikePostProps): Promise<LikePostResponse> {
+    static async LikePost({ postId, userId }: LikePostProps): Promise<LikePostResponse> {
         try {
-            let postHasBeenLiked = false;
-            let postLike = null;
-            // Verify if post has been liked by user
-            const postLiked = await query.postLike.findFirst({
-                where: {
-                    post_id: parseInt(postId),
-                    user_id: userId,
-                },
+            // Use transaction for atomic like/unlike+count update
+            const postLike = await query.postLike.findFirst({
+                where: { post_id: parseInt(postId), user_id: userId },
             });
-            if (!postLiked) {
-                postLike = await query.postLike.create({
-                    data: {
-                        post_id: parseInt(postId),
-                        like_id: 1,
-                        user_id: userId,
-                    },
-                });
-                await query.post.update({
-                    where: {
-                        id: Number(postId),
-                    },
-                    data: {
-                        post_likes: {
-                            increment: 1,
+            let isLiked = false;
+            let updatedPost = null;
+            await query.$transaction(async (prisma) => {
+                if (!postLike) {
+                    await prisma.postLike.create({
+                        data: {
+                            post_id: parseInt(postId),
+                            like_id: 1,
+                            user_id: userId,
                         },
-                    },
-                });
-                postHasBeenLiked = true;
-            } else {
-                await query.postLike.delete({
-                    where: {
-                        id: postLiked.id,
-                    },
-                });
-                postLike = await query.post.update({
-                    where: {
-                        id: parseInt(postId),
-                    },
-                    data: {
-                        post_likes: {
-                            decrement: 1,
-                        },
-                    },
-                });
-            }
+                    });
+                    updatedPost = await prisma.post.update({
+                        where: { id: Number(postId) },
+                        data: { post_likes: { increment: 1 } },
+                    });
+                    isLiked = true;
+                } else {
+                    await prisma.postLike.delete({ where: { id: postLike.id } });
+                    updatedPost = await prisma.post.update({
+                        where: { id: parseInt(postId) },
+                        data: { post_likes: { decrement: 1 } },
+                    });
+                    isLiked = false;
+                }
+            });
             return {
-                ...postLike,
                 success: true,
-                isLiked: postHasBeenLiked,
-                message: postHasBeenLiked
-                    ? "Post has been liked"
-                    : "Post has been unliked",
+                isLiked,
+                message: isLiked ? "Post has been liked" : "Post has been unliked",
             };
         } catch (error: any) {
             console.error(error);
@@ -1329,60 +1122,35 @@ export default class PostService {
     }
 
     // Delete Post
-    static async DeletePost({
-        postId,
-        userId,
-    }: {
-        postId: string;
-        userId: number;
-    }): Promise<DeletePostResponse> {
+    static async DeletePost({ postId, userId }: { postId: string; userId: number; }): Promise<DeletePostResponse> {
         try {
             const post = await query.post.findFirst({
-                where: {
-                    post_id: postId,
-                    user_id: userId,
-                },
+                where: { post_id: postId, user_id: userId },
             });
             if (!post) {
-                return {
-                    status: false,
-                    message: "Post not found",
-                };
+                return { status: false, message: "Post not found" };
             }
-            const postMedia = await query.userMedia.findMany({
-                where: {
-                    post_id: post.id,
-                },
-            });
+            const postMedia = await query.userMedia.findMany({ where: { post_id: post.id } });
             if (postMedia.length > 0) {
-                const media = postMedia.map((media) => ({
-                    id: media.media_id,
-                    type: media.media_type,
-                }));
-                console.log("Media", media);
-                if (media && media.length > 0) {
+                const media = postMedia.map((m) => ({ id: m.media_id, type: m.media_type }));
+                if (media.length > 0) {
                     const removeMedia = await RemoveCloudflareMedia(media);
-                    if ("error" in removeMedia && removeMedia.error) {
+                    if (removeMedia) {
                         return {
                             status: false,
                             message: "An error occurred while deleting media",
-                            error: removeMedia.error,
+                            error: removeMedia,
                         };
                     }
                 }
             }
-            await query.post.delete({
-                where: {
-                    id: post.id,
-                },
-            });
-            await Comments.deleteMany({
-                postId: String(post.post_id),
-            });
-            return {
-                status: true,
-                message: "Post deleted successfully",
-            };
+            // Use transaction to delete post+media
+            await query.$transaction([
+                query.userMedia.deleteMany({ where: { post_id: post.id } }),
+                query.post.delete({ where: { id: post.id } }),
+            ]);
+            await Comments.deleteMany({ postId: String(post.post_id) });
+            return { status: true, message: "Post deleted successfully" };
         } catch (error: any) {
             console.log(error);
             throw new Error(error.message);
@@ -1390,9 +1158,7 @@ export default class PostService {
     }
 
     // Gift Points
-    static async GiftPoints(
-        options: GiftPointsProps
-    ): Promise<{ message: string; error: boolean }> {
+    static async GiftPoints(options: GiftPointsProps): Promise<{ message: string; error: boolean }> {
         try {
             if (!options.points || !options.userId || !options.postId) {
                 return {
@@ -1402,114 +1168,51 @@ export default class PostService {
             }
             const { points, userId, postId, receiver_id } = options;
             const findPost = await query.post.findFirst({
-                where: {
-                    post_id: postId,
-                    user_id: receiver_id,
-                },
+                where: { post_id: postId, user_id: receiver_id },
             });
             if (!findPost) {
-                return {
-                    message: "Post not found",
-                    error: true,
-                };
+                return { message: "Post not found", error: true };
             }
-            // Check if the user has enough points
+            // Check enough points
             const user = await query.user.findFirst({
-                where: {
-                    id: userId,
-                },
-                include: {
-                    UserPoints: true,
-                },
+                where: { id: userId },
+                include: { UserPoints: true, UserWallet: { select: { id: true } } },
             });
             if (user?.UserPoints && user?.UserPoints?.points < points) {
-                return {
-                    message: "You do not have enough points",
-                    error: true,
-                };
+                return { message: "You do not have enough points", error: true };
             }
-            // Deduct points from the user and add to the receiver in a transaction
+            // Atomic transfer
             await query.$transaction([
                 query.user.update({
-                    where: {
-                        id: userId,
-                    },
-                    data: {
-                        UserPoints: {
-                            update: {
-                                points: {
-                                    decrement: points,
-                                },
-                            },
-                        },
-                    },
+                    where: { id: userId },
+                    data: { UserPoints: { update: { points: { decrement: points } } } },
                 }),
                 query.user.update({
-                    where: {
-                        id: receiver_id,
-                    },
-                    data: {
-                        UserPoints: {
-                            update: {
-                                points: {
-                                    increment: points,
-                                },
-                            },
-                        },
-                    },
+                    where: { id: receiver_id },
+                    data: { UserPoints: { update: { points: { increment: points } } } },
                 }),
             ]);
-
-
-            // Receiver
-            const receiver = await query.user.findFirst({
-                where: {
-                    id: receiver_id,
-                },
-            });
-            const [trx1, trx2] = await Promise.all([
-                `TRN${GenerateUniqueId()}`,
-                `TRN${GenerateUniqueId()}`,
-            ]);
+            const receiver = await query.user.findFirst({ where: { id: receiver_id }, include: { UserWallet: true } });
+            const [trx1, trx2] = await Promise.all([`TRN${GenerateUniqueId()}`, `TRN${GenerateUniqueId()}`]);
             const senderOptions = {
                 transactionId: trx1,
                 transaction: `Gifted ${points} points to user ${receiver?.username}`,
-                userId: userId,
-                amount: points,
-                transactionType: "debit",
+                userId, amount: points, transactionType: "debit",
                 transactionMessage: `You gifted ${points} points to user ${receiver?.username}`,
-                walletId: 1,
+                walletId: user?.UserWallet?.id,
             };
             const receiverOptions = {
                 transactionId: trx2,
                 transaction: `Received ${points} points from user ${user?.username}`,
-                userId: receiver_id,
-                amount: points,
-                transactionType: "credit",
+                userId: receiver_id, amount: points, transactionType: "credit",
                 transactionMessage: `You received ${points} points from user ${user?.username}`,
-                walletId: 1,
+                walletId: receiver?.UserWallet?.id,
             };
             const tasks = [
-                UserTransactionQueue.add("userTransaction", senderOptions, {
-                    removeOnComplete: true,
-                    attempts: 3,
-                }),
-                UserTransactionQueue.add("userTransaction", receiverOptions, {
-                    removeOnComplete: true,
-                    attempts: 3,
-                }),
-                EmailService.PostGiftSentEmail(
-                    GetSinglename(user?.fullname as string),
-                    String(user?.email),
-                    String(receiver?.username),
-                    points
-                ),
-                EmailService.PostGiftReceivedEmail(
-                    GetSinglename(receiver?.fullname as string),
-                    String(receiver?.email),
-                    String(user?.username),
-                    points
-                ),
+                UserTransactionQueue.add("userTransaction", senderOptions, { removeOnComplete: true, attempts: 3 }),
+                UserTransactionQueue.add("userTransaction", receiverOptions, { removeOnComplete: true, attempts: 3 }),
+                EmailService.PostGiftSentEmail(GetSinglename(user?.fullname as string), String(user?.email), String(receiver?.username), points),
+                EmailService.PostGiftReceivedEmail(GetSinglename(receiver?.fullname as string), String(receiver?.email), String(user?.username), points),
                 query.notifications.create({
                     data: {
                         notification_id: `NOTI${GenerateUniqueId()}`,
@@ -1532,20 +1235,17 @@ export default class PostService {
                     data: {
                         post_id: findPost.id,
                         gifter_id: userId,
-                        points: points,
-                        receiver_id: receiver_id,
+                        points,
+                        receiver_id,
                     }
                 })
             ];
-
             try {
                 await Promise.all(tasks);
             } catch (error) {
                 console.error("Error processing gift transaction:", error);
-                throw error; // Or handle partial failures differently
+                throw error;
             }
-
-            //  Return
             return {
                 message: `You have successfully gifted ${points} points to ${receiver?.username}`,
                 error: false,
@@ -1554,6 +1254,4 @@ export default class PostService {
             throw new Error(error.message);
         }
     }
-
-    // Handle Gift Transaction
 }

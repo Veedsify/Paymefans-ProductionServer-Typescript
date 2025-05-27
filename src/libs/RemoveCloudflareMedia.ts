@@ -37,13 +37,13 @@ async function RemoveCloudflareMedia(media: RemovedMedia[]): Promise<RemoveCloud
             })
             const removedMedia = await Promise.all(removeMediaPromises)
             console.log(removedMedia)
-            return removedMedia
+            return {
+                  error: false,
+                  data: removedMedia
+            }
       } catch (err) {
             console.log(err)
-            return {
-                  error: true,
-                  message: 'Error deleting media'
-            }
+            throw new Error('Failed to remove media from Cloudflare');
       }
 }
 

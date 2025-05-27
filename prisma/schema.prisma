@@ -71,7 +71,7 @@ model User {
   UserRepost                UserRepost[]
   UserStory                 UserStory[]
   UserTransaction           UserTransaction[]
-  UserWallet                UserWallet[]
+  UserWallet                UserWallet?
   UserWithdrawalBankAccount UserWithdrawalBankAccount[]
   Model                     Model?
   UserAttachments           UserAttachments[]
@@ -611,7 +611,7 @@ model PointConversionRate {
 
 model UserWallet {
   id              Int               @id @default(autoincrement())
-  user_id         Int
+  user_id         Int               @unique
   wallet_id       String
   balance         Float
   created_at      DateTime          @default(now())

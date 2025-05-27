@@ -39,8 +39,8 @@ export interface UploadFileType extends FileUploadSuccess {
 
 export type RemoveCloudflareMediaResponse = {
       error: boolean;
-      message: string;
-} | {
-      error: boolean;
-      message: string;
-}[]
+      data: {
+            error: boolean;
+            message: string;
+      }[];
+}

@@ -69,7 +69,7 @@ export default class PostController {
   static async GetReposts(req: Request, res: Response): Promise<any> {
     try {
       const Reposts = await PostService.Reposts({
-        userId: req.params.userId as string,
+        userId: Number(req.params.userId) as number,
         page: req.query.page as string,
         limit: req.query.limit as string,
       });

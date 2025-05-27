@@ -16,6 +16,7 @@ export interface GetAllFollowersProps {
         min: string;
         max: string;
     }
+    authUserId: number;
     user: AuthUser
 }
 
