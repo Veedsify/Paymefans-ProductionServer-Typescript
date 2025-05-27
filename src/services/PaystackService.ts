@@ -178,8 +178,8 @@ export class PaystackService {
 
             const responseData = await response.json();
             return {
-                error: responseData.data.status == "success" ? false : true,
-                message: responseData.message,
+                error: responseData?.data?.status == "success" ? false : true,
+                message: responseData?.message,
             };
         } catch (error) {
             console.error(error);
