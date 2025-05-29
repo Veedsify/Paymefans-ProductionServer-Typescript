@@ -220,7 +220,7 @@ export default class WithdrawService {
             data: {
                 user_id: user.id,
                 action: "purchase",
-                message: `Hi :${GetSinglename(user.name)}, your withdrawal request of ${amount} has been initiated successfully.`,
+                message: `Hi, ${GetSinglename(user.name)}, your withdrawal request of ₦${amount.toLocaleString()} has been initiated successfully.`,
                 read: false,
                 notification_id: `NOT${GenerateUniqueId()}`,
                 url: "/withdraw/history",
