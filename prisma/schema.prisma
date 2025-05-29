@@ -1128,6 +1128,9 @@ model Configurations {
   // Withdrawal Settings
   min_withdrawal_amount                 Float    @default(0.0) @map("min_withdrawal_amount")
   min_withdrawal_amount_ngn             Float    @default(0.0) @map("min_withdrawal_amount_ngn")
+  // Platform Fees
+  platform_deposit_fee                  Float    @default(0.0) @map("platform_deposit_fee")
+  platform_withdrawal_fee               Float    @default(0.0) @map("platform_withdrawal_fee")
   // Deposit Settings
   min_deposit_amount                    Float    @default(0.0) @map("min_deposit_amount")
   min_deposit_amount_ngn                Float    @default(0.0) @map("min_deposit_amount_ngn")
