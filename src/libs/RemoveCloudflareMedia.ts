@@ -36,9 +36,19 @@ async function RemoveCloudflareMedia(media: RemovedMedia[]): Promise<RemoveCloud
                   }
             })
             const removedMedia = await Promise.all(removeMediaPromises)
-            console.log(removedMedia)
+
+            if (removedMedia.some((res) => res.error)) {
+                  return {
+                        error: true,
+                        message: 'Some media could not be removed',
+                        data: removedMedia.filter((res) => !res.error)
+                  }
+            }
+            // If all media were removed successfully, return the data
+            console.log('All media removed successfully:', removedMedia);
             return {
                   error: false,
+                  message: 'All media removed successfully',
                   data: removedMedia
             }
       } catch (err) {

@@ -27,7 +27,6 @@ import query from "@utils/prisma";
 import { MediaState, PostAudience } from "@prisma/client";
 import RemoveCloudflareMedia from "@libs/RemoveCloudflareMedia";
 import { Comments } from "@utils/mongoSchema";
-import { redis } from "@libs/RedisStore";
 import { GenerateUniqueId } from "@utils/GenerateUniqueId";
 import { UserTransactionQueue } from "@jobs/notifications/UserTransactionJob";
 import EmailService from "./EmailService";
@@ -39,7 +38,7 @@ export default class PostService {
         try {
             const postId = uuid();
             const user = data.user;
-            const { content, visibility, media, removedMedia } = data;
+            const { content, visibility, media, removedMedia, price } = data;
 
             if (removedMedia) {
                 const removeMedia = await RemoveCloudflareMedia(removedMedia);
@@ -58,6 +57,23 @@ export default class PostService {
                     message: "Content and visibility are required",
                 };
             }
+
+            if (visibility === "price" && !price) {
+                return {
+                    status: false,
+                    error: true,
+                    message: "Price is required for price posts",
+                };
+            }
+
+            if (visibility === "price" && price && price < 0) {
+                return {
+                    status: false,
+                    error: true,
+                    message: "Price for post cannot be 0",
+                };
+            }
+
             const allImages = media.every((file) => file.type === "image");
             const userMediaData = media
                 .filter(file => file?.id)
@@ -81,6 +97,7 @@ export default class PostService {
                     post_status: allImages ? "approved" : "pending",
                     post_is_visible: true,
                     user_id: user.id,
+                    post_price: visibility === "price" ? price : null,
                     media: [],
                     UserMedia: {
                         createMany: { data: userMediaData },
@@ -302,20 +319,9 @@ export default class PostService {
         try {
             const parsedLimit = limit ? parseInt(limit, 10) : 5;
             const validLimit = Number.isNaN(parsedLimit) || parsedLimit <= 0 ? 5 : parsedLimit;
-            const redisKey = `user-repost-${userId}-page-${page}-limit-${validLimit}`;
             const userRepostCount = await query.userRepost.count({ where: { user_id: userId } });
             if (userRepostCount === 0) {
                 return { status: false, hasMore: false, data: [], message: "No reposts found" };
-            }
-            const RepostRedisCache = await redis.get(redisKey);
-            if (RepostRedisCache) {
-                const parsedRepost = JSON.parse(RepostRedisCache);
-                return {
-                    status: true,
-                    message: "Reposts retrieved successfully",
-                    data: parsedRepost,
-                    hasMore: parsedRepost.length > validLimit,
-                };
             }
             const userReposts = await query.userRepost.findMany({
                 where: { user_id: userId },
@@ -327,6 +333,7 @@ export default class PostService {
                             post_id: true,
                             post_audience: true,
                             post_status: true,
+                            post_price: true,
                             post_impressions: true,
                             media: true,
                             created_at: true,
@@ -389,7 +396,6 @@ export default class PostService {
                 wasReposted: postRepostSet.has(post.id),
                 isSubscribed: true,
             }));
-            await redis.set(redisKey, JSON.stringify(resolvedPosts), "EX", 10);
 
             return {
                 status: true,
@@ -408,6 +414,7 @@ export default class PostService {
         userId,
         page,
         limit,
+        authUserId,
     }: RepostProps): Promise<GetMyPostResponse> {
         try {
             const parsedLimit = limit ? parseInt(limit, 10) : 5;
@@ -431,6 +438,7 @@ export default class PostService {
                             post_likes: true,
                             post_comments: true,
                             post_reposts: true,
+                            post_price: true,
                             was_repost: true,
                             repost_id: true,
                             repost_username: true,
@@ -478,7 +486,7 @@ export default class PostService {
             // Batch likes and reposts
             const [likes, repostsDb] = await Promise.all([
                 query.postLike.findMany({ where: { post_id: { in: postIds }, user_id: userId } }),
-                query.userRepost.findMany({ where: { post_id: { in: postIds }, user_id: userId } }),
+                query.userRepost.findMany({ where: { post_id: { in: postIds }, user_id: authUserId } }),
             ]);
             const postLikesSet = new Set(likes.map(l => l.post_id));
             const postRepostSet = new Set(repostsDb.map(r => r.post_id));
@@ -658,6 +666,7 @@ export default class PostService {
                     post_status: true,
                     post_impressions: true,
                     post_comments: true,
+                    post_price: true,
                     post_reposts: true,
                     was_repost: true,
                     repost_id: true,
@@ -761,6 +770,7 @@ export default class PostService {
                     post_likes: true,
                     post_status: true,
                     post_impressions: true,
+                    post_price: true,
                     post_comments: true,
                     post_reposts: true,
                     was_repost: true,
@@ -870,6 +880,7 @@ export default class PostService {
                     post_audience: true,
                     post_status: true,
                     post_impressions: true,
+                    post_price: true,
                     created_at: true,
                     post_likes: true,
                     media: true,
@@ -1130,25 +1141,34 @@ export default class PostService {
             if (!post) {
                 return { status: false, message: "Post not found" };
             }
-            const postMedia = await query.userMedia.findMany({ where: { post_id: post.id } });
+            const postMedia = await query.userMedia.findMany({
+                where: { post_id: post.id },
+                select: { media_id: true, media_type: true }
+            });
+
+            // Use transaction to delete post+media
+            await query.$transaction(async (tx) => {
+                await tx.userMedia.deleteMany({ where: { post_id: post.id } })
+                await tx.postLike.deleteMany({ where: { post_id: post.id } })
+                await tx.userRepost.deleteMany({ where: { post_id: post.id } })
+                await tx.postGift.deleteMany({ where: { post_id: post.id } })
+                await tx.post.delete({ where: { id: post.id } })
+            });
+
+
             if (postMedia.length > 0) {
-                const media = postMedia.map((m) => ({ id: m.media_id, type: m.media_type }));
-                if (media.length > 0) {
-                    const removeMedia = await RemoveCloudflareMedia(media);
-                    if (removeMedia) {
-                        return {
-                            status: false,
-                            message: "An error occurred while deleting media",
-                            error: removeMedia,
-                        };
-                    }
+                const removeMedia = await RemoveCloudflareMedia(
+                    postMedia.map(m => ({ id: m.media_id, type: m.media_type }))
+                );
+                if (removeMedia.error) {
+                    return {
+                        status: false,
+                        message: "An error occurred while deleting media",
+                        error: removeMedia,
+                    };
                 }
             }
-            // Use transaction to delete post+media
-            await query.$transaction([
-                query.userMedia.deleteMany({ where: { post_id: post.id } }),
-                query.post.delete({ where: { id: post.id } }),
-            ]);
+
             await Comments.deleteMany({ postId: String(post.post_id) });
             return { status: true, message: "Post deleted successfully" };
         } catch (error: any) {

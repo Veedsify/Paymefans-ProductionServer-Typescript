@@ -91,6 +91,7 @@ interface CreatePostProps {
   visibility: string;
   media: CreateMedia[];
   user: AuthUser;
+  price: number | null;
   removedMedia: RemovedMedia[];
 }
 /**
@@ -295,6 +296,7 @@ export type RepostProps = {
   userId: number;
   page: string;
   limit: string;
+  authUserId: number;
 };
 /**
  * Props for creating a repost

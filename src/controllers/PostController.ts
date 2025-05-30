@@ -9,6 +9,7 @@ export default class PostController {
         user: req.user,
         ...req.body,
       });
+
       if ("error" in SavePost && SavePost.error) {
         return res.status(400).json({ message: SavePost.error });
       }
@@ -72,6 +73,7 @@ export default class PostController {
         userId: Number(req.params.userId) as number,
         page: req.query.page as string,
         limit: req.query.limit as string,
+        authUserId: req.user?.id!
       });
       return res.status(200).json(Reposts);
     } catch (err: any) {

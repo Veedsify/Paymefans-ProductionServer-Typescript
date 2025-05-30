@@ -75,6 +75,7 @@ class FeedService {
           { post_audience: "public" },
           { post_audience: "followers" },
           { post_audience: "subscribers" },
+          { post_audience: "price" },
           {
             user_id: authUserid,
           },
