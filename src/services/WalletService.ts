@@ -6,6 +6,7 @@ import type {
   DeleteBankResponse,
   GetBanksResponse,
   GetTransactionsResponse,
+  GetWithdrawalResponse,
   OtherTransactionResponse,
   RetrieveWalletResponse,
 } from "../types/wallet";
@@ -225,6 +226,49 @@ export default class WalletService {
         status: "error",
         message: error.message,
       };
+    }
+  }
+
+  // History
+  static async GetHistory(
+    user: AuthUser,
+    cursor?: string | null
+  ): Promise<GetWithdrawalResponse> {
+    try {
+
+      console.log("Fetching withdrawal history for user:", user.id, "with cursor:", cursor);
+
+      if (!user.id) {
+        return {
+          status: "error",
+          error: true,
+          message: "User not found",
+          data: [],
+        };
+      }
+
+      const history = await query.withdrawalRequest.findMany({
+        where: {
+          user_id: user.id,
+          ...(cursor ? { id: { lt: parseInt(cursor) } } : {}),
+        },
+        orderBy: {
+          created_at: "desc",
+        },
+        take: 10,
+      });
+
+      const nextCursor = history.length > 0 ? history[history.length - 1].id : null;
+
+      return {
+        status: "success",
+        error: false,
+        message: `Withdrawal History Retrieved`,
+        data: history,
+        nextCursor: nextCursor,
+      };
+    } catch (error: any) {
+      throw new Error(error.message);
     }
   }
 }

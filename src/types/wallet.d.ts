@@ -1,4 +1,4 @@
-import { UserBanks, UserPointsPurchase, UserTransaction } from "@prisma/client";
+import { UserBanks, UserPointsPurchase, UserTransaction, WithdrawalRequest } from "@prisma/client";
 import { bankTypes } from "./withdraw";
 
 export type RetrieveWalletResponse = {
@@ -52,5 +52,19 @@ export interface OtherTransactionResponse {
     error: boolean;
     status: "success" | "error";
     data: UserTransaction[]
+    message: string
+}
+
+export interface GetWithdrawalResponse {
+    error: boolean;
+    status: "success" | "error";
+    data: WithdrawalRequest[]
+    nextCursor?: number | null;
+    message: string
+}
+
+export interface HistoryResponse {
+    error: boolean;
+    status: "success" | "error";
     message: string
 }

@@ -1058,6 +1058,7 @@ model WithdrawalRequest {
   amount          Int                     @db.Integer
   recipient_code  String
   bank_account_id Int
+  reference       String                  @unique
   reason          String                  @default("Paymefans Model Withdrawal")
   status          WithdrawalRequestStatus
   created_at      DateTime                @default(now())

@@ -67,4 +67,17 @@ export default class WalletController {
             res.status(500).json({ message: err.message })
         }
     }
+
+    // History
+    static async History(req: Request, res: Response): Promise<void> {
+        try {
+            const getHistory = await WalletService.GetHistory(req.user as AuthUser, req.query.cursor as string | undefined)
+            if (getHistory.error) {
+                res.status(400).send({ ...getHistory })
+            }
+            res.status(200).send(getHistory)
+        } catch (err: any) {
+            res.status(500).json({ message: err.message })
+        }
+    }
 }
