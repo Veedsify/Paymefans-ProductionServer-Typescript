@@ -256,6 +256,15 @@ export default class WalletService {
           created_at: "desc",
         },
         take: 10,
+        include: {
+          bank: {
+            select: {
+              account_name: true,
+              account_number: true,
+              bank_name: true,
+            },
+          },
+        }
       });
 
       const nextCursor = history.length > 0 ? history[history.length - 1].id : null;

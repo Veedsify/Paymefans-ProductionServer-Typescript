@@ -30,4 +30,5 @@ post.post("/like/:postId", Auth, PostController.LikePost)
 post.delete("/:postId", Auth, PostController.DeletePost)
 post.post("/media/signed-url", Auth, UploadController.CreateMediaUploadSignedUrl)
 post.post("/point/gift", Auth, PostController.GiftPoints)
+post.post("/pay", Auth, PostController.PayForPost)
 export default post

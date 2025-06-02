@@ -340,3 +340,16 @@ export interface GiftPointsProps {
   receiver_id: number;
   points_buy_id: string;
 }
+
+
+export interface PayForPostProps {
+  postId: string,
+  user: AuthUser,
+  price: string,
+}
+
+export interface PayForPostResponse {
+  error: boolean;
+  status: boolean;
+  message: string;
+}

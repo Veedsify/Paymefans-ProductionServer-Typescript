@@ -110,6 +110,7 @@ model User {
   Gifter                    PostGift[]                  @relation("Gifter")
   GiftReciver               PostGift[]                  @relation("GiftReceiver")
   UserWithdrawalPin         UserWithdrawalPin[]
+  PurchasedPosts            PurchasedPosts[]
 }
 
 model Participants {
@@ -261,8 +262,9 @@ model Post {
   PostImpression   PostImpression[]
   UserMedia        UserMedia[]
 
-  user     User       @relation(fields: [user_id], references: [id], onDelete: Cascade)
-  PostGift PostGift[]
+  user           User             @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  PostGift       PostGift[]
+  PurchasedPosts PurchasedPosts[]
 }
 
 model PostImpression {
@@ -1058,7 +1060,7 @@ model WithdrawalRequest {
   amount          Int                     @db.Integer
   recipient_code  String
   bank_account_id Int
-  reference       String                  @unique
+  reference       String?
   reason          String                  @default("Paymefans Model Withdrawal")
   status          WithdrawalRequestStatus
   created_at      DateTime                @default(now())
@@ -1214,6 +1216,20 @@ model UserWithdrawalPin {
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
   user       User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id])
+}
+
+model PurchasedPosts {
+  id          Int      @id @default(autoincrement())
+  user_id     Int
+  post_id     Int
+  purchase_id String   @unique
+  price       Float
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+  user        User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  post        Post     @relation(fields: [post_id], references: [id], onDelete: Cascade)
 
   @@index([user_id])
 }

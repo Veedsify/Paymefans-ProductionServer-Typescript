@@ -305,4 +305,23 @@ export default class PostController {
       });
     }
   }
+
+  // Pay for Post
+  static async PayForPost(req: Request, res: Response): Promise<any> {
+    try {
+      const options = {
+        postId: req.body.postId,
+        user: req.user as AuthUser,
+        price: req.body.price,
+      };
+      const Payment = await PostService.PayForPost(options);
+      return res.status(200).json({ ...Payment });
+    } catch (error: any) {
+      console.log(error.message);
+      res.status(500).json({
+        status: false,
+        message: "Internal Server Error",
+      });
+    }
+  }
 }

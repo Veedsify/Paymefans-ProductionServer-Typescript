@@ -19,6 +19,8 @@ import type {
     GiftPointsProps,
     LikePostProps,
     LikePostResponse,
+    PayForPostProps,
+    PayForPostResponse,
     RepostProps,
     RepostResponse,
 } from "../types/post";
@@ -1235,7 +1237,7 @@ export default class PostService {
                 EmailService.PostGiftReceivedEmail(GetSinglename(receiver?.fullname as string), String(receiver?.email), String(user?.username), points),
                 query.notifications.create({
                     data: {
-                        notification_id: `NOTI${GenerateUniqueId()}`,
+                        notification_id: `NOT${GenerateUniqueId()}`,
                         message: `You have received <strong>${points}</strong> points from user ${user?.username}`,
                         user_id: receiver_id,
                         action: "purchase",
@@ -1244,7 +1246,7 @@ export default class PostService {
                 }),
                 query.notifications.create({
                     data: {
-                        notification_id: `NOTI${GenerateUniqueId()}`,
+                        notification_id: `NOT${GenerateUniqueId()}`,
                         message: `You have gifted <strong>${points}</strong> points to user ${receiver?.username}`,
                         user_id: userId,
                         action: "purchase",
@@ -1274,4 +1276,133 @@ export default class PostService {
             throw new Error(error.message);
         }
     }
+
+    // PayFor Post
+    static async PayForPost(options: PayForPostProps): Promise<PayForPostResponse> {
+        const { user, price, postId } = options;
+
+        if (!postId) return this.errorResponse("Post Not Found");
+        if (!user?.id) return this.errorResponse("User Not Found");
+
+        try {
+            const postIdNum = Number(postId);
+
+            const [alreadyPurchased, post, userPoints] = await Promise.all([
+                query.purchasedPosts.findFirst({
+                    where: { user_id: user.id, post_id: postIdNum }
+                }),
+                query.post.findFirst({
+                    where: { id: postIdNum },
+                    include: {
+                        user: {
+                            select: { id: true, fullname: true, email: true, username: true }
+                        }
+                    }
+                }),
+                query.userPoints.findFirst({ where: { user_id: user.id } })
+            ]);
+
+            if (alreadyPurchased) {
+                return this.successResponse("You have already purchased this post");
+            }
+
+            if (!post) return this.errorResponse("Post Not Found");
+
+            const postPrice = post.post_price;
+            if (!postPrice || postPrice <= 0) {
+                return this.errorResponse("Post is not paid or is free");
+            }
+
+            if (!userPoints?.points || userPoints.points < postPrice) {
+                return this.errorResponse("Insufficient points to purchase this post");
+            }
+
+            // Transaction to handle point transfers and post purchase
+            await query.$transaction([
+                query.userPoints.update({
+                    where: { user_id: user.id },
+                    data: { points: { decrement: postPrice } }
+                }),
+                query.userPoints.update({
+                    where: { user_id: post.user_id },
+                    data: { points: { increment: postPrice } }
+                }),
+                query.purchasedPosts.create({
+                    data: {
+                        user_id: user.id,
+                        post_id: post.id,
+                        price: postPrice,
+                        purchase_id: `PUR${GenerateUniqueId()}`,
+                    }
+                })
+            ]);
+
+            // Wallets and transaction logs
+            const [buyerWallet, sellerWallet] = await Promise.all([
+                query.userWallet.findFirst({ where: { user_id: user.id } }),
+                query.userWallet.findFirst({ where: { user_id: post.user_id } })
+            ]);
+
+            const [trx1, trx2] = [`TRN${GenerateUniqueId()}`, `TRN${GenerateUniqueId()}`];
+            const senderOptions = {
+                transactionId: trx1,
+                transaction: `Purchased a post from ${post.user.username} for ${postPrice} points`,
+                userId: user.id,
+                amount: postPrice,
+                transactionType: "debit",
+                transactionMessage: `You purchased post ${post.post_id} for ${postPrice} points`,
+                walletId: buyerWallet?.id
+            };
+
+            const receiverOptions = {
+                transactionId: trx2,
+                transaction: `Received ${postPrice} points from one of your fans`,
+                userId: post.user_id,
+                amount: postPrice,
+                transactionType: "credit",
+                transactionMessage: `You received ${postPrice} points for post ${post.post_id}`,
+                walletId: sellerWallet?.id
+            };
+
+            // Background tasks: transaction logs & notifications
+            await Promise.all([
+                UserTransactionQueue.add("userTransaction", senderOptions, { removeOnComplete: true, attempts: 3 }),
+                UserTransactionQueue.add("userTransaction", receiverOptions, { removeOnComplete: true, attempts: 3 }),
+                query.notifications.create({
+                    data: {
+                        notification_id: `NOT${GenerateUniqueId()}`,
+                        message: `You have purchased post <strong>${post.post_id}</strong> for <strong>${postPrice} points</strong>`,
+                        user_id: user.id,
+                        action: "purchase",
+                        url: `${process.env.APP_URL}/posts/${post.post_id}`,
+                    }
+                }),
+                query.notifications.create({
+                    data: {
+                        notification_id: `NOT${GenerateUniqueId()}`,
+                        message: `Your post <strong>${post.post_id}</strong> has been purchased for <strong>${postPrice} points</strong>`,
+                        user_id: post.user_id,
+                        action: "purchase",
+                        url: `${process.env.APP_URL}/posts/${post.post_id}`,
+                    }
+                })
+            ]);
+
+            return this.successResponse(`Post purchased successfully for ${postPrice} points`);
+
+        } catch (error: any) {
+            console.error("Error in PayForPost:", error);
+            return this.errorResponse("An unexpected error occurred during the post purchase");
+        }
+    }
+
+    // Helpers
+    private static successResponse(message: string): PayForPostResponse {
+        return { status: true, error: false, message };
+    }
+
+    private static errorResponse(message: string): PayForPostResponse {
+        return { status: false, error: true, message };
+    }
+
 }
