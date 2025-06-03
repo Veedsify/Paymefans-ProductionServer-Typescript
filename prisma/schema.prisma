@@ -384,6 +384,7 @@ model Subscribers {
   id            Int      @id @default(autoincrement())
   sub_id        String
   user_id       Int
+  status        String   @default("active")
   subscriber_id Int
   created_at    DateTime @default(now())
   updated_at    DateTime @updatedAt

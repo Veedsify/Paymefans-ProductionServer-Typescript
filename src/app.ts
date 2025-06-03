@@ -16,6 +16,7 @@ import type { Request, Response } from "express";
 import ModelsJobs from "@jobs/ModelsJobs";
 import { connectDB } from "@utils/mongodb";
 import { activeUsersQueue, pruneInactiveUsersQueue } from "@jobs/ActiveUsers/activeUserJobs";
+import { pruneInactiveSubscribersQueue } from "@jobs/Subscribers/ModelSubscriberJobs";
 
 const { ADMIN_PANEL_URL, VERIFICATION_URL, APP_URL, LIVESTREAM_PORT } =
   process.env;
@@ -66,7 +67,15 @@ IoInstance.init(server).then((instance) => {
     repeat: {
       every: 60000, // 1 minute
     },
+    removeOnComplete: true,
     jobId: "pruneInactiveUsersJob",
+  });
+  pruneInactiveSubscribersQueue.add("pruneInactiveSubscribersQueue", {}, {
+    repeat: {
+      pattern: "0 0 */12 * * *" // Every 12 hours
+    },
+    removeOnComplete: true,
+    jobId: "pruneInactiveSubscribersJob",
   });
   // Socket.IO instance
   AppSocket(instance).then();

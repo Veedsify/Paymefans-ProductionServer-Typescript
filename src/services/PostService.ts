@@ -573,7 +573,7 @@ export default class PostService {
 
             const [isSubscribed, media] = await Promise.all([
                 query.subscribers.findFirst({
-                    where: { subscriber_id: Number(authUserId), user_id: Number(userId) },
+                    where: { subscriber_id: Number(authUserId), status: "active", user_id: Number(userId) },
                 }),
                 query.userMedia.findMany({
                     where: {
@@ -716,7 +716,7 @@ export default class PostService {
             // Batch queries
             const [subs, likes, reposts] = await Promise.all([
                 query.subscribers.findFirst({
-                    where: { subscriber_id: authUserId, user_id: parsedUserId }
+                    where: { subscriber_id: authUserId, status: "active", user_id: parsedUserId }
                 }),
                 query.postLike.findMany({ where: { post_id: { in: postIds }, user_id: posts.length ? posts[0].user.id : 0 } }), // note: original used post.user.id, possible logic bug
                 query.userRepost.findMany({ where: { post_id: { in: postIds }, user_id: authUserId } }),
@@ -820,7 +820,7 @@ export default class PostService {
 
             const [subs, likes, reposts] = await Promise.all([
                 query.subscribers.findFirst({
-                    where: { subscriber_id: authUserId, user_id: Number(userId) }
+                    where: { subscriber_id: authUserId, status: "active", user_id: Number(userId) }
                 }),
                 query.postLike.findMany({ where: { post_id: { in: postIds }, user_id: posts.length ? posts[0].user.id : 0 } }),
                 query.userRepost.findMany({ where: { post_id: { in: postIds }, user_id: authUserId } }),
@@ -914,7 +914,7 @@ export default class PostService {
             // one query for like
             const [postLike, isSubscribed, isRespoted] = await Promise.all([
                 query.postLike.findFirst({ where: { post_id: post.id, user_id: authUserId } }),
-                query.subscribers.findFirst({ where: { user_id: post.user_id, subscriber_id: authUserId } }),
+                query.subscribers.findFirst({ where: { user_id: post.user_id, status: "active", subscriber_id: authUserId } }),
                 query.userRepost.findFirst({ where: { post_id: post.id, user_id: authUserId } }),
             ]);
             return {

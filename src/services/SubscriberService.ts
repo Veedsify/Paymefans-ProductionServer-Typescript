@@ -326,27 +326,36 @@ export default class SubscriberService {
           },
         });
       } else {
-        await query.userSubscriptionCurrent.create({
-          data: {
-            subscription_id: SUB_ID,
-            user_id: authUser.id,
-            ends_at: nextPaymentDate,
-            model_id: profileData.id,
-            subscription: profileData.ModelSubscriptionPack
-              ?.ModelSubscriptionTier[0]?.tier_name as string,
-          },
-        });
+        await query.$transaction([
+          query.userSubscriptionCurrent.create({
+            data: {
+              subscription_id: SUB_ID,
+              user_id: authUser.id,
+              ends_at: nextPaymentDate,
+              model_id: profileData.id,
+              subscription: profileData.ModelSubscriptionPack
+                ?.ModelSubscriptionTier[0]?.tier_name as string,
+            },
+          }),
+          query.user.update({
+            where: { id: profileData.id },
+            data: {
+              total_subscribers: {
+                increment: 1,
+              },
+            },
+          }),
+          query.userSubscriptionHistory.create({
+            data: {
+              subscription_id: SUB_ID,
+              user_id: authUser.id,
+              model_id: profileData.id,
+              subscription: profileData.ModelSubscriptionPack
+                ?.ModelSubscriptionTier[0]?.tier_name as string,
+            },
+          }),
+        ]);
       }
-
-      await query.userSubscriptionHistory.create({
-        data: {
-          subscription_id: SUB_ID,
-          user_id: authUser.id,
-          model_id: profileData.id,
-          subscription: profileData.ModelSubscriptionPack
-            ?.ModelSubscriptionTier[0]?.tier_name as string,
-        },
-      });
 
       return { status: true, message: "Subscription successful", error: false };
     } catch (error) {
