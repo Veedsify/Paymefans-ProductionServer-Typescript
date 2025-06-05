@@ -13,13 +13,14 @@ const pruneInactiveSubscribersWorker = new Worker(
         const expiredSubscriptions = await query.userSubscriptionCurrent.findMany({
             where: {
                 ends_at: {
-                    lt: new Date(),
+                    lt: Date.now(),
                 }
             },
             select: {
                 user_id: true
             }
         });
+
 
         if (expiredSubscriptions.length === 0) return;
 
@@ -28,7 +29,7 @@ const pruneInactiveSubscribersWorker = new Worker(
         const [updatedSubscribers] = await Promise.all([
             query.subscribers.updateMany({
                 where: {
-                    user_id: {
+                    subscriber_id: {
                         in: expiredUserIds,
                     }
                 },
@@ -53,6 +54,10 @@ const pruneInactiveSubscribersWorker = new Worker(
         connection: redis,
     }
 );
+
+pruneInactiveSubscribersWorker.on("completed", (job) => {
+    // console.log(`Job ${job.id} completed successfully`);
+})
 
 
 export { pruneInactiveSubscribersQueue, pruneInactiveSubscribersWorker };

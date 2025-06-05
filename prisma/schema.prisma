@@ -678,7 +678,7 @@ model UserSubscriptionCurrent {
   subscription    String
   created_at      DateTime @default(now())
   updated_at      DateTime @updatedAt
-  ends_at         DateTime
+  ends_at         BigInt
   user            User     @relation("UserCurrentSubscription", fields: [user_id], references: [id], onDelete: Cascade)
   model           User     @relation("ModelCurrentSubscriptions", fields: [model_id], references: [id], onDelete: Cascade)
   userId          Int?

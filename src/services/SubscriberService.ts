@@ -165,7 +165,7 @@ export default class SubscriberService {
         },
       });
 
-      if (checkSubscription) {
+      if (checkSubscription?.status === "active") {
         return {
           status: false,
           message: "You are already subscribed to this user",
@@ -186,23 +186,40 @@ export default class SubscriberService {
       }
 
       const SUB_ID = `SUB${GenerateUniqueId()}`;
-      // Step 3: Transaction for creating subscription and updating points
-      // This keeps only the write operations that need to be atomic in one transaction
-      const pointBalanceUpdate = await query.$transaction(async (prisma) => {
-        // Create subscription
-        const createSubscription = await prisma.subscribers.create({
-          data: {
-            user_id: profileData.id,
-            subscriber_id: userdata.id,
-            sub_id: SUB_ID,
-          },
-        });
 
-        if (!createSubscription) {
-          throw new Error("Failed to create subscription");
+      // Check if this is a reactivation (user had previous subscription) or truly new
+      const isReactivation = checkSubscription !== null;
+
+      // Step 3: Transaction for creating/updating subscription and updating points
+      const pointBalanceUpdate = await query.$transaction(async (prisma) => {
+        let createSubscription;
+
+        if (isReactivation) {
+          // Reactivate existing subscription
+          createSubscription = await prisma.subscribers.update({
+            where: { id: checkSubscription.id },
+            data: {
+              sub_id: SUB_ID,
+              status: "active",
+              // Reset any other fields as needed
+            },
+          });
+        } else {
+          // Create new subscription
+          createSubscription = await prisma.subscribers.create({
+            data: {
+              user_id: profileData.id,
+              subscriber_id: userdata.id,
+              sub_id: SUB_ID,
+            },
+          });
         }
 
-        // Update User Point Balance
+        if (!createSubscription) {
+          throw new Error("Failed to create/update subscription");
+        }
+
+        // Update User Point Balance (always happens)
         await prisma.user.update({
           where: { id: userdata.id },
           data: {
@@ -216,7 +233,7 @@ export default class SubscriberService {
           },
         });
 
-        // Update Model Point Balance
+        // Update Model Point Balance (always happens)
         await prisma.user.update({
           where: { id: profileData.id },
           data: {
@@ -271,7 +288,7 @@ export default class SubscriberService {
         }),
       ]);
 
-      //   TierDuration
+      // TierDuration
       const tierDuration =
         profileData.ModelSubscriptionPack?.ModelSubscriptionTier[0]
           ?.tier_duration ?? 0;
@@ -287,33 +304,35 @@ export default class SubscriberService {
         }),
       ]);
 
-      const updateSubscription = await query.user.update({
-        where: {
-          id: profileData.id,
-        },
-        data: {
-          total_subscribers: {
-            increment: 1,
-          },
-        },
-      });
-
-      if (!updateSubscription) {
-        throw new Error("Failed to update subscription count");
-      }
-
-      const existingSubscription =
-        await query.userSubscriptionCurrent.findFirst({
+      // Only increment total_subscribers if this is NOT a reactivation
+      if (!isReactivation) {
+        const updateSubscription = await query.user.update({
           where: {
-            user_id: authUser.id,
-            model_id: profileData.id,
+            id: profileData.id,
+          },
+          data: {
+            total_subscribers: {
+              increment: 1,
+            },
           },
         });
 
-      const nextPaymentDate = new Date();
-      nextPaymentDate.setDate(nextPaymentDate.getDate() + Number(tierDuration));
+        if (!updateSubscription) {
+          throw new Error("Failed to update subscription count");
+        }
+      }
 
-      //   Create Subscription History
+      const existingSubscription = await query.userSubscriptionCurrent.findFirst({
+        where: {
+          user_id: authUser.id,
+          model_id: profileData.id,
+        },
+      });
+
+      const millisecondsInADay = 24 * 60 * 60 * 1000;
+      const endsAtTimestamp = Date.now() + (Number(tierDuration) * millisecondsInADay);
+
+      // Create/Update Subscription History
       if (existingSubscription) {
         await query.userSubscriptionCurrent.update({
           where: {
@@ -321,29 +340,22 @@ export default class SubscriberService {
           },
           data: {
             subscription_id: SUB_ID,
-            ends_at: nextPaymentDate,
+            ends_at: endsAtTimestamp,
             subscription: profileData.ModelSubscriptionPack
               ?.ModelSubscriptionTier[0]?.tier_name as string,
           },
         });
       } else {
-        await query.$transaction([
+        // Only increment total_subscribers here if it's truly new (not reactivation)
+        const transactionOperations = [
           query.userSubscriptionCurrent.create({
             data: {
               subscription_id: SUB_ID,
               user_id: authUser.id,
-              ends_at: nextPaymentDate,
+              ends_at: endsAtTimestamp,
               model_id: profileData.id,
               subscription: profileData.ModelSubscriptionPack
                 ?.ModelSubscriptionTier[0]?.tier_name as string,
-            },
-          }),
-          query.user.update({
-            where: { id: profileData.id },
-            data: {
-              total_subscribers: {
-                increment: 1,
-              },
             },
           }),
           query.userSubscriptionHistory.create({
@@ -355,7 +367,8 @@ export default class SubscriberService {
                 ?.ModelSubscriptionTier[0]?.tier_name as string,
             },
           }),
-        ]);
+        ];
+        await query.$transaction(transactionOperations);
       }
 
       return { status: true, message: "Subscription successful", error: false };

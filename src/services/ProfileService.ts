@@ -41,6 +41,7 @@ class ProfileService {
                     admin: true,
                     role: true,
                     is_active: true,
+                    is_model: true,
                     is_verified: true,
                     website: true,
                     country: true,
