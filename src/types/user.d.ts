@@ -2,7 +2,7 @@ import { Model, Settings, User, UserPoints, UserWallet } from "@prisma/client";
 
 export interface AuthUser extends Omit<User, "password"> {
   UserPoints: UserPoints | null;
-  UserWallet: UserWallet[] | null;
+  UserWallet: UserWallet | null;
   Settings: Settings | null;
   Model: Model | null;
   subscriptions: number[];
@@ -24,13 +24,13 @@ export type RegisteredUser = {
 
 export type RetrieveUserResponse =
   | {
-      user: AuthUser;
-      status: boolean;
-    }
+    user: AuthUser;
+    status: boolean;
+  }
   | {
-      status: boolean;
-      message: string;
-    };
+    status: boolean;
+    message: string;
+  };
 
 type UpdateTwoFactorAuthResponse = {
   success: boolean;

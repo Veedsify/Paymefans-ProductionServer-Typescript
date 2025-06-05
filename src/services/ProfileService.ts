@@ -17,6 +17,7 @@ import { AuthUser } from "types/user";
 import { GenerateUniqueId } from "@utils/GenerateUniqueId";
 import { UserNotificationQueue } from "@jobs/notifications/UserNotificaton";
 import getSingleName from "@utils/GetSingleName";
+import { UserTransactionQueue } from "@jobs/notifications/UserTransactionJob";
 
 class ProfileService {
     // Get Profile
@@ -501,6 +502,100 @@ class ProfileService {
         } catch (error) {
             console.error("Error following/unfollowing user:", error);
             return { message: "Error following/unfollowing user", status: false };
+        }
+    }
+
+    // Tip User
+    static async TipUser({
+        user,
+        point_buy_id,
+        modelId,
+    }: { user: AuthUser; point_buy_id: string; modelId: number }): Promise<{ message: string; error: boolean }> {
+        try {
+            // 1. Validate input
+            if (!user?.id) return { message: "User not authenticated", error: true };
+            if (!point_buy_id) return { message: "Invalid point buy ID", error: true };
+
+            // 2. Fetch all needed data in parallel
+            const [userWallet, pointBuy, model, userPoints] = await Promise.all([
+                query.userWallet.findFirst({ where: { user_id: user.id }, select: { id: true } }),
+                query.globalPointsBuy.findFirst({ where: { points_buy_id: point_buy_id } }),
+                query.user.findFirst({
+                    where: { id: modelId },
+                    select: { id: true, username: true, name: true, user_id: true, UserWallet: { select: { id: true } } },
+                }),
+                query.userPoints.findFirst({ where: { user_id: user.id }, select: { points: true } }),
+            ]);
+
+            if (!pointBuy) return { message: "Point buy not found", error: true };
+            if (!model) return { message: "Model not found", error: true };
+            if (!userPoints || userPoints.points < pointBuy.points)
+                return { message: "Insufficient points", error: true };
+
+            // 3. Transfer points (transactional)
+            await query.$transaction([
+                query.userPoints.update({
+                    where: { user_id: user.id },
+                    data: { points: { decrement: pointBuy.points } },
+                }),
+                query.userPoints.update({
+                    where: { id: model.id },
+                    data: { points: { increment: pointBuy.points } },
+                }),
+            ]);
+
+            // 4. Prepare notification and transaction data
+            const pointsAmount = pointBuy.points;
+            const senderTrxId = `TRX${GenerateUniqueId()}`;
+            const receiverTrxId = `TRX${GenerateUniqueId()}`;
+
+            const senderTransaction = {
+                transactionId: senderTrxId,
+                transaction: `You tipped ${pointsAmount} points to user ${model.username}`,
+                userId: user.id,
+                amount: pointsAmount,
+                transactionType: "debit",
+                transactionMessage: `You tipped ${pointsAmount} points to user ${model.username}`,
+                walletId: userWallet?.id,
+            };
+            const receiverTransaction = {
+                transactionId: receiverTrxId,
+                transaction: `You received ${pointsAmount} points from user ${user.username}`,
+                userId: model.id,
+                amount: pointsAmount,
+                transactionType: "credit",
+                transactionMessage: `You received ${pointsAmount} points from user ${user.username}`,
+                walletId: model.UserWallet?.id,
+            };
+
+            const notificationMsg = `Hi ${getSingleName(user.name)}, <strong><a href="/${user.username}">${user.username}</a></strong> has just tipped you ${pointsAmount} points`;
+
+            // 5. Background jobs and notifications in parallel
+            await Promise.all([
+                UserTransactionQueue.add("userTransaction", senderTransaction, { removeOnComplete: true, attempts: 3 }),
+                UserTransactionQueue.add("userTransaction", receiverTransaction, { removeOnComplete: true, attempts: 3 }),
+                UserNotificationQueue.add("new-tip-notification", {
+                    user_id: modelId,
+                    url: `/${user.username}`,
+                    message: notificationMsg,
+                    action: "purchase",
+                    notification_id: `NOT${GenerateUniqueId()}`,
+                    read: false,
+                }, { removeOnComplete: true, attempts: 3 }),
+                UserNotificationQueue.add("new-tip-notification", {
+                    user_id: user.id,
+                    url: `/${model.username}`,
+                    message: ` You tipped ${pointsAmount} points to user ${model.username}`,
+                    action: "purchase",
+                    notification_id: `NOT${GenerateUniqueId()}`,
+                    read: false,
+                }, { removeOnComplete: true, attempts: 3 }),
+            ]);
+
+            return { message: `You tipped ${pointsAmount} points to user ${model.username}`, error: false };
+        } catch (error) {
+            console.error("Error tipping user:", error);
+            throw new Error("Error processing tip");
         }
     }
 }

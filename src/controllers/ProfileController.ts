@@ -78,6 +78,20 @@ class ProfileController {
             res.status(500).json({ error: 'Error following/unfollowing user' })
         }
     }
+    // Tip User
+    static async TipUser(req: Request, res: Response): Promise<any> {
+        try {
+            const user = await ProfileService.TipUser({
+                user: req.user!,
+                point_buy_id: String(req.body.id) as string,
+                modelId: Number(req.body.modelId) as number,
+            })
+            res.status(200).json(user)
+        } catch (error) {
+            console.error('Tip error:', error)
+            res.status(500).json({ error: 'Error tipping user' })
+        }
+    }
 }
 
 export default ProfileController
