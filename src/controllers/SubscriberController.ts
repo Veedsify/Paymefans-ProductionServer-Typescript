@@ -47,4 +47,17 @@ export default class SubscriberController {
         }
     }
 
+    static async GetActiveSubscribers(req: Request, res: Response): Promise<void> {
+        try {
+            const cursor = req.query.cursor as string | undefined;
+            const activeSubscribers = await SubscriberService.GetActiveSubscribers(cursor);
+            if (activeSubscribers.error) {
+                res.status(400).json({ ...activeSubscribers })
+            }
+            res.status(200).json({ ...activeSubscribers })
+        } catch (error) {
+            console.log(error)
+            res.status(500).json({ status: false, error: true, message: "An error occured" })
+        }
+    }
 }

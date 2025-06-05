@@ -47,3 +47,12 @@ export type CheckSubscriberProps = {
       main_user_id: number;
       user_id: number;
 }
+
+
+export interface GetActiveSubscribersResponse {
+      error: boolean;
+      status: boolean;
+      data?: any[],
+      nextCursor?: number | undefined;
+      message?: string;
+}

@@ -5,6 +5,7 @@ import type {
   CreateNewSubscriptionResponse,
   CheckSubscriberProps,
   CreateNewSubscriptionProps,
+  GetActiveSubscribersResponse,
 } from "../types/subscribers";
 import { GenerateUniqueId } from "@utils/GenerateUniqueId";
 import { UserTransactionQueue } from "@jobs/notifications/UserTransactionJob";
@@ -361,6 +362,58 @@ export default class SubscriberService {
     } catch (error) {
       console.log(error);
       throw new Error("An error occurred");
+    }
+  }
+
+
+  static async GetActiveSubscribers(cursor: string | undefined): Promise<GetActiveSubscribersResponse> {
+    try {
+      const cursorValue = cursor ? Number(cursor) : undefined;
+      const activeSubscribers = await query.subscribers.findMany({
+        where: {
+          ...(cursorValue && cursorValue !== 0 && { id: { lt: cursorValue } }),
+          status: "active",
+        },
+        orderBy: {
+          id: "desc",
+        },
+        include: {
+          subscriber: {
+            select: {
+              user_id: true,
+              username: true,
+              profile_image: true,
+              name: true,
+              id: true,
+            }
+          }
+        }
+      })
+
+      if (!activeSubscribers || activeSubscribers.length === 0) {
+        return { error: false, status: true, data: [], message: "No active subscribers found" };
+      }
+      const formattedSubscribers = activeSubscribers.map(subscriber => ({
+        id: subscriber.id,
+        user_id: subscriber.subscriber.user_id,
+        username: subscriber.subscriber.username,
+        profile_image: subscriber.subscriber.profile_image,
+        name: subscriber.subscriber.name,
+      }));
+
+      const nextCursor = activeSubscribers.length > 0 ? activeSubscribers[activeSubscribers.length - 1].id : undefined;
+
+      return {
+        error: false,
+        status: true,
+        data: formattedSubscribers,
+        nextCursor: nextCursor,
+        message: "Active subscribers fetched successfully"
+      };
+    }
+    catch (error) {
+      console.log(error);
+      throw new Error("An error occurred while fetching active subscribers");
     }
   }
 }

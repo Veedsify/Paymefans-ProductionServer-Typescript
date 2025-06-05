@@ -10,5 +10,6 @@ subscribers.post("/subscription-data/:userId", Auth, SubscriberController.GetSub
 subscribers.post("/subscription-to-user/:profileId", Auth, SubscriberController.CreateNewSubscription);
 subscribers.post("/create/subscription-tiers", Auth, SubscriptionTierController.CreateSubscriptionTier);
 subscribers.get("/subscriptions/:userId", Auth, SubscriptionTierController.FetchUserSubscription);
+subscribers.get("/active-subscribers", Auth, SubscriberController.GetActiveSubscribers);
 
 export default subscribers;
