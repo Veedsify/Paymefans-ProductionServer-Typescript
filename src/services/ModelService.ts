@@ -355,4 +355,44 @@ export default class ModelService {
       throw new Error("Error validating model payment");
     }
   }
+
+  // static async InitilizeModelPayment(
+  //   body: { amount: number; user_id: number },
+  //   user: AuthUser,
+  // ): Promise<{ error: boolean; message: string; data?: any }> {
+  //   try {
+  //     const { amount, user_id } = body;
+
+  //     if (user.id !== user_id) {
+  //       return {
+  //         error: true,
+  //         message: "You are not authorized to perform this action",
+  //       };
+  //     }
+
+  //     const initializePayment = await PaystackService.InitializePayment({
+  //       amount,
+
+  //     });
+
+  //     if (initializePayment.error) {
+  //       return {
+  //         error: true,
+  //         message: initializePayment.message,
+  //       };
+  //     }
+
+  //     return {
+  //       error: false,
+  //       message: "Payment initialized successfully",
+  //       data: initializePayment.data,
+  //     };
+  //   } catch (error) {
+  //     console.error(error);
+  //     return {
+  //       error: true,
+  //       message: "Error initializing model payment",
+  //     };
+  //   }
+  // }
 }

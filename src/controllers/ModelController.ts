@@ -47,6 +47,21 @@ export default class ModelController {
         }
     }
 
+    // static async InitilizeModelPayment(req: Request, res: Response): Promise<any> {
+    //     try {
+    //         const initilizemodelpayment = await ModelService.InitilizeModelPayment(req.body, req.user as AuthUser)
+    //         if (initilizemodelpayment.error) {
+    //             res.status(400).json({ message: initilizemodelpayment.message })
+    //             return
+    //         }
+    //         res.status(200).json({ ...initilizemodelpayment })
+    //         return
+    //     } catch (error) {
+    //         console.error(error)
+    //         res.status(500).json({ message: "Error initializing model payment" })
+    //     }
+    // }
+
     static async SignupModel(req: Request, res: Response): Promise<any> {
         try {
             const signupmodel = await ModelService.SignupModel(req.body, req.user as AuthUser)

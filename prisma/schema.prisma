@@ -1255,6 +1255,7 @@ enum UserRole {
   fan
   model
   admin
+  support
 }
 
 enum PostAudience {

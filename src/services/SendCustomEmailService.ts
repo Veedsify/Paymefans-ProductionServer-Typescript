@@ -22,10 +22,10 @@ export default class SendCustomEmailService {
                         },
                     })
                     break;
-                case "admins":
+                case "support":
                     EmailRecipients = await query.user.findMany({
                         where: {
-                            role: "admin",
+                            role: "support",
                         },
                         select: {
                             email: true,
