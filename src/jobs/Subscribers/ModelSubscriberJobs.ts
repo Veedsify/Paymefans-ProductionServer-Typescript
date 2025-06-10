@@ -56,7 +56,7 @@ const pruneInactiveSubscribersWorker = new Worker(
 );
 
 pruneInactiveSubscribersWorker.on("completed", (job) => {
-    // console.log(`Job ${job.id} completed successfully`);
+    console.log(`Job ${job.id} completed successfully`);
 })
 
 

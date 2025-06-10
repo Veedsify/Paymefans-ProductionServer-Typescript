@@ -50,7 +50,7 @@ export default class RegisterService {
         if (checkPhone) {
             return {
                 message:
-                    "Sorry This Account Already Exists Please Check Your Phone Number or Email",
+                    "Sorry This Account Already Exists, Check Your Phone Number or Email",
                 error: true,
             };
         }

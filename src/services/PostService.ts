@@ -76,19 +76,45 @@ export default class PostService {
                 };
             }
 
-            const allImages = media.every((file) => file.type === "image");
-            const userMediaData = media
-                .filter(file => file?.id)
-                .map((file) => ({
-                    media_id: file.id,
-                    media_type: file.type,
-                    url: file.public,
-                    media_state: (file.type.includes("image") ? "completed" : "processing") as MediaState,
-                    blur: String(file.blur),
-                    poster: file.public,
-                    accessible_to: visibility,
-                    locked: visibility === "subscribers",
-                }));
+            // Optimize media processing with early validation
+            const userMediaData = [];
+            let allImages = true;
+
+            if (media?.length > 0) {
+                for (const file of media) {
+                    if (!file?.id) continue; // Skip invalid files
+
+                    if (file.type !== "image") {
+                        allImages = false;
+                    }
+
+                    userMediaData.push({
+                        media_id: file.id,
+                        user_id: user.id,
+                        media_type: file.type,
+                        url: file.public,
+                        media_state: (file.type === "image" ? "completed" : "processing") as MediaState,
+                        blur: String(file.blur),
+                        poster: file.public,
+                        accessible_to: visibility,
+                        locked: visibility === "subscribers",
+                    });
+                }
+            }
+            // Move the media count check earlier to fail fast
+            if (media?.length > 0 && !user.is_model) {
+                const userMediaCount = await query.userMedia.count({
+                    where: { user_id: user.id },
+                });
+
+                const userMediaDataCount = userMediaData.length || 0;
+
+                if (Number(userMediaCount + userMediaDataCount) >= 6) {
+                    // Remove the Media From Cloudflare 
+                    await RemoveCloudflareMedia(media.map(file => ({ id: file.id, type: file.type })));
+                    throw new Error("Sorry You have reached the maximum media limit of 6, as a fan user. Upgrade to a model/creator account to unlock unlimited uploads and access all features as a content creator.");
+                }
+            }
 
             const post = await query.post.create({
                 data: {
@@ -150,6 +176,7 @@ export default class PostService {
                         select: {
                             id: true,
                             media_id: true,
+                            user_id: true,
                             post_id: true,
                             duration: true,
                             media_state: true,
@@ -250,6 +277,7 @@ export default class PostService {
                             media_id: true,
                             post_id: true,
                             duration: true,
+                            user_id: true,
                             media_state: true,
                             poster: true,
                             url: true,
@@ -354,6 +382,7 @@ export default class PostService {
                                     duration: true,
                                     media_state: true,
                                     url: true,
+                                    user_id: true,
                                     blur: true,
                                     media_type: true,
                                     locked: true,
@@ -453,6 +482,7 @@ export default class PostService {
                                     poster: true,
                                     duration: true,
                                     url: true,
+                                    user_id: true,
                                     blur: true,
                                     media_type: true,
                                     locked: true,
@@ -683,6 +713,7 @@ export default class PostService {
                             url: true,
                             blur: true,
                             media_state: true,
+                            user_id: true,
                             media_type: true,
                             locked: true,
                             accessible_to: true,
@@ -788,6 +819,7 @@ export default class PostService {
                             url: true,
                             blur: true,
                             media_state: true,
+                            user_id: true,
                             media_type: true,
                             locked: true,
                             accessible_to: true,
@@ -1099,7 +1131,6 @@ export default class PostService {
                 where: { post_id: parseInt(postId), user_id: userId },
             });
             let isLiked = false;
-            let updatedPost = null;
             await query.$transaction(async (prisma) => {
                 if (!postLike) {
                     await prisma.postLike.create({
@@ -1109,14 +1140,14 @@ export default class PostService {
                             user_id: userId,
                         },
                     });
-                    updatedPost = await prisma.post.update({
+                    await prisma.post.update({
                         where: { id: Number(postId) },
                         data: { post_likes: { increment: 1 } },
                     });
                     isLiked = true;
                 } else {
                     await prisma.postLike.delete({ where: { id: postLike.id } });
-                    updatedPost = await prisma.post.update({
+                    await prisma.post.update({
                         where: { id: parseInt(postId) },
                         data: { post_likes: { decrement: 1 } },
                     });
@@ -1279,7 +1310,7 @@ export default class PostService {
 
     // PayFor Post
     static async PayForPost(options: PayForPostProps): Promise<PayForPostResponse> {
-        const { user, price, postId } = options;
+        const { user, postId } = options;
 
         if (!postId) return this.errorResponse("Post Not Found");
         if (!user?.id) return this.errorResponse("User Not Found");

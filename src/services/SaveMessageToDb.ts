@@ -160,6 +160,8 @@ class SaveMessageToDb {
 
     const purchase_id = `TRN${GenerateUniqueId()}`;
     const purchase_id2 = `TRN${GenerateUniqueId()}`;
+    const senderWallet = sender?.UserWallet && Array.isArray(sender.UserWallet) ? sender.UserWallet[0]?.id : undefined;
+    const receiverWallet = receiver?.UserWallet && Array.isArray(receiver.UserWallet) ? receiver.UserWallet[0]?.id : undefined;
 
     if (receiverPrice > 0) {
       const optionsForSender = {
@@ -169,7 +171,7 @@ class SaveMessageToDb {
         amount: receiverPrice,
         transactionType: "debit",
         transactionMessage: `Message to ${receiver?.username}`,
-        walletId: sender?.UserWallet[0].id,
+        walletId: senderWallet,
       };
       const optionsForReceiver = {
         transactionId: purchase_id2,
@@ -178,7 +180,7 @@ class SaveMessageToDb {
         amount: receiverPrice,
         transactionType: "credit",
         transactionMessage: `Message from ${sender?.username}`,
-        walletId: receiver?.UserWallet[0].id,
+        walletId: receiverWallet,
       };
 
       await Promise.all([

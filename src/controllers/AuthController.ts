@@ -74,6 +74,7 @@ export default class AuthController {
       const LoginAccount = await LoginService.LoginUser(req.body);
       return res.status(200).json(LoginAccount);
     } catch (error) {
+      console.log(error);
       return res
         .status(500)
         .json({ message: "Internal server error", status: false });
