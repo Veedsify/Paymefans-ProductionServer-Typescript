@@ -39,7 +39,13 @@ export default class PostService {
     static async CreatePost(data: CreatePostProps): Promise<CreatePostResponse> {
         try {
             const postId = uuid();
-            const user = data.user;
+            const user = await query.user.findUnique({
+                where: { id: data.user.id },
+            })
+
+            if (!user) {
+                throw new Error("User not found");
+            }
             const { content, visibility, media, removedMedia, price } = data;
 
             if (removedMedia) {
