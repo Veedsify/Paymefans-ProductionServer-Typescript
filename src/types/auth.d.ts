@@ -10,9 +10,14 @@ export type RegisterServiceProp = {
       location: string
 }
 
-export type RegisterServiceResponse =
-      | { error: true; message: string }
-      | { error: false; message: string; data: any };
+export type RegisterServiceResponse = {
+      shouldRedirect?: boolean;
+      token?: string | null;
+      tfa?: boolean;
+      error: boolean;
+      message: string;
+      data?: any
+};
 
 
 export type FindUserNameResponse = {
@@ -31,7 +36,7 @@ export type LoginUserResponse = {
       token?: string | null;
       tfa?: boolean;
       user?: Omit<User, "password">;
-}  
+}
 
 export type CheckUsernameProps = {
       username: string;

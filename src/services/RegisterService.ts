@@ -1,22 +1,23 @@
-import type {RegisteredUser} from "../types/user";
+import type { RegisteredUser } from "../types/user";
 import query from "@utils/prisma";
-import {GenerateUniqueId} from "@utils/GenerateUniqueId";
-import {CreateHashedPassword} from "@libs/HashPassword";
-import type {CheckForAdminResponse} from "../types/admin";
+import { GenerateUniqueId } from "@utils/GenerateUniqueId";
+import { CreateHashedPassword } from "@libs/HashPassword";
+import type { CheckForAdminResponse } from "../types/admin";
 import EmailService from "./EmailService";
-import type {EmailServiceProp} from "../types/email";
+import type { EmailServiceProp } from "../types/email";
 import type {
     RegisterServiceProp,
     RegisterServiceResponse,
 } from "../types/auth";
-import {countries} from "@libs/countries";
+import { countries } from "@libs/countries";
+import LoginService from "./LoginService";
 
 export default class RegisterService {
     // Register New User
     static async RegisterNewUser(
         data: RegisterServiceProp,
     ): Promise<RegisterServiceResponse> {
-        if (!data) return {message: "Invalid request", error: true};
+        if (!data) return { message: "Invalid request", error: true };
         const RequiredFields = [
             "name",
             "username",
@@ -42,7 +43,7 @@ export default class RegisterService {
             };
         }
 
-        const {checkPhone, checkEmail} = await this.CheckPhoneAndEmail(
+        const { checkPhone, checkEmail } = await this.CheckPhoneAndEmail(
             data.phone,
             data.email,
         );
@@ -65,7 +66,7 @@ export default class RegisterService {
         const user = await this.CreateUser(data);
         const admin = await this.CheckForAdmin(user);
         if (admin?.error) {
-            return {message: admin.message, error: true};
+            return { message: admin.message, error: true };
         }
 
         const EmailData: EmailServiceProp = {
@@ -83,22 +84,35 @@ export default class RegisterService {
             EmailService.SendWelcomeEmail(EmailData),
         ];
         await Promise.all(WelcomeData);
+
+        const authenticateUser = await LoginService.LoginUser({ email: data.email, password: data.password });
+
+        if (authenticateUser.error) {
+            return {
+                message: authenticateUser.message,
+                error: true,
+            }
+        }
+
         return {
+            shouldRedirect: true,
             message: "Account created successfully",
             error: false,
+            token: authenticateUser.token,
+            tfa: authenticateUser.tfa,
             data: user,
         };
     }
 
     // Verify Registration
-    static async ValidateRegistration({email, phone}: {email: string; phone: string }): Promise<{
+    static async ValidateRegistration({ email, phone }: { email: string; phone: string }): Promise<{
         message: string;
         status: boolean;
     }> {
 
         try {
             if (!email && !phone) {
-                return {message: "Invalid request", status: false};
+                return { message: "Invalid request", status: false };
             }
 
             const [checkPhone, checkEmail] = await Promise.all([
@@ -120,15 +134,15 @@ export default class RegisterService {
                 }),
             ]);
 
-            if(checkPhone && checkEmail) {
-                return {message: "Sorry, this account already exists", status: false};
+            if (checkPhone && checkEmail) {
+                return { message: "Sorry, this account already exists", status: false };
             }
 
-            return {message: "Account verified successfully", status: true};
+            return { message: "Account verified successfully", status: true };
 
-        }catch (error: any){
+        } catch (error: any) {
             console.log(error);
-            throw  new Error(error.message);
+            throw new Error(error.message);
         }
 
     }
@@ -136,8 +150,8 @@ export default class RegisterService {
     // Check Email and Phone Number Exist
     static async CheckPhoneAndEmail(phone: string, email: string) {
         const [checkPhone, checkEmail] = await Promise.all([
-            query.user.findUnique({where: {phone: phone}}),
-            query.user.findUnique({where: {email: email}}),
+            query.user.findUnique({ where: { phone: phone } }),
+            query.user.findUnique({ where: { email: email } }),
         ]);
         return {
             checkPhone,
@@ -237,7 +251,7 @@ export default class RegisterService {
         user: RegisteredUser,
     ): Promise<CheckForAdminResponse> {
         const admin = await query.user.findFirst({
-            where: {username: "@paymefans"},
+            where: { username: "@paymefans" },
             select: {
                 user_id: true,
                 id: true,
@@ -245,14 +259,14 @@ export default class RegisterService {
         });
 
         if (!admin) {
-            await query.user.delete({where: {id: user.id}});
+            await query.user.delete({ where: { id: user.id } });
             return {
                 message: "Sorry, an error occurred while creating your account",
                 error: true,
             };
         }
 
-        return {id: admin.id, userId: admin.user_id, error: false};
+        return { id: admin.id, userId: admin.user_id, error: false };
     }
 
     // Create Welcome Conversation and Message

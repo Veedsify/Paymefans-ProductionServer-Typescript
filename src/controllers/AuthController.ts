@@ -21,7 +21,7 @@ export default class AuthController {
 
       return res
         .status(201)
-        .json({ message: "Account created successfully", status: true });
+        .json(CreateAccount);
     } catch (error) {
       console.log(error);
       return res
@@ -36,7 +36,7 @@ export default class AuthController {
         email: req.body.email,
         phone: req.body.phone,
       });
-      if(!ValidateAccount.status) {
+      if (!ValidateAccount.status) {
         return res.status(400).json(ValidateAccount);
       }
 
