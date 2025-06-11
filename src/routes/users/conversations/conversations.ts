@@ -16,6 +16,11 @@ conversations.get(
   Auth,
   ConversationController.AllConversations
 );
+conversations.get(
+  "/receiver/:conversationId",
+  Auth,
+  ConversationController.ConversationReceiver
+);
 conversations.post(
   "/create-new",
   Auth,

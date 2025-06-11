@@ -10,7 +10,7 @@ export default class ConversationController {
                 user: req.user as AuthUser,
                 conversationId: req.params.conversationId as string,
                 page: req.query.page as string,
-                cursor: Number(req.query.cursor) || 0,
+                cursor: Number(req.query.cursor) || undefined,
             });
             if (conversations.error) {
                 res.status(400).json({ ...conversations });
@@ -105,5 +105,23 @@ export default class ConversationController {
             res.status(400).json(conversations)
         }
         res.status(200).json({ ...conversations });
+    }
+
+    // Conversation Receiver
+    static async ConversationReceiver(req: Request, res: Response): Promise<void> {
+        try {
+            const receiver = await ConversationService.ConversationReceiver({
+                conversationId: req.params.conversationId as string,
+                user: req.user as AuthUser,
+            });
+            if (receiver.error) {
+                res.status(400).json({ ...receiver });
+                return
+            }
+            res.status(200).json({ ...receiver });
+        } catch (error) {
+            console.log(error);
+            res.status(500).json({ message: `Internal Server Error ${error}` });
+        }
     }
 }

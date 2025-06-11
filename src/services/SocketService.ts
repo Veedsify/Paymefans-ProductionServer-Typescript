@@ -108,7 +108,7 @@ export default class SocketService {
   // Emit typing event to the sender
   static async HandleTyping(data: any, socket: Socket, userRoom: string) {
     socket.to(userRoom).emit("sender-typing", {
-      value: data.value,
+      value: true,
       sender_id: data.sender_id,
     });
   }

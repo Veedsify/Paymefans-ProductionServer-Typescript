@@ -58,7 +58,7 @@ IoInstance.init(server).then((instance) => {
   // Emit active users to the socket
   activeUsersQueue.add("activeUsersQueue", {}, {
     repeat: {
-      every: 30000, // 30 seconds
+      every: 5000, // 10 seconds
     },
     jobId: "activeUsersJob",
   });

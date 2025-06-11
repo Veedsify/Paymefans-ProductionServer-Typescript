@@ -22,13 +22,78 @@ import { UploadImageToS3 } from "@libs/UploadImageToS3";
 import tusUploader from "@libs/tus";
 
 export default class ConversationService {
+    // Conversation Receiver
+    // Fetch the receiver of a conversation
+    static async ConversationReceiver({
+        user,
+        conversationId,
+    }: {
+        user: AuthUser;
+        conversationId: string;
+    }): Promise<{ receiver: any; error: boolean }> {
+        try {
+            // Fetch the conversation with participants
+            const conversation = await query.conversations.findFirst({
+                where: {
+                    conversation_id: conversationId,
+                    participants: {
+                        some: {
+                            OR: [{ user_1: user.user_id }, { user_2: user.user_id }],
+                        },
+                    },
+                },
+                select: {
+                    participants: true,
+                },
+            });
+            if (!conversation) {
+                return { receiver: null, error: true };
+            }
+
+            // Find the participant that is not the current user
+            const participant = conversation.participants.find(
+                (p) => p.user_1 === user.user_id ? p.user_2 : p.user_1
+            );
+
+            if (!participant) {
+                return { receiver: null, error: true };
+            }
+
+            // Fetch the receiver's details
+            const receiverId =
+                participant.user_1 === user.user_id ? participant.user_2 : participant.user_1;
+
+            const receiver = await query.user.findFirst({
+                where: { user_id: receiverId },
+                select: {
+                    id: true,
+                    user_id: true,
+                    name: true,
+                    username: true,
+                    profile_image: true,
+                    active_status: true,
+                    Settings: true,
+                },
+            });
+
+            return { receiver, error: false };
+        } catch (error) {
+            console.error("Error fetching conversation receiver:", error);
+            throw new Error("Failed to fetch conversation receiver");
+        } finally {
+            if (query.$disconnect) {
+                await query.$disconnect();
+            }
+        }
+    }
+
     // Fetch Conversations
     // Fetch all conversations for a user
     // This method retrieves all conversations for a user, including messages and participant details.
     static async AllConversations({
         user,
         conversationId,
-        cursor = 0,
+        cursor,
     }: AllConversationProps): Promise<AllConversationResponse> {
         try {
             // 1. Fetch conversation and validate participation in one query
@@ -47,10 +112,8 @@ export default class ConversationService {
             if (!conversation) {
                 return {
                     messages: [],
-                    receiver: null,
                     message: "Invalid conversation",
                     status: false,
-                    hasMore: false,
                     invalid_conversation: true,
                     error: true,
                 };
@@ -63,50 +126,22 @@ export default class ConversationService {
             const messages = await query.messages.findMany({
                 where: {
                     conversationsId: conversationId,
-                    ...(cursor && cursor > 0 ? { id: { lt: cursor } } : {}),
+                    ...(cursor && { id: { lt: cursor } }),
                 },
                 orderBy: [{ id: "desc" }],
-                take: messagesPerPage + 1,
+                take: messagesPerPage, // +1 to check if there's a next page
             });
 
-            const hasMore = messages.length > messagesPerPage;
-            if (hasMore) messages.pop(); // Remove the extra message
+            const nextCursor = messages && messages.length > 0 && messages[messages.length - 1].id >= 1
+                ? messages[messages.length - 1].id
+                : undefined;
 
-            // Messages should be returned in ascending order for chat UIs
-            const orderedMessages = messages.slice().reverse();
-
-            // 4. Find the receiver
-            const participant = conversation.participants.find(
-                (p) => p.user_1 === user.user_id || p.user_2 === user.user_id,
-            );
-            let receiver = null;
-            if (participant) {
-                const receiverId =
-                    participant.user_1 === user.user_id
-                        ? participant.user_2
-                        : participant.user_1;
-                receiver = await query.user.findFirst({
-                    where: { user_id: receiverId },
-                    select: {
-                        id: true,
-                        user_id: true,
-                        name: true,
-                        username: true,
-                        profile_image: true,
-                        active_status: true,
-                        Settings: true,
-                    },
-                });
-            }
 
             const response = {
-                messages: orderedMessages as Messages[],
-                receiver,
+                messages: messages as Messages[],
                 error: false,
                 status: true,
-                hasMore,
-                nextCursor:
-                    orderedMessages.length > 0 ? orderedMessages[0].id : undefined,
+                nextCursor
             };
 
             return response;

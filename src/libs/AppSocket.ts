@@ -19,10 +19,19 @@ async function AppSocket(io: any) {
       await redis.set(`user:${user.userId}:room`, data);
     };
 
-    // Socket Actions
-    socket.on("user_active", (username: string) =>
-      SocketService.HandleUserActive(username, socket)
-    );
+    const username = socket.handshake.query.username as string;
+    if (!username) {
+      console.error("No username provided in socket connection");
+      return;
+    }
+
+    // Initialize user object
+    SocketService.HandleUserActive(username, socket)
+
+    // // Socket Actions
+    // socket.on("user_active", (username: string) =>
+    //   SocketService.HandleUserActive(username, socket)
+    // );
     socket.on("join", (data: string) =>
       SocketService.HandleJoinRoom(AddToUserRoom, socket, data)
     );
