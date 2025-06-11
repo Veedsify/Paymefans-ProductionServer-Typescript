@@ -50,6 +50,7 @@ model User {
   active_status             Boolean                     @default(true)
   max_post_count            Int                         @default(0)
   hasPin                    Boolean                     @default(false)
+  watermarkEnabled          Boolean                     @default(true)
   created_at                DateTime                    @default(now())
   updated_at                DateTime                    @updatedAt
   Follow                    Follow[]
@@ -164,6 +165,7 @@ model Model {
   country             String
   hookup              Boolean               @default(false)
   payment_status      Boolean               @default(false)
+  watermark           String?               @default("/site/watermark.png")
   payment_reference   String?               @unique
   verification_video  String?
   verification_image  String?

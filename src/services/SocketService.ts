@@ -234,7 +234,7 @@ export default class SocketService {
       const message = await SaveMessageToDb.SaveMessage(data);
       if (message) {
         socket.to(userRoom).emit("message", {
-          ...data,
+          ...data, rawFiles: [],
         });
 
         //clear cached conversations

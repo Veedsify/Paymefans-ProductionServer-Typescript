@@ -120,7 +120,7 @@ export default class ConversationService {
             }
 
             // 2. Get pagination limit
-            const messagesPerPage = Number(process.env.MESSAGES_PER_PAGE) || 20;
+            const messagesPerPage = Number(process.env.MESSAGES_PER_PAGE) || 40;
 
             // 3. Fetch paginated messages (fetch one extra for hasMore)
             const messages = await query.messages.findMany({
