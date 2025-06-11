@@ -14,6 +14,10 @@ import LoginService from "./LoginService";
 
 export default class RegisterService {
     // Register New User
+    static async isValidUsername(username: string): Promise<boolean> {
+        const regex = /^[a-zA-Z0-9_]{1,20}$/;
+        return regex.test(username);
+    }
     static async RegisterNewUser(
         data: RegisterServiceProp,
     ): Promise<RegisterServiceResponse> {
@@ -39,6 +43,27 @@ export default class RegisterService {
         if (MissingFields) {
             return {
                 message: `Sorry, ${MissingFields} field is missing`,
+                error: true,
+            };
+        }
+
+        if (data.username.length < 5) {
+            return {
+                message: "Username must be at least 5 characters long",
+                error: true,
+            };
+        }
+
+        if (data.username.length > 20) {
+            return {
+                message: "Username must not be more than 20 characters long",
+                error: true,
+            };
+        }
+
+        if (!this.isValidUsername(data.username)) {
+            return {
+                message: "Username can only contain letters, numbers, and underscores",
                 error: true,
             };
         }
