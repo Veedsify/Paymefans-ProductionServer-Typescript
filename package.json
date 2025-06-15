@@ -9,9 +9,9 @@
   "scripts": {
     "build": "tsc",
     "bun-build": "bun build",
-    "start": "node -r tsconfig-paths/register dist/app.js",
-    "dev": "nodemon --exec tsx -r tsconfig-paths/register src/app.ts",
-    "dev2": "bun run --hot src/app.ts"
+    "start": "node -r tsconfig-paths/register ./dist/app.js",
+    "dev2": "nodemon --exec tsx -r tsconfig-paths/register src/app.ts",
+    "dev": "bun --watch ./src/app.ts --ext .ts"
   },
   "keywords": [],
   "author": "",

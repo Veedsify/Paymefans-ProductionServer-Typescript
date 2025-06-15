@@ -5,6 +5,7 @@ import {
   PostCommentAttachments,
   PostLike,
   Subscribers,
+  User,
   UserMedia,
 } from "@prisma/client";
 import { AuthUser } from "./user";
@@ -92,6 +93,7 @@ interface CreatePostProps {
   media: CreateMedia[];
   user: AuthUser;
   price: number | null;
+  mentions: MentionUser[];
   removedMedia: RemovedMedia[];
 }
 /**
@@ -352,4 +354,28 @@ export interface PayForPostResponse {
   error: boolean;
   status: boolean;
   message: string;
+}
+
+export interface GetMentionsProps {
+  query: string;
+  userId: number;
+}
+
+export interface GetMentionsResponse {
+  status: boolean;
+  message: string;
+  mentions?: {
+    id: number;
+    username: string;
+    profile_image: string | null;
+    name: string;
+  }[]
+}
+
+export interface MentionUser {
+  id: string;
+  username: string;
+  displayName: string;
+  avatar?: string;
+  isVerified?: boolean;
 }

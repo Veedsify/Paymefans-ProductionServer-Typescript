@@ -5,6 +5,8 @@ import type {
     DeletePostResponse,
     EditPostProps,
     EditPostResponse,
+    GetMentionsProps,
+    GetMentionsResponse,
     GetMyMediaProps,
     GetMyMediaResponse,
     GetMyPostProps,
@@ -33,6 +35,8 @@ import { GenerateUniqueId } from "@utils/GenerateUniqueId";
 import { UserTransactionQueue } from "@jobs/notifications/UserTransactionJob";
 import EmailService from "./EmailService";
 import GetSinglename from "@utils/GetSingleName";
+import { redis } from "@libs/RedisStore";
+import ParseContentToHtml from "@utils/ParseHtmlContent";
 
 export default class PostService {
     // Create Post
@@ -46,7 +50,7 @@ export default class PostService {
             if (!user) {
                 throw new Error("User not found");
             }
-            const { content, visibility, media, removedMedia, price } = data;
+            const { content, visibility, media, removedMedia, mentions, price } = data;
 
             if (removedMedia) {
                 const removeMedia = await RemoveCloudflareMedia(removedMedia);
@@ -122,11 +126,13 @@ export default class PostService {
                 }
             }
 
+            const formattedContent = ParseContentToHtml(content, mentions || []);
+
             const post = await query.post.create({
                 data: {
                     post_id: postId,
                     was_repost: false,
-                    content: content || "",
+                    content: formattedContent || "",
                     post_audience: visibility as PostAudience,
                     post_status: allImages ? "approved" : "pending",
                     post_is_visible: true,
@@ -1432,6 +1438,70 @@ export default class PostService {
             return this.errorResponse("An unexpected error occurred during the post purchase");
         }
     }
+
+    // Get Mentions
+    static async GetMentions({ query: searchQuery, userId }: GetMentionsProps): Promise<GetMentionsResponse> {
+        try {
+            if (!searchQuery || searchQuery.trim() === "") {
+                return {
+                    status: false,
+                    message: "Search query cannot be empty",
+                    mentions: []
+                };
+            }
+
+            const mentionsKey = `mentions:${searchQuery.toLowerCase()}:${userId}`;
+
+            const cachedMentions = await redis.get(mentionsKey);
+
+            if (cachedMentions) {
+                return {
+                    status: true,
+                    message: "Mentions retrieved from cache",
+                    mentions: JSON.parse(cachedMentions)
+                };
+            }
+
+            const findMentions = await query.user.findMany({
+                where: {
+                    OR: [
+                        { username: { contains: searchQuery, mode: "insensitive" } },
+                        { name: { contains: searchQuery, mode: "insensitive" } }
+                    ],
+                    id: { not: userId } // Exclude the current user
+                },
+                select: {
+                    id: true,
+                    username: true,
+                    profile_image: true,
+                    name: true,
+                },
+                take: 10, // Limit results to 10
+            })
+
+            if (findMentions.length === 0) {
+                return {
+                    status: false,
+                    message: "No mentions found",
+                    mentions: []
+                };
+            }
+
+            // Cache the results for 2 minutes
+            await redis.set(mentionsKey, JSON.stringify(findMentions), "EX", 120);
+
+            return {
+                status: true,
+                message: "Mentions retrieved successfully",
+                mentions: findMentions
+            }
+        }
+        catch (error: any) {
+            console.error("Error in GetMentions:", error);
+            throw new Error("An unexpected error occurred while fetching mentions");
+        }
+    }
+
 
     // Helpers
     private static successResponse(message: string): PayForPostResponse {

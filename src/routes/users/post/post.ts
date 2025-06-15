@@ -19,7 +19,7 @@ post.get("/other/private-posts/:userId", Auth, PostController.GetPrivatePostByID
 post.get("/other/reposts/:userId", Auth, PostController.GetReposts)
 post.get("/other/media/:userId", Auth, PostController.GetOtherMedia)
 post.get("/user/:userId", Auth, PostController.GetUserPostByID)
-post.get("/:postId", Auth, PostController.GetSinglePost);
+post.get("/single/:postId", Auth, PostController.GetSinglePost);
 post.get("/edit/:postId", Auth, PostController.EditPost)
 post.put("/update/audience/:postId", Auth, PostController.UpdatePostAudience)
 post.post("/repost/:postId", Auth, PostController.CreateRepost)
@@ -31,4 +31,7 @@ post.delete("/:postId", Auth, PostController.DeletePost)
 post.post("/media/signed-url", Auth, UploadController.CreateMediaUploadSignedUrl)
 post.post("/point/gift", Auth, PostController.GiftPoints)
 post.post("/pay", Auth, PostController.PayForPost)
+
+// Mentions and Tags
+post.get("/mentions", Auth, PostController.GetMentions)
 export default post

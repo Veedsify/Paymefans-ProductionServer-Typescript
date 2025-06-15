@@ -1,6 +1,6 @@
 import { User } from "@prisma/client";
 import { AuthUser } from "./user";
-import {Config} from "./config";
+import { Config } from "./config";
 declare global {
     namespace Express {
         interface Request {

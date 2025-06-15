@@ -17,7 +17,6 @@ import ModelsJobs from "@jobs/ModelsJobs";
 import { connectDB } from "@utils/mongodb";
 import { activeUsersQueue, pruneInactiveUsersQueue } from "@jobs/ActiveUsers/activeUserJobs";
 import { pruneInactiveSubscribersQueue } from "@jobs/Subscribers/ModelSubscriberJobs";
-
 const { ADMIN_PANEL_URL, VERIFICATION_URL, APP_URL, LIVESTREAM_PORT } =
   process.env;
 
@@ -41,11 +40,9 @@ app.use(
       "http://192.168.18.126",
       "http://192.168.18.126:3009",
       "http://192.168.18.126:3000",
-      "http://localhost:8000",
       "http://192.168.0.115:3000",
       "http://192.168.0.115:3009",
       "http://23.20.241.255:3000",
-      "http://23.20.241.255:3002"
     ].filter(Boolean),
     credentials: true,
     optionsSuccessStatus: 200,
