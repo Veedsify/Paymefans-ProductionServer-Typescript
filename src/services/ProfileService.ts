@@ -568,7 +568,7 @@ class ProfileService {
                 walletId: model.UserWallet?.id,
             };
 
-            const notificationMsg = `Hi ${getSingleName(user.name)}, <strong><a href="/${user.username}">${user.username}</a></strong> has just tipped you ${pointsAmount} points`;
+            const notificationMsg = `Hi ${getSingleName(model.name)}, <strong><a href="/${user.username}">${user.username}</a></strong> has just tipped you ${pointsAmount} points`;
 
             // 5. Background jobs and notifications in parallel
             await Promise.all([
