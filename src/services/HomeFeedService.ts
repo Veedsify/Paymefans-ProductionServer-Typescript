@@ -105,9 +105,6 @@ class FeedService {
       orderBy: { created_at: "desc" },
     });
 
-
-
-
     const postsChecked = posts.map(async (post) => {
       const postLike = await query.postLike.findFirst({
         where: {

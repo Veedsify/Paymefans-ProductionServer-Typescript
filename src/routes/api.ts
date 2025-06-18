@@ -22,6 +22,7 @@ import withdraw from "@routes/users/withdraw/withdraw";
 import pages from "./users/pages/pages"
 import rates from "./users/rate/rate"
 import configs from "@routes/users/configs/configs";
+import search from "@routes/users/search/search"
 const api = express.Router()
 
 // Authentication
@@ -72,4 +73,6 @@ api.use("/pages", pages)
 api.use("/rates", rates)
 // Configs
 api.use("/configs", configs)
+// Search
+api.use("/search", search)
 export default api
