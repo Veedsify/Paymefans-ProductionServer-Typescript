@@ -1,6 +1,7 @@
 import { UploadImageToS3 } from "@libs/UploadImageToS3";
 import { GenerateUniqueId } from "@utils/GenerateUniqueId";
 import { Comments } from "@utils/mongoSchema";
+import ParseContentToHtml from "@utils/ParseHtmlContent";
 import query from "@utils/prisma";
 import type { LikeCommentResponse, NewCommentResponse } from "types/comments";
 import type { AuthUser } from "types/user";
@@ -14,7 +15,8 @@ export default class CommentsService {
         user: AuthUser,
         postId: number,
         parentId: string | null,
-        files?: Express.Multer.File[]
+        mentions: string,
+        files?: Express.Multer.File[],
     ): Promise<NewCommentResponse> {
         try {
             const comment_id = `COM${GenerateUniqueId()}`;
@@ -66,6 +68,9 @@ export default class CommentsService {
                     id: user.id
                 }
             })
+
+            const formattedComments = ParseContentToHtml(comment, JSON.parse(mentions))
+
             const newComment = await Comments.insertOne({
                 name: user.name,
                 comment_id: comment_id,
@@ -74,7 +79,7 @@ export default class CommentsService {
                 profile_image: commentOwner?.profile_image || `${process.env.SERVER_ORIGINAL_URL}/site/avatar.png`,
                 postId: String(post_id),
                 parentId: parentId && parentId !== "null" ? parentId : null,
-                comment: comment,
+                comment: formattedComments,
                 attachment: commentAttachments,
                 likes: 0,
                 impressions: 0,
