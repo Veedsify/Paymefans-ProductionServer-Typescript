@@ -20,17 +20,35 @@ export interface GetStoryMediaProps {
   limit: string;
   user: AuthUser;
 }
-export type StoryType = {
-  id: number;
-  media_type: string;
-  media_url: string;
-  caption?: string;
-  captionStyle?: {
+
+interface CaptionElement {
+  id: string;
+  type: "text" | "link";
+  content: string;
+  url?: string;
+  position: {
+    x: number;
+    y: number;
+  };
+  style: {
     fontFamily: string;
     fontSize: string;
     fontWeight: string;
     color: string;
+    textAlign: "left" | "center" | "right";
+    fontStyle?: string;
+    textDecoration?: string;
   };
+}
+
+
+export type StoryType = {
+  id: number;
+  index: number;
+  media_type: string;
+  media_url: string;
+  caption?: string;
+  captionElements?: CaptionElement[];
 };
 
 export interface SaveStoryProps {

@@ -226,18 +226,18 @@ model UserStory {
 }
 
 model StoryMedia {
-  id            Int       @id @default(autoincrement())
-  media_id      String
-  media_type    String
-  filename      String
-  captionStyle  Json?
-  story_content String?
-  url           String
-  duration      Int?
-  story         UserStory @relation(fields: [user_id], references: [id], onDelete: Cascade)
-  user_id       Int
-  created_at    DateTime  @default(now())
-  updated_at    DateTime  @updatedAt
+  id              Int       @id @default(autoincrement())
+  media_id        String
+  filename        String
+  captionElements Json?
+  story_content   String?
+  media_type      String
+  media_url       String?
+  duration        Int?
+  user_id         Int
+  story           UserStory @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  created_at      DateTime  @default(now())
+  updated_at      DateTime  @updatedAt
 }
 
 model Post {

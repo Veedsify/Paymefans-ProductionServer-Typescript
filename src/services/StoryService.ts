@@ -255,13 +255,13 @@ export default class StoryService {
                 media_id: `MED${GenerateUniqueId()}`,
                 media_type: story.media_type,
                 filename: story.media_url,
-                url: story.media_url,
+                media_url: story.media_url,
                 duration:
                   story.media_type === "image"
                     ? Number(5000)
                     : Number(lengthArray[index]),
                 story_content: story.caption,
-                captionStyle: story.captionStyle,
+                captionElements: JSON.stringify(story.captionElements),
               };
             }),
           },

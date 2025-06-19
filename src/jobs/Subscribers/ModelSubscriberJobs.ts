@@ -60,4 +60,4 @@ pruneInactiveSubscribersWorker.on("completed", (job) => {
 })
 
 
-export { pruneInactiveSubscribersQueue, pruneInactiveSubscribersWorker };
+export { pruneInactiveSubscribersQueue,  };

@@ -40,4 +40,4 @@ UpdateAvatarWorker.on("failed", (error: any) => {
     console.error(`Job failed with error: ${error}`);
 })
 
-export { UpdateAvatarQueue, UpdateAvatarWorker }
+export { UpdateAvatarQueue,  }

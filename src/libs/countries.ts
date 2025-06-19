@@ -1,4 +1,4 @@
-export interface Countries {
+interface Countries {
   name: string;
   code: string | null;
   dial_code?: string;

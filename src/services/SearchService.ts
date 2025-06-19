@@ -105,6 +105,7 @@ export default class SearchService {
                 location: true,
                 country: true,
                 is_model: true,
+                admin: true,
                 total_followers: true,
                 total_subscribers: true,
                 total_following: true,

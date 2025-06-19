@@ -54,4 +54,4 @@ const activeUsersWorker = new Worker(
 );
 
 
-export { activeUsersQueue, activeUsersWorker, pruneInactiveUsersQueue, pruneInactiveUsersWorker };
+export { activeUsersQueue,  pruneInactiveUsersQueue,  };

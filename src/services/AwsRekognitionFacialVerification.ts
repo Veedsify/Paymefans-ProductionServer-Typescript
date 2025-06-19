@@ -75,4 +75,4 @@ const AwsFaceVerification = async ({
     };
   }
 };
-export { rekognition, AwsFaceVerification };
+export {  AwsFaceVerification };
