@@ -202,6 +202,7 @@ interface GetSinglePost {
   UserMedia?: UserMedia[];
   likedByme: boolean;
   isSubscribed: boolean;
+  hasPaid: boolean;
   wasReposted: boolean;
   user: {
     username: string;

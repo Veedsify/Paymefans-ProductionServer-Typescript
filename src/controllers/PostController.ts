@@ -1,4 +1,4 @@
-import { query, type Request, type Response } from "express";
+import { type Request, type Response } from "express";
 import PostService from "@services/PostService";
 import { AuthUser } from "types/user";
 export default class PostController {

@@ -236,6 +236,7 @@ export default class PostService {
                 ...post,
                 isSubscribed: true,
                 wasReposted: postRepostSet.has(post.id),
+                hasPaid: true,
                 likedByme: postLikesSet.has(post.id),
             }));
 
@@ -338,6 +339,7 @@ export default class PostService {
                 likedByme: postLikesSet.has(post.id),
                 wasReposted: postRepostSet.has(post.id),
                 isSubscribed: true,
+                hasPaid: true,
             }));
 
             return {
@@ -426,17 +428,20 @@ export default class PostService {
             const reposts = userReposts.map(repost => repost.post);
             const postIds = reposts.map(post => post.id);
             // Batch likes and reposts
-            const [likes, repostsDb] = await Promise.all([
+            const [likes, repostsDb, purchasedPosts] = await Promise.all([
                 query.postLike.findMany({ where: { post_id: { in: postIds }, user_id: userId } }),
                 query.userRepost.findMany({ where: { post_id: { in: postIds }, user_id: userId } }),
+                query.purchasedPosts.findMany({ where: { post_id: { in: postIds }, user_id: userId } }),
             ]);
             const postLikesSet = new Set(likes.map(l => l.post_id));
             const postRepostSet = new Set(repostsDb.map(r => r.post_id));
+            const purchasedPostsSet = new Set(purchasedPosts.map(r => r.post_id));
 
             const resolvedPosts = reposts.map(post => ({
                 ...post,
                 likedByme: postLikesSet.has(post.id),
                 wasReposted: postRepostSet.has(post.id),
+                hasPaid: purchasedPostsSet.has(post.id),
                 isSubscribed: true,
             }));
 
@@ -528,17 +533,20 @@ export default class PostService {
             const reposts = userReposts.map(repost => repost.post);
             const postIds = reposts.map(post => post.id);
             // Batch likes and reposts
-            const [likes, repostsDb] = await Promise.all([
+            const [likes, repostsDb, payedPosts] = await Promise.all([
                 query.postLike.findMany({ where: { post_id: { in: postIds }, user_id: userId } }),
                 query.userRepost.findMany({ where: { post_id: { in: postIds }, user_id: authUserId } }),
+                query.purchasedPosts.findMany({ where: { post_id: { in: postIds }, user_id: authUserId } }),
             ]);
             const postLikesSet = new Set(likes.map(l => l.post_id));
             const postRepostSet = new Set(repostsDb.map(r => r.post_id));
+            const purchasedPostsSet = new Set(payedPosts.map(l => l.post_id));
 
             const resolvedPosts = reposts.map(post => ({
                 ...post,
                 likedByme: postLikesSet.has(post.id),
                 wasReposted: postRepostSet.has(post.id),
+                hasPaid: purchasedPostsSet.has(post.id) || post.post_audience !== "price",
                 isSubscribed: true,
             }));
 
@@ -613,7 +621,7 @@ export default class PostService {
                 select: { id: true },
             })).map(p => p.id);
 
-            const [isSubscribed, media] = await Promise.all([
+            const [isSubscribed, media, payedPosts] = await Promise.all([
                 query.subscribers.findFirst({
                     where: { subscriber_id: Number(authUserId), status: "active", user_id: Number(userId) },
                 }),
@@ -646,6 +654,9 @@ export default class PostService {
                     take: validLimit + 1,
                     orderBy: { created_at: "desc" },
                 }),
+                query.purchasedPosts.findMany({
+                    where: { post_id: { in: postIds }, user_id: Number(authUserId) },   
+                }),
             ]);
 
             let hasMore = false;
@@ -653,8 +664,11 @@ export default class PostService {
                 hasMore = true;
                 media.pop();
             }
+
+            const purchasedPostsSet = new Set(payedPosts.map(l => l.post_id));
             const resolvedMedia = media.map(mediaFile => ({
                 ...mediaFile,
+                hasPaid: purchasedPostsSet.has(mediaFile.post_id) || mediaFile.accessible_to !== "price",
                 isSubscribed: mediaFile.post.user.id === Number(authUserId) || !!isSubscribed,
             }));
 
@@ -757,19 +771,22 @@ export default class PostService {
 
             const postIds = posts.map(post => post.id);
             // Batch queries
-            const [subs, likes, reposts] = await Promise.all([
+            const [subs, likes, reposts, payedPosts] = await Promise.all([
                 query.subscribers.findFirst({
                     where: { subscriber_id: authUserId, status: "active", user_id: parsedUserId }
                 }),
                 query.postLike.findMany({ where: { post_id: { in: postIds }, user_id: posts.length ? posts[0].user.id : 0 } }), // note: original used post.user.id, possible logic bug
                 query.userRepost.findMany({ where: { post_id: { in: postIds }, user_id: authUserId } }),
+                query.purchasedPosts.findMany({ where: { post_id: { in: postIds }, user_id: authUserId } }),
             ]);
             const postLikesSet = new Set(likes.map(l => l.post_id));
             const postRepostSet = new Set(reposts.map(r => r.post_id));
+            const purchasedPostsSet = new Set(payedPosts.map(l => l.post_id));
 
             const resolvedPosts = posts.map(post => ({
                 ...post,
                 likedByme: postLikesSet.has(post.id),
+                hasPaid: purchasedPostsSet.has(post.id) || post.post_audience !== "price",
                 wasReposted: postRepostSet.has(post.id),
                 isSubscribed: !!subs,
             }));
@@ -862,20 +879,22 @@ export default class PostService {
             }
             const postIds = posts.map(post => post.id);
 
-            const [subs, likes, reposts] = await Promise.all([
+            const [subs, likes, reposts, payedPosts] = await Promise.all([
                 query.subscribers.findFirst({
                     where: { subscriber_id: authUserId, status: "active", user_id: Number(userId) }
                 }),
                 query.postLike.findMany({ where: { post_id: { in: postIds }, user_id: posts.length ? posts[0].user.id : 0 } }),
                 query.userRepost.findMany({ where: { post_id: { in: postIds }, user_id: authUserId } }),
+                query.purchasedPosts.findMany({ where: { post_id: { in: postIds }, user_id: userId } }),
             ]);
             const postLikesSet = new Set(likes.map(l => l.post_id));
             const postRepostSet = new Set(reposts.map(r => r.post_id));
-
+            const purchasedPostsSet = new Set(payedPosts.map(l => l.post_id));
             const resolvedPosts = posts.map(post => ({
                 ...post,
                 likedByme: postLikesSet.has(post.id),
                 wasReposted: postRepostSet.has(post.id),
+                hasPaid: purchasedPostsSet.has(post.id) || post.post_audience !== "price",
                 isSubscribed: !!subs || post.user.id === authUserId,
             }));
 
@@ -956,10 +975,11 @@ export default class PostService {
                 };
             }
             // one query for like
-            const [postLike, isSubscribed, isRespoted] = await Promise.all([
+            const [postLike, isSubscribed, isRespoted, isPaid] = await Promise.all([
                 query.postLike.findFirst({ where: { post_id: post.id, user_id: authUserId } }),
                 query.subscribers.findFirst({ where: { user_id: post.user_id, status: "active", subscriber_id: authUserId } }),
                 query.userRepost.findFirst({ where: { post_id: post.id, user_id: authUserId } }),
+                query.purchasedPosts.findMany({ where: { post_id: post.id, user_id: authUserId } }),
             ]);
             return {
                 error: false,
@@ -969,6 +989,7 @@ export default class PostService {
                     ...post,
                     likedByme: !!postLike,
                     wasReposted: !!isRespoted,
+                    hasPaid: !!isPaid || post.post_audience !== "price",
                     isSubscribed: !!isSubscribed || post.user_id === authUserId,
                 },
             };
