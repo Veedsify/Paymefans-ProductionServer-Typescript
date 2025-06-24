@@ -331,7 +331,9 @@ export interface GetPostCommentsResponse {
   error: boolean;
   hasMore: boolean;
   message: string;
-  data: Comments;
+  data: Comments & {
+    likedByme: boolean;
+  };
   total: number;
 }
 

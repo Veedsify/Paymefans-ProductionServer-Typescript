@@ -12,7 +12,7 @@ export default function ParseContentToHtml(text: string, mentions: MentionUser[]
     const urlRegex =
         /\b((https?:\/\/)?((www\.)?[\w-]+\.[a-z]{2,})(:\d+)?(\/[^\s<]*)?(\?[^\s<]*)?(#[^\s<]*)?)(?![^<]*>|[^<>]*<\/)/gi;
 
-    htmlContent = htmlContent.replace(urlRegex, (match, url) => {
+    htmlContent = htmlContent.replace(urlRegex, (_, url) => {
         const hyperlink = url.startsWith("http") ? url : `https://${url}`;
         return `<a href="${hyperlink}" class="text-primary-dark-pink" target="_blank" rel="noopener noreferrer">${url}</a>`;
     });

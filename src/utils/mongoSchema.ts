@@ -15,7 +15,7 @@ const commentSchema = new mongoose.Schema({
     required: true,
   },
   userId: {
-    type: String,
+    type: Number,
     required: true,
   },
   postId: {
@@ -59,6 +59,22 @@ const commentSchema = new mongoose.Schema({
   },
 });
 
-const Comments = mongo.model("Comments", commentSchema);
+const CommentLikeSchema = new mongoose.Schema({
+  commentId: {
+    type: String,
+    required: true,
+  },
+  userId: {
+    type: Number,
+    required: true,
+  },
+  date: {
+    type: Date,
+    default: Date.now,
+  },
+});
 
-export { Comments };
+const Comments = mongo.model("Comments", commentSchema);
+const CommentLikes = mongo.model("CommentLikes", CommentLikeSchema);
+
+export { Comments, CommentLikes };

@@ -30,7 +30,7 @@ import { v4 as uuid } from "uuid";
 import query from "@utils/prisma";
 import { MediaState, PostAudience } from "@prisma/client";
 import RemoveCloudflareMedia from "@libs/RemoveCloudflareMedia";
-import { Comments } from "@utils/mongoSchema";
+import { CommentLikes, Comments } from "@utils/mongoSchema";
 import { GenerateUniqueId } from "@utils/GenerateUniqueId";
 import { UserTransactionQueue } from "@jobs/notifications/UserTransactionJob";
 import EmailService from "./EmailService";
@@ -1136,6 +1136,7 @@ export default class PostService {
             .sort({ date: -1 })
             .skip(skip)
             .limit(limitInt + 1); // one extra for hasMore
+        
         const hasMore = comments.length > limitInt;
         if (hasMore) comments.pop();
         if (!comments || comments.length == 0) {
@@ -1147,10 +1148,21 @@ export default class PostService {
                 total: 0,
             };
         }
+
+        const commentLikes = await CommentLikes.find({
+            commentId: { $in: comments.map(c => c.comment_id) },
+            userId: { $in: comments.map(c => c.userId) },
+        });
+
+        const checkedComments = comments.map(comment => ({
+            ...comment.toObject(),
+            likedByme: commentLikes.some(like => like.commentId === comment.comment_id && like.userId === comment.userId),
+        }));
+
         return {
             error: false,
             message: "Comments found",
-            data: comments,
+            data: checkedComments,
             hasMore,
             total: countComments,
         };

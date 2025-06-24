@@ -54,4 +54,12 @@ const activeUsersWorker = new Worker(
 );
 
 
+activeUsersWorker.on("completed", (job) => {
+    console.log(`Active users job completed: ${job.id}`);
+});
+
+pruneInactiveUsersWorker.on("completed", (job) => {
+    console.log(`Prune inactive users job completed: ${job.id}`);
+});
+
 export { activeUsersQueue,  pruneInactiveUsersQueue,  };

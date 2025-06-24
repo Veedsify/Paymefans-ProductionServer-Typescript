@@ -1,6 +1,6 @@
 import { UploadImageToS3 } from "@libs/UploadImageToS3";
 import { GenerateUniqueId } from "@utils/GenerateUniqueId";
-import { Comments } from "@utils/mongoSchema";
+import { CommentLikes, Comments } from "@utils/mongoSchema";
 import ParseContentToHtml from "@utils/ParseHtmlContent";
 import query from "@utils/prisma";
 import type { LikeCommentResponse, NewCommentResponse } from "types/comments";
@@ -75,7 +75,7 @@ export default class CommentsService {
                 name: user.name,
                 comment_id: comment_id,
                 username: user.username,
-                userId: user.user_id,
+                userId: user.id,
                 profile_image: commentOwner?.profile_image || `${process.env.SERVER_ORIGINAL_URL}/site/avatar.png`,
                 postId: String(post_id),
                 parentId: parentId && parentId !== "null" ? parentId : null,
@@ -123,52 +123,66 @@ export default class CommentsService {
         user: AuthUser
     ): Promise<LikeCommentResponse> {
         try {
-            let action: string = "";
-            const result = await query.$transaction(async (prisma) => {
-                const commentLike = await prisma.postCommentLikes.findFirst({
-                    where: {
-                        comment_id: Number(commentId),
-                        user_id: Number(user.id),
-                    },
-                });
-                if (commentLike) {
-                    await prisma.postCommentLikes.deleteMany({
-                        where: {
-                            comment_id: Number(commentId),
-                            user_id: Number(user.id),
-                        },
-                    });
-                    action = "Comment Like Removed";
-                    return {
-                        error: false,
-                        action,
-                        status: true,
-                        message: "Comment like removed successfully",
-                    };
-                } else {
-                    await prisma.postCommentLikes.create({
-                        data: {
-                            comment_id: Number(commentId),
-                            user_id: Number(user.id),
-                        },
-                    });
-                    action = "Comment Liked";
-                    return {
-                        error: false,
-                        status: true,
-                        action,
-                        message: "Comment liked successfully",
-                    };
-                }
+            if (!commentId) {
+                return {
+                    error: true,
+                    status: false,
+                    action: "Invalid Comment ID",
+                    message: "Comment ID is required to like a comment",
+                };
+            }
+
+            console.log("Liking comment with ID:", commentId);
+
+            const commentLike = await CommentLikes.findOne({
+                commentId: commentId,
+                userId: Number(user.id),
             });
-            return result;
+
+            if (commentLike) {
+                // Remove like
+                await CommentLikes.deleteOne({
+                    commentId: commentId,
+                    userId: Number(user.id), // Fixed: consistent type conversion
+                });
+                await Comments.updateOne(
+                    { comment_id: commentId },
+                    { $inc: { likes: -1 } }
+                );
+
+                return {
+                    error: false,
+                    status: true,
+                    action: "Comment Like Removed",
+                    message: "Comment like removed successfully",
+                };
+            } else {
+                // Add like
+                await CommentLikes.create({
+                    date: new Date(),
+                    commentId: commentId, // Fixed: consistent type conversion
+                    userId: user.id,
+                    parentId: null,
+                });
+                await Comments.updateOne(
+                    { comment_id: commentId },
+                    { $inc: { likes: 1 } }
+                );
+
+                return {
+                    error: false,
+                    status: true,
+                    action: "Comment Liked",
+                    message: "Comment liked successfully",
+                };
+            }
         } catch (error) {
-            console.log(error);
+            console.error("Error liking comment:", error);
             return {
                 error: true,
-                action: "",
                 status: false,
-                message: "An error occurred while processing comment like",
+                action: "Error",
+                message: "An error occurred while liking comment",
             };
         }
     }

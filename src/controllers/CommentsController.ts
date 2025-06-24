@@ -24,8 +24,16 @@ export default class CommentsController {
     // This is for liking a comment
     static LikeComment = async (req: Request, res: Response): Promise<any> => {
         try {
-            const { commentId } = req.body
+            const { commentId } = req.body as { commentId: string }
             const { user } = req as { user: AuthUser }
+            if (!commentId) {
+                return res.status(400).json({
+                    status: false,
+                    error: true,
+                    message: "Invalid comment ID",
+                    data: null,
+                })
+            }
             const likeComment = await CommentsService.LikeComment(commentId, user)
             if (likeComment.error) {
                 return res.status(400).json({ ...likeComment })

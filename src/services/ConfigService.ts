@@ -30,7 +30,7 @@ export default class ConfigService {
                 data: config,
             }
             // Cache the config data for 1 hour
-            await redis.set(cacheKey, JSON.stringify(response), "EX", 3600);
+            await redis.set(cacheKey, JSON.stringify(response), "EX", 10); // Set to 10 seconds for testing, change to 3600 for production
             return response
         } catch (error: any) {
             throw new Error(error.message)

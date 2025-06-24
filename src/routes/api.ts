@@ -1,4 +1,4 @@
-import express, { Request, Response } from "express"
+import express from "express"
 import auth from "@routes/users/auth/auth"
 import feed from "@routes/users/feed/feed"
 import profile from "@routes/users/profile/profile"
