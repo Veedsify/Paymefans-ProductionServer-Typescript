@@ -34,7 +34,7 @@ interface RemovedMedia {
 export type GetMyMediaResponse = {
   status: boolean;
   message: string;
-  data: (UserMedia & { isSubscribed: boolean })[];
+  data: (UserMedia & { isSubscribed: boolean; post: {watermark_enabled: boolean} })[];
   total: number;
 };
 /**
@@ -95,6 +95,7 @@ interface CreatePostProps {
   price: number | null;
   mentions: MentionUser[];
   removedMedia: RemovedMedia[];
+  isWaterMarkEnabled?: boolean;
 }
 /**
  * Success response for post creation
@@ -143,6 +144,7 @@ export interface MyPost {
   likedByme: boolean;
   isSubscribed: boolean;
   wasReposted: boolean;
+  watermark_enabled?: boolean;
   user: {
     username: string;
     profile_image: string | null;

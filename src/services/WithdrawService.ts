@@ -8,6 +8,7 @@ import EmailService from "./EmailService";
 import { Configurations, UserBanks } from "@prisma/client";
 import ConfigService from "./ConfigService";
 import bcryptjs from "bcryptjs";
+import { UserTransactionQueue } from "@jobs/notifications/UserTransactionJob";
 export default class WithdrawService {
     // Verify Withdraw Pin
     static async VerifyWithdrawPin(data: { user: AuthUser, pin: string }): Promise<CreateWithdrawRequestResponse> {
@@ -190,6 +191,18 @@ export default class WithdrawService {
                 message: 'Failed to update user points',
             };
         }
+        const senderOptions = {
+            transactionId: `TRN${GenerateUniqueId()}`,
+            transaction: `Withdrawal of ₦${amount.toLocaleString()} to ${recipient.bank_name} (${recipient.account_number})`,
+            userId: user.id,
+            amount: pointToRemove,
+            transactionType: "debit",
+            transactionMessage: `Withdrawal of ₦${amount.toLocaleString()} to ${recipient.account_name} (${recipient.account_number})`,
+            walletId: recipient.id,
+        };
+
+        UserTransactionQueue.add("userTransaction", senderOptions, { removeOnComplete: true, attempts: 3 })
+
         // Create withdrawal request
         const CreateWithdrawal = await query.withdrawalRequest.create({
             data: {

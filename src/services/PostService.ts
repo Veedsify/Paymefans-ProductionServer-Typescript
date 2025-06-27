@@ -50,7 +50,7 @@ export default class PostService {
             if (!user) {
                 throw new Error("User not found");
             }
-            const { content, visibility, media, removedMedia, mentions, price } = data;
+            const { content, visibility, media, removedMedia, mentions, price, isWaterMarkEnabled } = data;
 
             if (removedMedia) {
                 const removeMedia = await RemoveCloudflareMedia(removedMedia);
@@ -137,6 +137,7 @@ export default class PostService {
                     post_status: allImages ? "approved" : "pending",
                     post_is_visible: true,
                     user_id: user.id,
+                    watermark_enabled: !!isWaterMarkEnabled,
                     post_price: visibility === "price" ? price : null,
                     media: [],
                     UserMedia: {
@@ -180,6 +181,7 @@ export default class PostService {
                     post_impressions: true,
                     post_likes: true,
                     post_comments: true,
+                    watermark_enabled:true,
                     post_reposts: true,
                     was_repost: true,
                     repost_id: true,
@@ -280,6 +282,7 @@ export default class PostService {
                     post_impressions: true,
                     post_likes: true,
                     post_comments: true,
+                    watermark_enabled:true,
                     post_reposts: true,
                     was_repost: true,
                     repost_id: true,
@@ -383,6 +386,7 @@ export default class PostService {
                             created_at: true,
                             post_likes: true,
                             post_comments: true,
+                            watermark_enabled:true,
                             post_reposts: true,
                             was_repost: true,
                             repost_id: true,
@@ -485,6 +489,7 @@ export default class PostService {
                             created_at: true,
                             post_likes: true,
                             post_comments: true,
+                            watermark_enabled:true,
                             post_reposts: true,
                             post_price: true,
                             was_repost: true,
@@ -584,6 +589,13 @@ export default class PostService {
                 query.userMedia.count({ where: { post_id: { in: postIds } } }),
                 query.userMedia.findMany({
                     where: { post_id: { in: postIds } },
+                    include: {
+                        post: {
+                            select: {
+                                watermark_enabled: true,
+                            }
+                        },
+                    },
                     skip: (validPage - 1) * validLimit,
                     take: validLimit,
                     orderBy: { created_at: "desc" },
@@ -724,6 +736,7 @@ export default class PostService {
                     post_status: true,
                     post_impressions: true,
                     post_comments: true,
+                    watermark_enabled:true,
                     post_price: true,
                     post_reposts: true,
                     was_repost: true,
@@ -834,6 +847,7 @@ export default class PostService {
                     post_impressions: true,
                     post_price: true,
                     post_comments: true,
+                    watermark_enabled:true,
                     post_reposts: true,
                     was_repost: true,
                     repost_id: true,
@@ -945,6 +959,7 @@ export default class PostService {
                     post_audience: true,
                     post_status: true,
                     post_impressions: true,
+                    watermark_enabled: true,
                     post_price: true,
                     created_at: true,
                     post_likes: true,
@@ -1014,6 +1029,7 @@ export default class PostService {
                     post_impressions: true,
                     post_likes: true,
                     post_comments: true,
+                    watermark_enabled:true,
                     post_reposts: true,
                     PostLike: true,
                     UserMedia: true,

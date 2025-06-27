@@ -11,7 +11,8 @@
     "bun-build": "bun build",
     "start": "node -r tsconfig-paths/register ./dist/app.js",
     "dev2": "nodemon --exec tsx -r tsconfig-paths/register src/app.ts",
-    "dev": "bun --watch ./src/app.ts --ext .ts"
+    "dev": "bun --watch ./src/app.ts --ext .ts",
+    "ngrok": "ngrok http --url=current-early-hippo.ngrok-free.app 3009"
   },
   "keywords": [],
   "author": "",

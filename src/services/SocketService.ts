@@ -4,6 +4,7 @@ import IoInstance from "../libs/io";
 import type {
   HandleFollowUserDataProps,
   HandleSeenProps,
+  MessageErrorResponse,
   SocketUser,
 } from "types/socket";
 import MessageService from "./MessageService";
@@ -24,7 +25,7 @@ export default class SocketService {
     const activeUsers = await redis.hgetall("activeUsers");
     io.emit(
       "active_users",
-      Object.values(activeUsers).map((value) => JSON.parse(value))
+      Object.values(activeUsers).map((value) => JSON.parse(value)),
     );
   }
 
@@ -34,14 +35,13 @@ export default class SocketService {
   static async GetCachedConversations(userId: string) {
     let conversations = await redis.get(`conversations:${userId}`);
     if (!conversations) {
-      const userConversations = await ConversationService.GetUserConversations(
-        userId
-      );
+      const userConversations =
+        await ConversationService.GetUserConversations(userId);
       redis.set(
         `conversations:${userId}`,
         JSON.stringify(userConversations),
         "EX",
-        60
+        60,
       );
       return userConversations;
     }
@@ -74,7 +74,7 @@ export default class SocketService {
   static async HandleJoinRoom(
     cb: (value: any) => void,
     socket: Socket,
-    data: any
+    data: any,
   ) {
     cb(data);
     socket.join(data);
@@ -86,7 +86,7 @@ export default class SocketService {
     data: HandleSeenProps,
     socket: Socket,
     userRoom: string,
-    _: any
+    _: any,
   ) {
     const lastMessageSeen = await MessageService.MessagesSeenByReceiver(data);
     if (lastMessageSeen.success) {
@@ -118,11 +118,11 @@ export default class SocketService {
   // Emit check user is following event to the receiver
   static async HandleCheckUserIsFollowing(
     data: { user_id: number; thisuser_id: number },
-    socket: Socket
+    socket: Socket,
   ) {
     const response = await FollowerService.CheckUserFollowing(
       data.user_id,
-      data.thisuser_id
+      data.thisuser_id,
     );
     if (response.status && "followId" in response) {
       socket.emit("isFollowing", {
@@ -137,13 +137,13 @@ export default class SocketService {
   // Emit follow user event to the receiver
   static async HandleFollowUser(
     data: HandleFollowUserDataProps,
-    socket: Socket
+    socket: Socket,
   ) {
     const response = await FollowerService.FollowUser(
       data.user_id,
       data.profile_id,
       data.status,
-      data.followId
+      data.followId,
     );
     socket.emit("followed", {
       status: response.action === "followed",
@@ -228,13 +228,65 @@ export default class SocketService {
     socket: Socket,
     userRoom: string,
     user: SocketUser,
-    io: any
+    io: any,
   ) {
     try {
-      const message = await SaveMessageToDb.SaveMessage(data);
-      if (message) {
+      console.log("🚀 HandleMessage called with data:", {
+        message_id: data.message_id,
+        sender_id: data.sender_id,
+        receiver_id: data.receiver_id,
+        conversationId: data.conversationId,
+        userRoom,
+        socketId: socket.id,
+      });
+
+      const messageResult = await SaveMessageToDb.SaveMessage(data);
+      if (
+        messageResult &&
+        typeof messageResult === "object" &&
+        "success" in messageResult &&
+        !messageResult.success
+      ) {
+        // Handle specific error cases
+        console.error("❌ SaveMessageToDb error:", messageResult);
+
+        if (messageResult.error === "INSUFFICIENT_POINTS") {
+          const errorResponse: MessageErrorResponse = {
+            message: messageResult.message || "Insufficient points",
+            error: "INSUFFICIENT_POINTS",
+            currentPoints: messageResult.currentPoints,
+            requiredPoints: messageResult.requiredPoints,
+          };
+          socket.emit("message-error", errorResponse);
+        } else if (messageResult.error === "USERS_NOT_FOUND") {
+          const errorResponse: MessageErrorResponse = {
+            message: "User not found",
+            error: "USERS_NOT_FOUND",
+          };
+          socket.emit("message-error", errorResponse);
+        } else {
+          const errorResponse: MessageErrorResponse = {
+            message:
+              messageResult.message ||
+              "An error occurred while sending this message",
+            error:
+              (messageResult.error as MessageErrorResponse["error"]) ||
+              "UNKNOWN_ERROR",
+          };
+          socket.emit("message-error", errorResponse);
+        }
+        return;
+      }
+
+      if (
+        messageResult &&
+        typeof messageResult === "object" &&
+        !("success" in messageResult)
+      ) {
+        // This is a successful message object
         socket.to(userRoom).emit("message", {
-          ...data, rawFiles: [],
+          ...data,
+          rawFiles: [],
         });
 
         //clear cached conversations
@@ -248,7 +300,7 @@ export default class SocketService {
 
         // Check If Receiver Is Active
         const allActiveUsers = await redis.hgetall("activeUsers");
-        const targetUsername = message.receiver.username;
+        const targetUsername = messageResult.receiver.username;
 
         const foundStr = Object.values(allActiveUsers).find((str) => {
           const obj = JSON.parse(str);
@@ -262,11 +314,12 @@ export default class SocketService {
         // Send New Message If Receiver Is Not Active
         if (!found) {
           const name =
-            message.receiver.name.split(" ")[0] ?? message.receiver.name;
+            messageResult.receiver.name.split(" ")[0] ??
+            messageResult.receiver.name;
           const subject = `You've received a new message on PayMeFans!`;
-          const link = `${process.env.APP_URL}/chats/${message.conversationsId}`;
+          const link = `${process.env.APP_URL}/chats/${messageResult.conversationsId}`;
           await EmailService.SendNewMessageEmail({
-            email: message.receiver.email,
+            email: messageResult.receiver.email,
             name: name,
             subject,
             link,
@@ -274,17 +327,29 @@ export default class SocketService {
         }
 
         io.to(found?.socket_id).emit("prefetch-conversations", "conversations");
-
       } else {
-        socket.emit("message-error", {
+        console.error(
+          "❌ SaveMessageToDb.SaveMessage returned unexpected result",
+        );
+        const errorResponse: MessageErrorResponse = {
           message: "An error occurred while sending this message",
-        });
+          error: "UNKNOWN_ERROR",
+        };
+        socket.emit("message-error", errorResponse);
       }
     } catch (e) {
-      socket.emit("message-error", {
-        message: "An error occurred while sending this message",
+      console.error("❌ Error in HandleMessage:", e);
+      const error = e as Error;
+      console.error("🔍 Error details:", {
+        name: error.name,
+        message: error.message,
+        stack: error.stack,
       });
-      console.log(e);
+      const errorResponse: MessageErrorResponse = {
+        message: "An error occurred while sending this message",
+        error: "SOCKET_ERROR",
+      };
+      socket.emit("message-error", errorResponse);
     }
   }
 
@@ -292,7 +357,7 @@ export default class SocketService {
   static async HandleUserConnected(
     socket: Socket,
     user: SocketUser,
-    data: any
+    data: any,
   ) {
     user = {
       socketId: socket.id,
@@ -318,9 +383,8 @@ export default class SocketService {
 
   // Handle Restore Notifications
   static async HandleRestoreNotifications(socket: Socket, userId: string) {
-    const notifications = await NotificationService.GetUnreadNotifications(
-      userId
-    );
+    const notifications =
+      await NotificationService.GetUnreadNotifications(userId);
     socket.join(`notifications-${userId}`);
     socket.emit(`notifications-${userId}`, notifications);
   }
@@ -336,5 +400,4 @@ export default class SocketService {
     };
     await redis.hset("activeUsers", userKey, JSON.stringify(userData));
   }
-
 }

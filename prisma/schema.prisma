@@ -241,31 +241,32 @@ model StoryMedia {
 }
 
 model Post {
-  id               Int              @id @default(autoincrement())
-  post_id          String
-  was_repost       Boolean          @default(false)
-  repost_username  String?          @default("")
-  repost_id        String?          @default("")
-  user_id          Int
-  content          String?
-  media            Json?
-  post_price       Float?           @default(0)
-  post_status      PostStatus       @default(pending)
-  post_audience    PostAudience
-  post_is_visible  Boolean          @default(true)
-  post_likes       Int              @default(0)
-  post_comments    Int              @default(0)
-  post_reposts     Int              @default(0)
-  post_impressions Int              @default(0)
-  created_at       DateTime         @default(now())
-  updated_at       DateTime         @updatedAt
-  PostComment      PostComment[]
-  PostLike         PostLike[]
-  PostShared       PostShared[]
-  ReportPost       ReportPost[]
-  UserRepost       UserRepost[]
-  PostImpression   PostImpression[]
-  UserMedia        UserMedia[]
+  id                Int              @id @default(autoincrement())
+  post_id           String
+  was_repost        Boolean          @default(false)
+  repost_username   String?          @default("")
+  repost_id         String?          @default("")
+  user_id           Int
+  content           String?
+  media             Json?
+  post_price        Float?           @default(0)
+  post_status       PostStatus       @default(pending)
+  post_audience     PostAudience
+  watermark_enabled Boolean          @default(false)
+  post_is_visible   Boolean          @default(true)
+  post_likes        Int              @default(0)
+  post_comments     Int              @default(0)
+  post_reposts      Int              @default(0)
+  post_impressions  Int              @default(0)
+  created_at        DateTime         @default(now())
+  updated_at        DateTime         @updatedAt
+  PostComment       PostComment[]
+  PostLike          PostLike[]
+  PostShared        PostShared[]
+  ReportPost        ReportPost[]
+  UserRepost        UserRepost[]
+  PostImpression    PostImpression[]
+  UserMedia         UserMedia[]
 
   user           User             @relation(fields: [user_id], references: [id], onDelete: Cascade)
   PostGift       PostGift[]
@@ -1226,7 +1227,7 @@ model UserWithdrawalPin {
   @@index([user_id])
 }
 
-model   PurchasedPosts {
+model PurchasedPosts {
   id          Int      @id @default(autoincrement())
   user_id     Int
   post_id     Int
