@@ -14,6 +14,7 @@ class SaveMessageToDb {
         receiver_id: data.receiver_id,
         conversationId: data.conversationId,
         hasAttachment: (data.attachment?.length || 0) > 0,
+        attachmentCount: data.attachment?.length || 0,
       });
 
       // Get the data from the message
@@ -67,10 +68,27 @@ class SaveMessageToDb {
           ? participant1.user_2
           : participant1.user_1;
 
-      const modifiedAttachment = attachment.map((file: any) => ({
-        ...file,
-        poster: `${process.env.CLOUDFLARE_CUSTOMER_SUBDOMAIN}/${file.id}/thumbnails/thumbnail.gif?time=1s&height=400&duration=4s`,
-      }));
+      // Process attachments with better video handling
+      const modifiedAttachment = attachment.map((file: any) => {
+        const baseAttachment = {
+          ...file,
+        };
+
+        // Add poster for video files
+        if (file.type === "video" && file.id) {
+          baseAttachment.poster = `${process.env.CLOUDFLARE_CUSTOMER_SUBDOMAIN}/${file.id}/thumbnails/thumbnail.gif?time=1s&height=400&duration=4s`;
+        }
+
+        console.log("📎 Processed attachment:", {
+          type: file.type,
+          id: file.id,
+          hasUrl: !!file.url,
+          hasPoster: !!baseAttachment.poster
+        });
+
+        return baseAttachment;
+      });
+
       // Save the message to the database
       const newMessage = await query.messages.create({
         data: {
@@ -101,6 +119,7 @@ class SaveMessageToDb {
       console.log("✅ Message successfully saved to database:", {
         messageId: newMessage.message_id,
         conversationId: newMessage.conversationsId,
+        attachmentCount: modifiedAttachment.length,
       });
 
       // Return the data
@@ -137,7 +156,13 @@ class SaveMessageToDb {
           id: true,
           username: true,
           UserPoints: true,
-          UserWallet: true,
+          UserWallet: {
+            select: {
+              id: true,
+              wallet_id: true,
+              balance: true,
+            },
+          },
         },
       });
 
@@ -150,7 +175,13 @@ class SaveMessageToDb {
           id: true,
           username: true,
           Settings: true,
-          UserWallet: true,
+          UserWallet: {
+            select: {
+              id: true,
+              wallet_id: true,
+              balance: true,
+            },
+          },
         },
       });
 
@@ -159,6 +190,8 @@ class SaveMessageToDb {
         username: sender?.username,
         hasUserPoints: !!sender?.UserPoints,
         currentPoints: sender?.UserPoints?.points,
+        hasWallet: !!sender?.UserWallet,
+        walletId: sender?.UserWallet?.id,
       });
 
       console.log("👤 Receiver found:", {
@@ -166,6 +199,8 @@ class SaveMessageToDb {
         username: receiver?.username,
         hasSettings: !!receiver?.Settings,
         pricePerMessage: receiver?.Settings?.price_per_message,
+        hasWallet: !!receiver?.UserWallet,
+        walletId: receiver?.UserWallet?.id,
       });
 
       if (!sender || !receiver) {
@@ -251,16 +286,72 @@ class SaveMessageToDb {
 
       const purchase_id = `TRN${GenerateUniqueId()}`;
       const purchase_id2 = `TRN${GenerateUniqueId()}`;
-      const senderWallet =
-        sender?.UserWallet && Array.isArray(sender.UserWallet)
-          ? sender.UserWallet[0]?.id
-          : undefined;
-      const receiverWallet =
-        receiver?.UserWallet && Array.isArray(receiver.UserWallet)
-          ? receiver.UserWallet[0]?.id
-          : undefined;
 
-      if (receiverPrice > 0) {
+      // Ensure sender has a wallet
+      let senderWallet = sender?.UserWallet?.id;
+
+      if (!senderWallet && sender?.id) {
+        console.log("📱 Creating wallet for sender...");
+        try {
+          const newSenderWallet = await query.userWallet.create({
+            data: {
+              user_id: sender.id,
+              wallet_id: `WALLET_${GenerateUniqueId()}`,
+              balance: 0,
+            },
+          });
+          senderWallet = newSenderWallet.id;
+        } catch (error: any) {
+          // If wallet already exists due to race condition, fetch it
+          if (error.code === 'P2002') {
+            console.log("📱 Wallet already exists for sender, fetching...");
+            const existingWallet = await query.userWallet.findUnique({
+              where: { user_id: sender.id },
+              select: { id: true },
+            });
+            senderWallet = existingWallet?.id;
+          } else {
+            throw error;
+          }
+        }
+      }
+
+      // Ensure receiver has a wallet  
+      let receiverWallet = receiver?.UserWallet?.id;
+
+      if (!receiverWallet && receiver?.id) {
+        console.log("📱 Creating wallet for receiver...");
+        try {
+          const newReceiverWallet = await query.userWallet.create({
+            data: {
+              user_id: receiver.id,
+              wallet_id: `WALLET_${GenerateUniqueId()}`,
+              balance: 0,
+            },
+          });
+          receiverWallet = newReceiverWallet.id;
+        } catch (error: any) {
+          // If wallet already exists due to race condition, fetch it
+          if (error.code === 'P2002') {
+            console.log("📱 Wallet already exists for receiver, fetching...");
+            const existingWallet = await query.userWallet.findUnique({
+              where: { user_id: receiver.id },
+              select: { id: true },
+            });
+            receiverWallet = existingWallet?.id;
+          } else {
+            throw error;
+          }
+        }
+      }
+
+      if (receiverPrice > 0 && senderWallet && receiverWallet) {
+        console.log("💰 Creating transaction records...", {
+          senderWallet,
+          receiverWallet,
+          amount: receiverPrice,
+        });
+
         const optionsForSender = {
           transactionId: purchase_id,
           transaction: `Message to ${receiver?.username} with id ${receiver_id}`,
@@ -290,6 +381,13 @@ class SaveMessageToDb {
             attempts: 3,
           }),
         ]);
+        console.log("✅ Transaction queue jobs added successfully");
+      } else if (receiverPrice > 0) {
+        console.warn("⚠️ Skipping transaction creation - missing wallet:", {
+          receiverPrice,
+          senderWallet: !!senderWallet,
+          receiverWallet: !!receiverWallet,
+        });
       }
 
       console.log("✅ Point transaction completed successfully");

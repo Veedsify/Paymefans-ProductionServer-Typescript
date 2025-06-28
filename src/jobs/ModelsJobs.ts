@@ -34,7 +34,7 @@ async function ModelsJobs() {
         {
             removeOnComplete: true,
             repeat: {
-                every: 3000,
+                every: 3000, // 3 seconds
                 immediately: true, // Run immediately after adding the job
             },
         }

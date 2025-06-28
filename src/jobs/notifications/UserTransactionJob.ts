@@ -24,17 +24,37 @@ const UserTransactionWorker = new Worker(
       walletId,
     } = job.data;
     try {
+      // Only create transaction if walletId is provided
+      if (!walletId) {
+        console.warn(`Skipping transaction creation - no wallet ID provided for user ${userId}`);
+        return;
+      }
+
+      console.log("💳 Creating user transaction:", {
+        transactionId,
+        userId,
+        walletId,
+        amount,
+        transactionType,
+      });
+
       await query.userTransaction.create({
         data: {
           transaction_id: transactionId,
           transaction,
-          user_id: userId,
+          user: {
+            connect: { id: userId }
+          },
+          UserWallet: {
+            connect: { id: walletId }
+          },
           amount,
           transaction_type: transactionType,
           transaction_message: transactionMessage,
-          wallet_id: walletId,
         },
       });
+
+      console.log("✅ User transaction created successfully:", transactionId);
     } catch (err: any) {
       console.error(`Error creating user transaction: ${err.message}`);
       throw err;

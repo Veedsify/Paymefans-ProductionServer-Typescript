@@ -22,7 +22,8 @@ const pruneInactiveUsersWorker = new Worker(
         for (const [userKey, json] of Object.entries(activeUsers)) {
             try {
                 const data = JSON.parse(json);
-                if (now - data.last_active > 60000) {
+                // Increased timeout to 2 minutes to avoid premature disconnections
+                if (now - data.last_active > 120000) {
                     toDelete.push(userKey);
                 }
             } catch {
@@ -32,6 +33,10 @@ const pruneInactiveUsersWorker = new Worker(
 
         if (toDelete.length > 0) {
             await redis.hdel("activeUsers", ...toDelete);
+            // Emit updated active users list after cleanup
+            const instance = await IoInstance.getIO();
+            await EmitActiveUsers(instance);
+            console.log(`Pruned ${toDelete.length} inactive users`);
         }
     },
     {
@@ -62,4 +67,4 @@ pruneInactiveUsersWorker.on("completed", (job) => {
     console.log(`Prune inactive users job completed: ${job.id}`);
 });
 
-export { activeUsersQueue,  pruneInactiveUsersQueue,  };
+export { activeUsersQueue, pruneInactiveUsersQueue, };

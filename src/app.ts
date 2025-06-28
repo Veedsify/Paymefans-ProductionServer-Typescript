@@ -52,14 +52,14 @@ app.use(
 
 // Instance of Socket.IO
 IoInstance.init(server).then((instance) => {
-  // Emit active users to the socket
+  // Emit active users to the socket - reduced frequency since we now use event-driven updates
   activeUsersQueue.add("activeUsersQueue", {}, {
     repeat: {
-      every: 5000, // 10 seconds
+      every: 30000, // 30 seconds - fallback for missed events
     },
     jobId: "activeUsersJob",
   });
-  // Prunde inactive users
+  // Prune inactive users
   pruneInactiveUsersQueue.add("pruneInactiveUsersQueue", {}, {
     repeat: {
       every: 60000, // 1 minute

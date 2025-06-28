@@ -37,4 +37,5 @@ conversations.post(
   Auth,
   ConversationController.SearchMessages
 );
+conversations.get("/unread-count", Auth, ConversationController.GetUnreadCount);
 export default conversations;

@@ -124,4 +124,21 @@ export default class ConversationController {
             res.status(500).json({ message: `Internal Server Error ${error}` });
         }
     }
+
+    // Get Unread Count
+    static async GetUnreadCount(req: Request, res: Response): Promise<void> {
+        try {
+            const unreadCount = await ConversationService.GetUnreadCount({
+                user: req.user as AuthUser,
+            });
+            if (unreadCount.error) {
+                res.status(400).json({ ...unreadCount });
+                return;
+            }
+            res.status(200).json({ unreadCount: unreadCount.count });
+        } catch (error) {
+            console.log(error);
+            res.status(500).json({ message: `Internal Server Error ${error}` });
+        }
+    }
 }

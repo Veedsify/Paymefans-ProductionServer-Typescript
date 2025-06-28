@@ -737,4 +737,49 @@ export default class ConversationService {
             return { error: true, messages: [], total: 0, hasMore: false };
         }
     }
+
+    // Get Unread Count
+    // Get the total unread message count for a user
+    static async GetUnreadCount({
+        user,
+    }: {
+        user: AuthUser;
+    }): Promise<{ count?: number; error: boolean }> {
+        try {
+            const authUser = await query.user.findFirst({
+                where: { user_id: user.user_id },
+                select: { id: true },
+            });
+
+            if (!authUser) {
+                return { error: true };
+            }
+
+            // Get unread count
+            const unreadCount = await query.messages.count({
+                where: {
+                    sender: { id: { not: authUser.id } },
+                    seen: false,
+                    Conversations: {
+                        participants: {
+                            some: {
+                                OR: [
+                                    { user_1: user.user_id },
+                                    { user_2: user.user_id },
+                                ],
+                            },
+                        },
+                    },
+                },
+            });
+
+            return {
+                error: false,
+                count: unreadCount,
+            };
+        } catch (error) {
+            console.error("GetUnreadCount error:", error);
+            return { error: true };
+        }
+    }
 }

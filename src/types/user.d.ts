@@ -24,13 +24,13 @@ export type RegisteredUser = {
 
 export type RetrieveUserResponse =
   | {
-    user: AuthUser;
-    status: boolean;
-  }
+      user: AuthUser;
+      status: boolean;
+    }
   | {
-    status: boolean;
-    message: string;
-  };
+      status: boolean;
+      message: string;
+    };
 
 type UpdateTwoFactorAuthResponse = {
   success: boolean;

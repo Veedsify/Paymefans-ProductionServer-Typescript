@@ -1,6 +1,7 @@
 import type { SocketUser } from "types/socket";
 import { redis } from "./RedisStore";
 import SocketService from "@services/SocketService";
+import EmitActiveUsers from "@jobs/EmitActiveUsers";
 
 async function AppSocket(io: any) {
   io.on("connection", (socket: any) => {
@@ -25,13 +26,11 @@ async function AppSocket(io: any) {
       return;
     }
 
-    // Initialize user object
+    console.log("🔌 Socket connected:", username, "Socket ID:", socket.id);
+
+    // Initialize user object and immediately emit active users
     SocketService.HandleUserActive(username, socket)
 
-    // // Socket Actions
-    // socket.on("user_active", (username: string) =>
-    //   SocketService.HandleUserActive(username, socket)
-    // );
     socket.on("join", (data: string) =>
       SocketService.HandleJoinRoom(AddToUserRoom, socket, data)
     );
@@ -59,9 +58,14 @@ async function AppSocket(io: any) {
     socket.on("still-active", (username: string) =>
       SocketService.HandleStillActive(username, socket)
     );
-    // socket.on("conversations-opened", (conversationId: string) =>
-    //   SocketService.HandleConversationsOpened(conversationId, socket)
-    // );
+    socket.on("inactive", (username: string) =>
+      SocketService.HandleUserInactive(username || socket.handshake.query.username as string).then(() => {
+       EmitActiveUsers(io);
+      })
+    );
+    socket.on("get-active-users", () =>
+      EmitActiveUsers(io)
+    );
     socket.on("user-connected", (data: any) =>
       SocketService.HandleUserConnected(socket, user, data)
     );
@@ -77,9 +81,13 @@ async function AppSocket(io: any) {
 
     // socket.on("new-message", handleMessage);
     socket.on("disconnect", async () => {
+      console.log("🔌 Socket disconnected:", username, "Socket ID:", socket.id);
       // invalidate conversations cache
       await redis.del(`conversations:${user.userId}`);
-      await SocketService.HandleUserInactive(user.userId);
+      // Use username for disconnect since user.userId might not be set
+      await SocketService.HandleUserInactive(username);
+      // Emit updated active users list after disconnect
+      await EmitActiveUsers(io);
     });
   });
 }

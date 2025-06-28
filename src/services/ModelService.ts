@@ -35,14 +35,16 @@ export default class ModelService {
       const models = await redis.get(`models`);
       if (!models) {
         return await query.$transaction(async (tx) => {
-          const models: Models = await tx.$queryRaw`
-                        SELECT * FROM "User"
-                        INNER JOIN "Model" ON "User"."id" = "Model"."user_id"
-                        WHERE "User"."is_model" = true
-                        AND "Model"."verification_status" = true
-                        ORDER BY RANDOM()
-                        LIMIT ${limit};
-                    `;
+            const models: Models = await tx.$queryRaw`
+                  SELECT "User"."id", "User"."username", "User"."fullname", "User"."name", "User"."profile_image", "User"."profile_banner", "User"."is_model",
+                       "Model"."hookup", "Model"."verification_status"
+                  FROM "User"
+                  INNER JOIN "Model" ON "User"."id" = "Model"."user_id"
+                  WHERE "User"."is_model" = true
+                  AND "Model"."verification_status" = true
+                  ORDER BY RANDOM()
+                  LIMIT ${limit};
+                `;
 
           const modelsWithoutPassword = models.map(
             ({ password, ...rest }: { password: string }) => rest,

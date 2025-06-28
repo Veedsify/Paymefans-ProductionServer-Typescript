@@ -15,60 +15,10 @@ import query from "@utils/prisma";
 import NotificationService from "./NotificationService";
 import SaveMessageToDb from "./SaveMessageToDb";
 import EmailService from "./EmailService";
+import EmitActiveUsers from "@jobs/EmitActiveUsers";
 
 export default class SocketService {
-  // Emit active users
-  // Get active users from redis
-  // Emit active users to all connected clients
-  static async EmitActiveUsers() {
-    const io = await IoInstance.getIO();
-    const activeUsers = await redis.hgetall("activeUsers");
-    io.emit(
-      "active_users",
-      Object.values(activeUsers).map((value) => JSON.parse(value)),
-    );
-  }
-
-  // Cached Conversations
-  // Get cached conversations
-  // If not found, fetch from database and cache it
-  static async GetCachedConversations(userId: string) {
-    let conversations = await redis.get(`conversations:${userId}`);
-    if (!conversations) {
-      const userConversations =
-        await ConversationService.GetUserConversations(userId);
-      redis.set(
-        `conversations:${userId}`,
-        JSON.stringify(userConversations),
-        "EX",
-        60,
-      );
-      return userConversations;
-    }
-    return JSON.parse(conversations);
-  }
-
-  // Handle user inactive status
-  // Remove user from active users list
-  // Emit updated active users list
-  static async HandleUserInactive(username: string) {
-    const userKey = `user:${username}`;
-    await redis.hdel("activeUsers", userKey);
-  }
-
-  //  Handle user active status
-  // Add user to active users list
-  // Emit updated active users list
-  static async HandleUserActive(username: string, socket: Socket) {
-    const userKey = `user:${username}`;
-    const userData = {
-      username,
-      socket_id: socket.id,
-      last_active: Date.now(),
-    };
-    await redis.hdel("activeUsers", userKey);
-    await redis.hset("activeUsers", userKey, JSON.stringify(userData));
-  }
+  // Emit active users to a specific socket
 
   // Handle join room
   static async HandleJoinRoom(
@@ -96,6 +46,27 @@ export default class SocketService {
       });
       await redis.del(`conversations:${data.userId}`);
       await redis.del(`conversations:${data.receiver_id}`);
+
+      // Update unread count for the user who saw the message
+      try {
+        const ConversationService = (await import("./ConversationService"))
+          .default;
+        const unreadCountResult = await ConversationService.GetUnreadCount({
+          user: { user_id: data.userId } as any,
+        });
+
+        if (!unreadCountResult.error && unreadCountResult.count !== undefined) {
+          socket.emit("unread-count-updated", {
+            unreadCount: unreadCountResult.count,
+          });
+        }
+      } catch (error) {
+        console.error(
+          "❌ Error updating unread count after message seen:",
+          error,
+        );
+      }
+
       // const conversations = await this.GetCachedConversations(data.userId);
       // const receiverConversations = await this.GetCachedConversations(data.receiver_id);
       // io.to(userRoom).emit("prefetch-conversations", "conversations");
@@ -284,10 +255,15 @@ export default class SocketService {
         !("success" in messageResult)
       ) {
         // This is a successful message object
-        socket.to(userRoom).emit("message", {
+        console.log("✅ Message saved successfully, emitting to receiver");
+
+        // Emit message without rawFiles (they're only for sender UI)
+        const messageForReceiver = {
           ...data,
           rawFiles: [],
-        });
+        };
+
+        socket.to(userRoom).emit("message", messageForReceiver);
 
         //clear cached conversations
         const userMessageKey = `user:${user.userId}:conversations:${userRoom}`;
@@ -296,6 +272,8 @@ export default class SocketService {
         await redis.del(receiverMessageKey);
         await redis.del(`conversations:${user.userId}`);
         await redis.del(`conversations:${data.receiver_id}`);
+
+        // Emit prefetch event to both sender and receiver
         io.to(socket.id).emit("prefetch-conversations", "conversations");
 
         // Check If Receiver Is Active
@@ -324,9 +302,33 @@ export default class SocketService {
             subject,
             link,
           });
-        }
+        } else {
+          // If receiver is active, emit prefetch to them too
+          io.to(found.socket_id).emit(
+            "prefetch-conversations",
+            "conversations",
+          );
 
-        io.to(found?.socket_id).emit("prefetch-conversations", "conversations");
+          // Emit real-time unread count update to the receiver
+          try {
+            const ConversationService = (await import("./ConversationService"))
+              .default;
+            const unreadCountResult = await ConversationService.GetUnreadCount({
+              user: { user_id: data.receiver_id } as any,
+            });
+
+            if (
+              !unreadCountResult.error &&
+              unreadCountResult.count !== undefined
+            ) {
+              io.to(found.socket_id).emit("unread-count-updated", {
+                unreadCount: unreadCountResult.count,
+              });
+            }
+          } catch (error) {
+            console.error("❌ Error updating unread count:", error);
+          }
+        }
       } else {
         console.error(
           "❌ SaveMessageToDb.SaveMessage returned unexpected result",
@@ -392,12 +394,92 @@ export default class SocketService {
   // Handle Still Active
   static async HandleStillActive(username: string, socket: Socket) {
     if (!username) return; // don't do anything if username is falsy
+
+    try {
+      const userKey = `user:${username}`;
+
+      // Fetch user's show_active preference from database
+      const user = await query.user.findFirst({
+        where: { username },
+        select: { show_active: true },
+      });
+
+      const userData = {
+        username,
+        socket_id: socket.id,
+        last_active: Date.now(),
+        show_active: user?.show_active ?? true, // Default to true if user not found
+      };
+
+      await redis.hset("activeUsers", userKey, JSON.stringify(userData));
+      // Emit updated active users when someone updates their activity
+      await EmitActiveUsers(IoInstance.getIO());
+    } catch (error) {
+      console.error("❌ Error in HandleStillActive:", error);
+      // Fallback to basic user data if database query fails
+      const userKey = `user:${username}`;
+      const userData = {
+        username,
+        socket_id: socket.id,
+        last_active: Date.now(),
+        show_active: true, // Default fallback
+      };
+      await redis.hset("activeUsers", userKey, JSON.stringify(userData));
+      await EmitActiveUsers(IoInstance.getIO());
+    }
+  }
+
+  // Cached Conversations
+  // Get cached conversations
+  // If not found, fetch from database and cache it
+  static async GetCachedConversations(userId: string) {
+    let conversations = await redis.get(`conversations:${userId}`);
+    if (!conversations) {
+      const userConversations =
+        await ConversationService.GetUserConversations(userId);
+      redis.set(
+        `conversations:${userId}`,
+        JSON.stringify(userConversations),
+        "EX",
+        60,
+      );
+      return userConversations;
+    }
+    return JSON.parse(conversations);
+  }
+
+  // Handle user inactive status
+  // Remove user from active users list
+  // Emit updated active users list
+  static async HandleUserInactive(username: string) {
     const userKey = `user:${username}`;
-    const userData = {
-      username,
-      socket_id: socket.id,
-      last_active: Date.now(),
-    };
-    await redis.hset("activeUsers", userKey, JSON.stringify(userData));
+    await redis.hdel("activeUsers", userKey);
+  }
+
+  //  Handle user active status
+  // Add user to active users list
+  // Emit updated active users list
+  static async HandleUserActive(username: string, socket: Socket) {
+    try {
+      const userKey = `user:${username}`;
+
+      // Fetch user's show_active preference from database
+      const user = await query.user.findFirst({
+        where: { username },
+        select: { show_active: true },
+      });
+
+      const userData = {
+        username,
+        socket_id: socket.id,
+        last_active: Date.now(),
+        show_active: user?.show_active ?? true, // Default to true if user not found
+      };
+
+      await redis.hdel("activeUsers", userKey);
+      await redis.hset("activeUsers", userKey, JSON.stringify(userData));
+    } catch (error) {
+      console.error("❌ Error in HandleUserActive:", error);
+    }
   }
 }
