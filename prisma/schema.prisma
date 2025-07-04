@@ -1046,18 +1046,20 @@ model WithdrawalRequestCode {
 }
 
 model WithdrawalRequest {
-  id              Int                     @id @default(autoincrement())
-  user_id         Int
-  amount          Int
-  recipient_code  String
-  bank_account_id Int
-  reference       String?
-  reason          String                  @default("Paymefans Model Withdrawal")
-  status          WithdrawalRequestStatus
-  created_at      DateTime                @default(now())
-  updated_at      DateTime                @updatedAt
-  bank            UserBanks               @relation(fields: [bank_account_id], references: [id], onDelete: Cascade)
-  user            User                    @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  id                Int                     @id @default(autoincrement())
+  user_id           Int
+  amount            Int
+  recipient_code    String
+  bank_account_id   Int
+  reference         String?
+  reason            String                  @default("Paymefans Model Withdrawal")
+  status            WithdrawalRequestStatus
+  transfer_code     String?
+  paystack_response Json?
+  created_at        DateTime                @default(now())
+  updated_at        DateTime                @updatedAt
+  bank              UserBanks               @relation(fields: [bank_account_id], references: [id], onDelete: Cascade)
+  user              User                    @relation(fields: [user_id], references: [id], onDelete: Cascade)
 }
 
 model PlatformExchangeRate {
@@ -1210,6 +1212,7 @@ model PurchasedPosts {
 enum WithdrawalRequestStatus {
   pending
   processing
+  approved
   rejected
   completed
 }
