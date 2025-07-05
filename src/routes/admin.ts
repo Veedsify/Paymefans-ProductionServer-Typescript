@@ -1,12 +1,32 @@
 import AdminMiddleware from "@middleware/AdminMiddleware";
 import express from "express";
 import email from "./admin/email";
+import path from "path";
 import adminRoutes from "./admin/admin";
+import fs from "fs/promises";
 
 const admin = express.Router();
 
 // Health check endpoint (no auth required)
-admin.get("/health", async (req, res) => {
+admin.post('/simulate-upload', async (_, res) => {
+  try {
+    const uploadsDir = path.join(__dirname, '../public/uploads');
+
+    // Ensure directory exists
+    await fs.mkdir(uploadsDir, { recursive: true });
+
+    const filePath = path.join(uploadsDir, `${Date.now()}.txt`);
+    await fs.writeFile(filePath, `Request at ${new Date().toISOString()}`);
+
+    res.status(200).json({ success: true });
+  } catch (error) {
+    console.error('File write failed:', error);
+    res.status(500).json({ error: 'Write failed' });
+  }
+
+});
+
+admin.get("/health", async (_, res) => {
   res.status(200).json({
     status: "ok",
     message: "Admin API is running",

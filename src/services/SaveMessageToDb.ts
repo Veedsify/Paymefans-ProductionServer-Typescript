@@ -8,14 +8,6 @@ import type { DatabaseOperationResult } from "types/socket";
 class SaveMessageToDb {
   static async SaveMessage(data: SaveMessageToDBProps) {
     try {
-      console.log("📝 SaveMessage called with data:", {
-        message_id: data.message_id,
-        sender_id: data.sender_id,
-        receiver_id: data.receiver_id,
-        conversationId: data.conversationId,
-        hasAttachment: (data.attachment?.length || 0) > 0,
-        attachmentCount: data.attachment?.length || 0,
-      });
 
       // Get the data from the message
       const {
@@ -41,7 +33,6 @@ class SaveMessageToDb {
         );
         return pointsResult;
       }
-      console.log("✅ Points successfully processed");
 
       // Get the receiver id
       const receiverId = await query.conversations.findFirst({
@@ -79,13 +70,6 @@ class SaveMessageToDb {
           baseAttachment.poster = `${process.env.CLOUDFLARE_CUSTOMER_SUBDOMAIN}/${file.id}/thumbnails/thumbnail.gif?time=1s&height=400&duration=4s`;
         }
 
-        console.log("📎 Processed attachment:", {
-          type: file.type,
-          id: file.id,
-          hasUrl: !!file.url,
-          hasPoster: !!baseAttachment.poster
-        });
-
         return baseAttachment;
       });
 
@@ -115,12 +99,6 @@ class SaveMessageToDb {
       });
 
       query.$disconnect();
-
-      console.log("✅ Message successfully saved to database:", {
-        messageId: newMessage.message_id,
-        conversationId: newMessage.conversationsId,
-        attachmentCount: modifiedAttachment.length,
-      });
 
       // Return the data
       return newMessage;
@@ -389,8 +367,6 @@ class SaveMessageToDb {
           receiverWallet: !!receiverWallet,
         });
       }
-
-      console.log("✅ Point transaction completed successfully");
       return { success: true };
     } catch (error) {
       console.error("❌ Error in RemovePointsFromUser:", error);

@@ -1,8 +1,8 @@
 import { redisSub } from "./RedisStore";
 
-export default function HookupRedisPubSub(io: any) {
+export default async function HookupRedisPubSub(io: any) {
   // Subscribe to a Redis channel
-  redisSub.subscribe("hookups");
+  await redisSub.subscribe("hookups");
   // Event listener for Redis messages
   redisSub.on("message", (channel, PlatformHookups) => {
     if (channel === "hookups") {

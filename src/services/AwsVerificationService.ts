@@ -2,6 +2,7 @@ import type { AwsVerificationResponse, ProcessVerificationProps } from "../types
 import { acceptedCountries } from "@utils/AcceptedVerificationCountries";
 import { documentTypes } from "@utils/AcceptedDocumentTypes";
 import { UploadImageToS3 } from "@libs/UploadImageToS3";
+import { validateIDDocument, analyzeDocumentQuality, detectFaceQuality } from "./AwsDocumentValidationService";
 
 const { S3_BUCKET_NAME } = process.env;
 
@@ -27,11 +28,40 @@ export class AwsVerificationService {
             };
         }
 
-        if (files.length === 0) {
+        // Enhanced validation: Check file count more strictly
+        if (files.length !== 3) {
             return {
                 error: true,
-                message: "No files uploaded",
+                message: "Exactly 3 files required: front of ID, back of ID, and face photo",
             };
+        }
+
+        // Enhanced validation: Check file sizes and types
+        for (const file of files) {
+            // Check file size (max 5MB)
+            if (file.size > 5 * 1024 * 1024) {
+                return {
+                    error: true,
+                    message: "File size too large. Please ensure each file is under 5MB.",
+                };
+            }
+
+            // Check file type
+            if (!file.mimetype.startsWith('image/')) {
+                return {
+                    error: true,
+                    message: "Invalid file type. Only image files are allowed.",
+                };
+            }
+
+            // Check supported formats
+            const supportedFormats = ['image/jpeg', 'image/jpg', 'image/png'];
+            if (!supportedFormats.includes(file.mimetype)) {
+                return {
+                    error: true,
+                    message: "Unsupported image format. Please use JPEG or PNG files.",
+                };
+            }
         }
 
         if (!terms || !country || !documentType) {
@@ -90,6 +120,54 @@ export class AwsVerificationService {
         const results = await Promise.all(UploadToAws)
 
         const [front, back, faceVideo] = results
+
+        // Enhanced validation: Validate documents using AWS services
+        try {
+            // Validate front document quality and authenticity
+            const frontQuality = await analyzeDocumentQuality(front);
+            if (frontQuality.error) {
+                return {
+                    error: true,
+                    message: `Front document: ${frontQuality.message}`,
+                };
+            }
+
+            // Validate front document content
+            const frontValidation = await validateIDDocument(front, country, documentType);
+            if (frontValidation.error) {
+                return {
+                    error: true,
+                    message: `Front document: ${frontValidation.message}`,
+                };
+            }
+
+            // Validate back document quality (if required)
+            if (documentType !== 'passport') {
+                const backQuality = await analyzeDocumentQuality(back);
+                if (backQuality.error) {
+                    return {
+                        error: true,
+                        message: `Back document: ${backQuality.message}`,
+                    };
+                }
+            }
+
+            // Validate face photo quality
+            const faceQuality = await detectFaceQuality(faceVideo);
+            if (faceQuality.error) {
+                return {
+                    error: true,
+                    message: `Face photo: ${faceQuality.message}`,
+                };
+            }
+
+        } catch (validationError: any) {
+            console.error("Document validation error:", validationError);
+            return {
+                error: true,
+                message: "Failed to validate documents. Please ensure all images are clear and properly formatted.",
+            };
+        }
 
         return {
             error: false,

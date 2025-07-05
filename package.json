@@ -14,7 +14,7 @@
     "dev": "bun --watch ./src/app.ts --ext .ts",
     "ngrok": "ngrok http --url=current-early-hippo.ngrok-free.app 3009"
   },
-  "keywords": [],
+  "keywords": [], 
   "author": "",
   "license": "ISC",
   "description": "",

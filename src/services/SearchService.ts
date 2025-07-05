@@ -185,7 +185,6 @@ export default class SearchService {
 
     static async SearchPlatform(query: string, category: string, authUser: AuthUser): Promise<SearchPlatformResponse> {
         try {
-            console.log("Search query:", query, "Category:", category);
             let results: any;
             if (category === "posts") {
                 results = await this.searchInPosts(query, authUser.id);

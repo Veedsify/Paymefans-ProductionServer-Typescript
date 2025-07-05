@@ -157,7 +157,7 @@ export default class AdminWithdrawalController {
   /**
    * Get withdrawal statistics
    */
-  static async getWithdrawalStats(req: Request, res: Response): Promise<void> {
+  static async getWithdrawalStats(_: Request, res: Response): Promise<void> {
     try {
       const stats = await WithdrawalService.getWithdrawals({
         page: 1,

@@ -51,23 +51,23 @@ app.use(
 
 
 // Instance of Socket.IO
-IoInstance.init(server).then((instance) => {
+IoInstance.init(server).then(async (instance) => {
   // Emit active users to the socket - reduced frequency since we now use event-driven updates
-  activeUsersQueue.add("activeUsersQueue", {}, {
+ await activeUsersQueue.add("activeUsersQueue", {}, {
     repeat: {
       every: 30000, // 30 seconds - fallback for missed events
     },
     jobId: "activeUsersJob",
   });
   // Prune inactive users
-  pruneInactiveUsersQueue.add("pruneInactiveUsersQueue", {}, {
+  await pruneInactiveUsersQueue.add("pruneInactiveUsersQueue", {}, {
     repeat: {
       every: 60000, // 1 minute
     },
     removeOnComplete: true,
     jobId: "pruneInactiveUsersJob",
   });
-  pruneInactiveSubscribersQueue.add("pruneInactiveSubscribersQueue", {}, {
+  await pruneInactiveSubscribersQueue.add("pruneInactiveSubscribersQueue", {}, {
     repeat: {
       pattern: "0 0 */12 * * *" // Every 12 hours
     },
@@ -75,11 +75,11 @@ IoInstance.init(server).then((instance) => {
     jobId: "pruneInactiveSubscribersJob",
   });
   // Socket.IO instance
-  AppSocket(instance).then();
+  await AppSocket(instance)
   // Redis Model PubSub
-  ModelsRedisPubSub(instance);
+  await ModelsRedisPubSub(instance);
   // Hookup Redis PubSub
-  HookupRedisPubSub(instance);
+  await HookupRedisPubSub(instance);
 });
 
 // Connect to MongoDB

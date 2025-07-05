@@ -92,7 +92,7 @@ export default class AdminPointsController {
   /**
    * Get points statistics (Admin endpoint)
    */
-  static async GetPointsStatistics(req: Request, res: Response): Promise<void> {
+  static async GetPointsStatistics(_: Request, res: Response): Promise<void> {
     try {
       const stats = await PointsService.getPointsStatistics();
 

@@ -4,6 +4,7 @@ import type { AuthUser } from "types/user";
 import fs from "fs";
 import { AwsVerificationService } from "@services/AwsVerificationService";
 import { AwsVerificationQueue } from "@jobs/verifications/AwsFacialVerificationJob";
+import query from "@utils/prisma";
 
 export default class VerificationController {
   // Model Verification
@@ -154,6 +155,136 @@ export default class VerificationController {
         return res.status(400).json(verifyToken);
       }
       return res.status(200).json(verifyToken);
+    } catch (error: any) {
+      res.status(500).json({ error: true, message: error.message });
+    }
+  }
+
+  // Check Verification Status
+  // This function checks the current status of a verification by token
+  static async CheckVerificationStatus(req: Request, res: Response): Promise<any> {
+    const { token } = req.params;
+    try {
+      const verification = await query.model.findFirst({
+        where: {
+          token: token,
+        },
+        select: {
+          verification_state: true,
+          verification_status: true,
+          created_at: true,
+          user: {
+            select: {
+              name: true,
+            }
+          }
+        },
+      });
+
+      if (!verification) {
+        return res.status(404).json({
+          error: true,
+          message: "Verification not found",
+        });
+      }
+
+      // Calculate time elapsed since submission
+      const timeElapsed = Date.now() - verification.created_at.getTime();
+      const minutesElapsed = Math.floor(timeElapsed / (1000 * 60));
+
+      return res.status(200).json({
+        error: false,
+        verification_state: verification.verification_state,
+        verification_status: verification.verification_status,
+        minutes_elapsed: minutesElapsed,
+        user_name: verification.user.name,
+      });
+    } catch (error: any) {
+      res.status(500).json({ error: true, message: error.message });
+    }
+  }
+
+  // Debug Queue Status
+  // This function checks the current queue status for debugging
+  static async DebugQueueStatus(req: Request, res: Response): Promise<any> {
+    try {
+      const { AwsVerificationQueue } = await import("@jobs/verifications/AwsFacialVerificationJob");
+
+      const waiting = await AwsVerificationQueue.getWaiting();
+      const active = await AwsVerificationQueue.getActive();
+      const completed = await AwsVerificationQueue.getCompleted();
+      const failed = await AwsVerificationQueue.getFailed();
+
+      return res.status(200).json({
+        error: false,
+        queue_status: {
+          waiting: waiting.length,
+          active: active.length,
+          completed: completed.length,
+          failed: failed.length,
+          jobs: {
+            waiting: waiting.slice(0, 5).map(job => ({ id: job.id, data: job.data.token })),
+            active: active.slice(0, 5).map(job => ({ id: job.id, data: job.data.token })),
+            failed: failed.slice(0, 5).map(job => ({ id: job.id, failedReason: job.failedReason })),
+          }
+        }
+      });
+    } catch (error: any) {
+      res.status(500).json({ error: true, message: error.message });
+    }
+  }
+
+  // Manual Verification Trigger (for debugging)
+  // This function manually triggers verification processing bypassing the queue
+  static async ManualVerificationTrigger(req: Request, res: Response): Promise<any> {
+    const { token } = req.params;
+    try {
+      // Get verification data
+      const verification = await query.model.findFirst({
+        where: { token },
+        select: {
+          id: true,
+          verification_state: true,
+        }
+      });
+
+      if (!verification) {
+        return res.status(404).json({
+          error: true,
+          message: "Verification not found",
+        });
+      }
+
+      if (verification.verification_state !== "started") {
+        return res.status(400).json({
+          error: true,
+          message: "Verification is not in started state",
+        });
+      }
+
+      // Trigger manual processing (for debugging)
+      const { AwsVerificationQueue } = await import("@jobs/verifications/AwsFacialVerificationJob");
+
+      // Add a job to process this verification manually
+      const job = await AwsVerificationQueue.add(
+        "ManualVerifyUser",
+        {
+          token: token,
+          // Note: In real scenario, these would come from the original upload
+          // For debugging, we'll let the job handle missing data gracefully
+        },
+        {
+          removeOnComplete: false, // Keep for debugging
+          attempts: 1,
+        }
+      );
+
+      return res.status(200).json({
+        error: false,
+        message: "Manual verification triggered",
+        job_id: job.id,
+        token: token,
+      });
     } catch (error: any) {
       res.status(500).json({ error: true, message: error.message });
     }
