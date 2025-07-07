@@ -43,9 +43,12 @@ model User {
   max_post_count            Int                         @default(0)
   hasPin                    Boolean                     @default(false)
   watermarkEnabled          Boolean                     @default(true)
+  flags                     Json?                       @default("[]")
   created_at                DateTime                    @default(now())
   updated_at                DateTime                    @updatedAt
   show_active               Boolean                     @default(true)
+  should_delete             Boolean                     @default(false)
+  delete_date               DateTime?
   ActivityLog               ActivityLog[]
   BlockedGroupParticipant   BlockedGroupParticipant[]
   Cart                      Cart[]

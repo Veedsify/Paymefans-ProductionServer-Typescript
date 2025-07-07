@@ -15,4 +15,5 @@ profile.post("/update", Auth, uploadAvatar.single("profile_image"), ProfileContr
 profile.get("/stats/:userId/:type", Auth, ProfileController.ProfileStats)
 profile.post("/action/:action/:userId", Auth, ProfileController.FollowUnfollowUser)
 profile.post("/tip/model", Auth, ProfileController.TipUser)
+profile.delete("/delete-account", Auth, ProfileController.DeleteAccount)
 export default profile

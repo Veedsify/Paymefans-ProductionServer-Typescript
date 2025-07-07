@@ -17,6 +17,7 @@ import ModelsJobs from "@jobs/ModelsJobs";
 import { connectDB } from "@utils/mongodb";
 import { activeUsersQueue, pruneInactiveUsersQueue } from "@jobs/ActiveUsers/activeUserJobs";
 import { pruneInactiveSubscribersQueue } from "@jobs/Subscribers/ModelSubscriberJobs";
+import { deleteUserQueue } from "@jobs/DeleteAccountActions/DeleteAccountMedia";
 const { ADMIN_PANEL_URL, VERIFICATION_URL, APP_URL, LIVESTREAM_PORT } =
   process.env;
 
@@ -53,7 +54,7 @@ app.use(
 // Instance of Socket.IO
 IoInstance.init(server).then(async (instance) => {
   // Emit active users to the socket - reduced frequency since we now use event-driven updates
- await activeUsersQueue.add("activeUsersQueue", {}, {
+  await activeUsersQueue.add("activeUsersQueue", {}, {
     repeat: {
       every: 30000, // 30 seconds - fallback for missed events
     },
@@ -74,6 +75,15 @@ IoInstance.init(server).then(async (instance) => {
     removeOnComplete: true,
     jobId: "pruneInactiveSubscribersJob",
   });
+
+  // Delete users
+  await deleteUserQueue.add("deleteUserQueue", {}, {
+    repeat: {
+      every: 60 * 60 * 24, // Every 24 hours
+    },
+    jobId: "deleteUserJob",
+  });
+
   // Socket.IO instance
   await AppSocket(instance)
   // Redis Model PubSub

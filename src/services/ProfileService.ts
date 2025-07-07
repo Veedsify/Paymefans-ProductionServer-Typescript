@@ -18,6 +18,7 @@ import { GenerateUniqueId } from "@utils/GenerateUniqueId";
 import { UserNotificationQueue } from "@jobs/notifications/UserNotificaton";
 import getSingleName from "@utils/GetSingleName";
 import { UserTransactionQueue } from "@jobs/notifications/UserTransactionJob";
+import { Permissions, RBAC } from "@utils/FlagsConfig";
 
 class ProfileService {
   // Get Profile
@@ -510,9 +511,9 @@ class ProfileService {
       );
       const followingRelations = otherUserIds.length
         ? await query.follow.findMany({
-            where: { follower_id: user.id, user_id: { in: otherUserIds } },
-            select: { user_id: true },
-          })
+          where: { follower_id: user.id, user_id: { in: otherUserIds } },
+          select: { user_id: true },
+        })
         : [];
 
       const followingSet = new Set(followingRelations.map((f) => f.user_id));
@@ -759,6 +760,37 @@ class ProfileService {
     } catch (error) {
       console.error("Error tipping user:", error);
       throw new Error("Error processing tip");
+    }
+  }
+
+  // Delete User Accounts and Media
+  static async DeleteAccount(userId: number): Promise<{ message: string; error: boolean }> {
+    try {
+      if (!userId || isNaN(userId)) {
+        return { message: "Invalid user ID", error: true };
+      }
+
+      await query.user.update({
+        where: { id: userId },
+        data: {
+          should_delete: true,
+          delete_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // Set delete date to 7 days from now
+        },
+      });
+
+      // Clear cache
+      const stream = redis.scanStream({
+        match: `user_profile_${userId}*`,
+        count: 100,
+      });
+      for await (const keys of stream) {
+        if (keys.length) await redis.del(...keys);
+      }
+
+      return { message: "Account deleted successfully", error: false };
+    } catch (error) {
+      console.error("Error deleting account:", error);
+      throw new Error("Error deleting account");
     }
   }
 }

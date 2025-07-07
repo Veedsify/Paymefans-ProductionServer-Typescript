@@ -11,6 +11,7 @@ import type {
 } from "../types/auth";
 import { countries } from "@libs/countries";
 import LoginService from "./LoginService";
+import { RBAC } from "@utils/FlagsConfig";
 
 export default class RegisterService {
     // Register New User
@@ -259,6 +260,7 @@ export default class RegisterService {
                             subscription_id: subscriptionId,
                         },
                     },
+                    flags: RBAC.getRolePermissions("user")
                 },
                 include: {
                     UserWallet: true,

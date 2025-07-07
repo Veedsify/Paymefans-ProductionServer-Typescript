@@ -92,6 +92,20 @@ class ProfileController {
             res.status(500).json({ error: 'Error tipping user' })
         }
     }
+
+    // Delete Account
+    static async DeleteAccount(req: Request, res: Response): Promise<any> {
+        try {
+            const user = await ProfileService.DeleteAccount(req.user!.id)
+            if(user.error) {
+                return res.status(400).json(user)
+            }
+            res.status(200).json(user)
+        } catch (error) {
+            console.error('Delete account error:', error)
+            res.status(500).json({ error: 'Error deleting account' })
+        }
+    }
 }
 
 export default ProfileController

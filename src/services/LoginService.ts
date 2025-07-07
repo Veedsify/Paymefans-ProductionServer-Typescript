@@ -30,6 +30,13 @@ export default class LoginService {
                 return { error: true, message: "Invalid email or password" };
             }
 
+            if (user.should_delete) {
+                return {
+                    error: true,
+                    message: "Your account is scheduled for deletion. Please contact support.",
+                };
+            }
+
             const match = await ComparePasswordHash(pass, user.password);
             if (!match) {
                 return { error: true, message: "Invalid email or password" };
