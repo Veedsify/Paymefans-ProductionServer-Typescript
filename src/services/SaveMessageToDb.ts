@@ -1,4 +1,5 @@
 import { UserTransactionQueue } from "@jobs/notifications/UserTransactionJob";
+import { Permissions, RBAC } from "@utils/FlagsConfig";
 import { GenerateUniqueId } from "@utils/GenerateUniqueId";
 import query from "@utils/prisma";
 import sanitizeHtml from "sanitize-html";
@@ -8,7 +9,6 @@ import type { DatabaseOperationResult } from "types/socket";
 class SaveMessageToDb {
   static async SaveMessage(data: SaveMessageToDBProps) {
     try {
-
       // Get the data from the message
       const {
         message_id,
@@ -19,19 +19,29 @@ class SaveMessageToDb {
         attachment = [],
       } = data;
 
-      // Remove points from user
-      console.log("💰 Attempting to remove points from user...");
-      const pointsResult = await this.RemovePointsFromUser(
-        sender_id,
-        receiver_id,
+      const user = await query.user.findFirst({
+        where: {
+          user_id: sender_id,
+        },
+      });
+
+      const checkCanUserSendFreeMessage = RBAC.checkUserFlag(
+        user?.flags,
+        Permissions.SEND_FREE_MESSAGES,
       );
 
-      // If points are not removed return an error with details
-      if (pointsResult.success === false) {
-        console.error(
-          "❌ Failed to remove points from user - message sending aborted",
+      if (checkCanUserSendFreeMessage === false) {
+        const pointsResult = await this.RemovePointsFromUser(
+          sender_id,
+          receiver_id,
         );
-        return pointsResult;
+        // If points are not removed return an error with details
+        if (pointsResult.success === false) {
+          console.error(
+            "❌ Failed to remove points from user - message sending aborted",
+          );
+          return pointsResult;
+        }
       }
 
       // Get the receiver id
@@ -281,7 +291,7 @@ class SaveMessageToDb {
           senderWallet = newSenderWallet.id;
         } catch (error: any) {
           // If wallet already exists due to race condition, fetch it
-          if (error.code === 'P2002') {
+          if (error.code === "P2002") {
             console.log("📱 Wallet already exists for sender, fetching...");
             const existingWallet = await query.userWallet.findUnique({
               where: { user_id: sender.id },
@@ -294,7 +304,7 @@ class SaveMessageToDb {
         }
       }
 
-      // Ensure receiver has a wallet  
+      // Ensure receiver has a wallet
       let receiverWallet = receiver?.UserWallet?.id;
 
       if (!receiverWallet && receiver?.id) {
@@ -310,7 +320,7 @@ class SaveMessageToDb {
           receiverWallet = newReceiverWallet.id;
         } catch (error: any) {
           // If wallet already exists due to race condition, fetch it
-          if (error.code === 'P2002') {
+          if (error.code === "P2002") {
             console.log("📱 Wallet already exists for receiver, fetching...");
             const existingWallet = await query.userWallet.findUnique({
               where: { user_id: receiver.id },

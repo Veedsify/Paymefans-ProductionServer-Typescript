@@ -217,7 +217,16 @@ class ProfileService {
     }: ProfileUpdateInfo,
     user: AuthUser,
   ): Promise<{ error: boolean; message: string }> {
-    let username = bodyUsername?.trim() || user.username;
+    const trimmedUsername = bodyUsername?.trim();
+    let username;
+
+    if (trimmedUsername) {
+      username = trimmedUsername.startsWith("@")
+        ? trimmedUsername
+        : "@" + trimmedUsername;
+    } else {
+      username = user.username;
+    }
     if (!user.id || isNaN(user.id))
       return { error: true, message: "Invalid user ID" };
     if (!username || username.length < 3)
@@ -511,9 +520,9 @@ class ProfileService {
       );
       const followingRelations = otherUserIds.length
         ? await query.follow.findMany({
-          where: { follower_id: user.id, user_id: { in: otherUserIds } },
-          select: { user_id: true },
-        })
+            where: { follower_id: user.id, user_id: { in: otherUserIds } },
+            select: { user_id: true },
+          })
         : [];
 
       const followingSet = new Set(followingRelations.map((f) => f.user_id));
@@ -764,7 +773,9 @@ class ProfileService {
   }
 
   // Delete User Accounts and Media
-  static async DeleteAccount(userId: number): Promise<{ message: string; error: boolean }> {
+  static async DeleteAccount(
+    userId: number,
+  ): Promise<{ message: string; error: boolean }> {
     try {
       if (!userId || isNaN(userId)) {
         return { message: "Invalid user ID", error: true };

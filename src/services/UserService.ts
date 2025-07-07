@@ -41,20 +41,9 @@ export default class UserService {
         },
       });
 
-      // Fetch subscriptions
-      // const getMySubscriptions = await query.subscribers.findMany({
-      //   where: {
-      //     subscriber_id: userid,
-      //   },
-      //   select: {
-      //     user_id: true,
-      //   },
-      // });
-
       // const subscriptions = getMySubscriptions.map((sub) => sub.user_id);
       const { password, ...rest } = user;
       const purchasedPosts: number[] = [2];
-
       const result = {
         message: "User retrieved successfully",
         user: { ...rest, following, purchasedPosts },
@@ -71,7 +60,7 @@ export default class UserService {
   // Update User Two Factor Authentication
   static async UpdateTwoFactorAuth(
     userId: number,
-    twofactorauth: boolean
+    twofactorauth: boolean,
   ): Promise<UpdateTwoFactorAuthResponse> {
     try {
       const user = await query.user.update({
@@ -104,7 +93,7 @@ export default class UserService {
 
   // Verify Two Factor Authentication
   static async VerifyTwoFactorAuth(
-    code: number
+    code: number,
   ): Promise<VerificationControllerResponse> {
     try {
       const verify = await query.twoFactorAuth.findFirst({
