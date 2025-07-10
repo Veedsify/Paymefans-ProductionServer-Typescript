@@ -2,7 +2,6 @@ import type { Post } from "@prisma/client";
 import query from "@utils/prisma";
 import type { PostWithLike } from "../types/feed";
 import { Permissions, RBAC } from "@utils/FlagsConfig";
-import { JsonValue } from "@prisma/client/runtime/library";
 
 interface CursorInfo {
   timestamp: Date;

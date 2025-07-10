@@ -179,15 +179,15 @@ const Roles = {
 
 // RBAC utility functions
 export class RBAC {
-  static hasPermission(userRoles: string[], permission: string): boolean {
+  static hasPermission(userRoles: string[], permission:string): boolean {
     return userRoles.some((role) => {
       const roleConfig = Object.values(Roles).find((r) => r.name === role);
-      return roleConfig?.permissions.includes(String(permission)) || false;
+      return roleConfig?.permissions.includes(permission) || false;
     });
   }
 
   static hasAnyPermission(userRoles: string[], permissions: string[]): boolean {
-    return permissions.some((permission) =>
+    return permissions.some((permission:string) =>
       this.hasPermission(userRoles, permission),
     );
   }

@@ -18,7 +18,6 @@ import { GenerateUniqueId } from "@utils/GenerateUniqueId";
 import { UserNotificationQueue } from "@jobs/notifications/UserNotificaton";
 import getSingleName from "@utils/GetSingleName";
 import { UserTransactionQueue } from "@jobs/notifications/UserTransactionJob";
-import { Permissions, RBAC } from "@utils/FlagsConfig";
 
 class ProfileService {
   // Get Profile
@@ -211,6 +210,7 @@ class ProfileService {
       twitter,
       facebook,
       tiktok,
+      state,
       youtube,
       snapchat,
       telegram,
@@ -269,6 +269,7 @@ class ProfileService {
       if (username !== undefined) userUpdateData.username = username.trim();
       if (website !== undefined)
         userUpdateData.website = website?.trim() || null;
+      if (state !== undefined) userUpdateData.state = state?.trim() || null;
 
       const settingsUpdateData: any = {};
       if (instagram !== undefined)

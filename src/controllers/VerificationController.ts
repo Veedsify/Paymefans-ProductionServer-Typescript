@@ -206,7 +206,7 @@ export default class VerificationController {
 
   // Debug Queue Status
   // This function checks the current queue status for debugging
-  static async DebugQueueStatus(req: Request, res: Response): Promise<any> {
+  static async DebugQueueStatus(_: Request, res: Response): Promise<any> {
     try {
       const { AwsVerificationQueue } = await import("@jobs/verifications/AwsFacialVerificationJob");
 

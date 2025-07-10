@@ -8,49 +8,49 @@ datasource db {
 }
 
 model User {
-  id                        Int                         @id @default(autoincrement())
-  email                     String                      @unique
-  name                      String
-  password                  String
-  fullname                  String
-  user_id                   String                      @unique
-  username                  String                      @unique
-  admin                     Boolean                     @default(false)
-  role                      UserRole                    @default(fan)
-  is_active                 Boolean                     @default(false)
-  is_verified               Boolean                     @default(false)
-  is_email_verified         Boolean                     @default(false)
-  is_model                  Boolean                     @default(false)
-  email_verify_code         String?
-  email_verify_time         DateTime?
-  is_phone_verified         Boolean                     @default(false)
-  phone                     String                      @unique
-  profile_image             String?                     @default("/site/avatar.png")
-  profile_banner            String?                     @default("/site/banner.png")
-  bio                       String?
-  location                  String?
-  website                   String?
-  country                   String?
-  state                     String?
-  city                      String?
-  zip                       String?
-  currency                  String?                     @default("NGN")
-  post_watermark            String?
-  total_followers           Int                         @default(0)
-  total_following           Int                         @default(0)
-  total_subscribers         Int                         @default(0)
-  active_status             Boolean                     @default(true)
-  max_post_count            Int                         @default(0)
-  hasPin                    Boolean                     @default(false)
-  watermarkEnabled          Boolean                     @default(true)
-  flags                     Json?                       @default("[]")
-  created_at                DateTime                    @default(now())
-  updated_at                DateTime                    @updatedAt
-  show_active               Boolean                     @default(true)
-  should_delete             Boolean                     @default(false)
-  delete_date               DateTime?
-  ActivityLog               ActivityLog[]
-  BlockedGroupParticipant   BlockedGroupParticipant[]
+  id                Int           @id @default(autoincrement())
+  email             String        @unique
+  name              String
+  password          String
+  fullname          String
+  user_id           String        @unique
+  username          String        @unique
+  admin             Boolean       @default(false)
+  role              UserRole      @default(fan)
+  is_active         Boolean       @default(false)
+  is_verified       Boolean       @default(false)
+  is_email_verified Boolean       @default(false)
+  is_model          Boolean       @default(false)
+  email_verify_code String?
+  email_verify_time DateTime?
+  is_phone_verified Boolean       @default(false)
+  phone             String        @unique
+  profile_image     String?       @default("/site/avatar.png")
+  profile_banner    String?       @default("/site/banner.png")
+  bio               String?
+  location          String?
+  website           String?
+  country           String?
+  state             String?
+  city              String?
+  zip               String?
+  currency          String?       @default("NGN")
+  post_watermark    String?
+  total_followers   Int           @default(0)
+  total_following   Int           @default(0)
+  total_subscribers Int           @default(0)
+  active_status     Boolean       @default(true)
+  max_post_count    Int           @default(0)
+  hasPin            Boolean       @default(false)
+  watermarkEnabled  Boolean       @default(true)
+  flags             Json?         @default("[]")
+  created_at        DateTime      @default(now())
+  updated_at        DateTime      @updatedAt
+  show_active       Boolean       @default(true)
+  should_delete     Boolean       @default(false)
+  delete_date       DateTime?
+  ActivityLog       ActivityLog[]
+
   Cart                      Cart[]
   CommentImpression         CommentImpression[]
   Followers                 Follow[]                    @relation("Followers")
@@ -108,7 +108,12 @@ model User {
   WishList                  WishList[]
   WithdrawalRequest         WithdrawalRequest[]
   WithWithdrawalRequestCode WithdrawalRequestCode[]
-  Groups                    Groups[]                    @relation("GroupsToUser")
+  // Group relationships
+  adminGroups               Groups[]                    @relation("GroupAdmin")
+  groupMemberships          GroupMember[]               @relation("GroupMembers")
+  blockedFromGroups         BlockedGroupParticipant[]   @relation("BlockedUser")
+  blockedUsers              BlockedGroupParticipant[]   @relation("BlockedByUser")
+  mutedUsers                GroupMember[]               @relation("MutedByUser")
 }
 
 model Participants {
@@ -142,7 +147,6 @@ model Messages {
   conversationsId String?
   groupsId        Int?
   Conversations   Conversations?  @relation(fields: [conversationsId], references: [conversation_id])
-  Groups          Groups?         @relation(fields: [groupsId], references: [id])
   receiver        User            @relation("MessageReceiver", fields: [receiver_id], references: [user_id], onDelete: Cascade)
   sender          User            @relation("MessageSender", fields: [sender_id], references: [user_id], onDelete: Cascade)
   ReportMessage   ReportMessage[]
@@ -924,11 +928,18 @@ model GroupMessage {
   id          Int               @id @default(autoincrement())
   content     String?
   senderId    Int
-  groupChatId Int
+  groupId     Int
+  messageType String            @default("text") // text, image, video, audio, file
+  isEdited    Boolean           @default(false)
+  editedAt    DateTime?
+  replyToId   Int?
   createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
   attachments GroupAttachment[]
-  groupChat   Groups            @relation(fields: [groupChatId], references: [id], onDelete: Cascade)
+  group       Groups            @relation(fields: [groupId], references: [id], onDelete: Cascade)
   sender      User              @relation(fields: [senderId], references: [id])
+  replyTo     GroupMessage?     @relation("MessageReplies", fields: [replyToId], references: [id])
+  replies     GroupMessage[]    @relation("MessageReplies")
   tags        Tag[]
 }
 
@@ -944,43 +955,84 @@ model Tag {
 model GroupAttachment {
   id        Int          @id @default(autoincrement())
   url       String
-  type      String
+  type      String // image, video, audio, document
+  fileName  String?
+  fileSize  Int?
   messageId Int
   createdAt DateTime     @default(now())
-  message   GroupMessage @relation(fields: [messageId], references: [id])
+  message   GroupMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
 }
 
 model Groups {
-  id                      Int                       @id @default(autoincrement())
-  group_id                String
-  created_at              DateTime                  @default(now())
-  updated_at              DateTime                  @updatedAt
-  BlockedGroupParticipant BlockedGroupParticipant[]
-  GroupMessage            GroupMessage[]
-  GroupSettings           GroupSettings?
-  messages                Messages[]
-  partitcipants           User[]                    @relation("GroupsToUser")
+  id                  Int                       @id @default(autoincrement())
+  name                String
+  description         String?
+  groupIcon           String?
+  groupType           GroupType                 @default(PUBLIC)
+  isActive            Boolean                   @default(true)
+  maxMembers          Int                       @default(100)
+  adminId             Int
+  createdAt           DateTime                  @default(now())
+  updatedAt           DateTime                  @updatedAt
+  admin               User                      @relation("GroupAdmin", fields: [adminId], references: [id])
+  members             GroupMember[]
+  messages            GroupMessage[]
+  blockedParticipants BlockedGroupParticipant[]
+  settings            GroupSettings?
+
+  @@index([adminId])
+  @@index([groupType])
 }
 
 model GroupSettings {
-  id          Int      @id @default(autoincrement())
-  group_id    Int      @unique
-  name        String
-  description String
-  group_icon  String
-  created_at  DateTime @default(now())
-  updated_at  DateTime @updatedAt
-  group       Groups   @relation(fields: [group_id], references: [id], onDelete: Cascade)
+  id                  Int       @id @default(autoincrement())
+  groupId             Int       @unique
+  allowMemberInvites  Boolean   @default(true)
+  allowMediaSharing   Boolean   @default(true)
+  allowFileSharing    Boolean   @default(true)
+  moderateMessages    Boolean   @default(false)
+  autoApproveJoinReqs Boolean   @default(true)
+  mutedUntil          DateTime?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+  group               Groups    @relation(fields: [groupId], references: [id], onDelete: Cascade)
 }
 
 model BlockedGroupParticipant {
-  id         Int      @id @default(autoincrement())
-  user_id    Int
-  group_id   Int
-  created_at DateTime @default(now())
-  updated_at DateTime @updatedAt
-  group      Groups   @relation(fields: [group_id], references: [id], onDelete: Cascade)
-  user       User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  groupId   Int
+  blockedBy Int
+  reason    String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  group     Groups   @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  user      User     @relation("BlockedUser", fields: [userId], references: [id], onDelete: Cascade)
+  blocker   User     @relation("BlockedByUser", fields: [blockedBy], references: [id])
+
+  @@unique([userId, groupId])
+  @@index([groupId])
+}
+
+model GroupMember {
+  id          Int             @id @default(autoincrement())
+  userId      Int
+  groupId     Int
+  role        GroupMemberRole @default(MEMBER)
+  joinedAt    DateTime        @default(now())
+  lastSeen    DateTime?
+  isMuted     Boolean         @default(false)
+  mutedBy     Int?
+  mutedUntil  DateTime?
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  user        User            @relation("GroupMembers", fields: [userId], references: [id], onDelete: Cascade)
+  group       Groups          @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  mutedByUser User?           @relation("MutedByUser", fields: [mutedBy], references: [id])
+
+  @@unique([userId, groupId])
+  @@index([groupId])
+  @@index([userId])
 }
 
 model ActivityLog {
@@ -1277,4 +1329,29 @@ enum VerificationStateEnum {
 enum MediaState {
   processing
   completed
+}
+
+enum GroupType {
+  PUBLIC
+  PRIVATE
+  SECRET
+}
+
+enum GroupMemberRole {
+  ADMIN
+  MODERATOR
+  MEMBER
+}
+
+enum JoinRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum InvitationStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+  EXPIRED
 }
