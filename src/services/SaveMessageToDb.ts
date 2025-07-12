@@ -107,9 +107,6 @@ class SaveMessageToDb {
           },
         },
       });
-
-      query.$disconnect();
-
       // Return the data
       return newMessage;
     } catch (error) {

@@ -67,8 +67,6 @@ export default class NotificationService {
       notifications.pop();
     }
 
-    await query.$disconnect();
-
     return {
       error: false,
       hasMore: hasMore,
@@ -95,7 +93,6 @@ export default class NotificationService {
           read: true,
         },
       });
-      await query.$disconnect();
       return {
         error: false,
         status: true,
@@ -103,7 +100,6 @@ export default class NotificationService {
       };
     } catch (error) {
       console.log(error);
-      await query.$disconnect();
       throw new Error("Error updating notification");
     }
   }

@@ -1,29 +1,36 @@
-import type { NextFunction, Request } from "express";
-import type { Response } from "express";
+import type { NextFunction, Request, Response } from "express";
 import jwt from "jsonwebtoken";
 import type { AuthUser } from "../types/user";
 
-export default async function Auth(req: Request, res: Response, next: NextFunction): Promise<any> {
-    try {
-        if (!req.headers) {
-            return res
-                .status(403)
-                .json({ message: "Authorization token is missing", status: false });
-        }
+export default async function Auth(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<any> {
+  try {
+    // Get token from Authorization header (Bearer <token>)
+    const authHeader = req.headers.authorization;
+    let token = authHeader?.startsWith("Bearer ")
+      ? authHeader.split(" ")[1]
+      : undefined;
 
-        const token = req.headers.authorization?.split(" ")[1];
-
-        if (!token) {
-            return res.status(403).json({ message: "No token found", status: false });
-        }
-
-        if (!process.env.JWT_SECRET) {
-            throw new Error("JWT_SECRET is not defined in the environment variables");
-        }
-        const decoded = jwt.verify(token, process.env.JWT_SECRET) as AuthUser
-        req.user = decoded;
-        next();
-    } catch (error) {
-        return res.status(403).json({ message: "Unauthorized", status: false });
+    // Fallback to token in cookie if not in header
+    if (!token && req.cookies?.token) {
+      token = req.cookies.token;
     }
-};
+
+    if (!token) {
+      return res.status(403).json({ message: "No token found", status: false });
+    }
+
+    if (!process.env.JWT_SECRET) {
+      throw new Error("JWT_SECRET is not defined in the environment variables");
+    }
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET) as AuthUser;
+    req.user = decoded;
+    next();
+  } catch (error) {
+    return res.status(403).json({ message: "Unauthorized", status: false });
+  }
+}

@@ -44,13 +44,11 @@ export default class PointService {
       const point = await query.globalPointsBuy.findFirst({
         where: { points_buy_id },
       });
-      query.$disconnect();
 
       if (!point) {
         return { message: "Sorry you cant buy this package", status: false };
       }
       const createNewPointsOrder = await this.PaystackPayment(point, user);
-      query.$disconnect();
       return createNewPointsOrder;
     } catch (err: any) {
       console.log(err.message);
@@ -75,7 +73,6 @@ export default class PointService {
           success: false,
         },
       });
-      query.$disconnect();
 
       const CreateOrder = await fetch(
         "https://api.paystack.co/transaction/initialize",
@@ -186,7 +183,7 @@ export default class PointService {
         amount: Number(approximateAmount),
         user: user,
         usd_amount,
-        platformFee
+        platformFee,
       });
 
       if (!response.data || response.data.authorization_url == "") {
@@ -196,7 +193,7 @@ export default class PointService {
           message: `Cannot Generate Proceed With Checkout`,
         };
       }
-      const config = await ConfigService.Config()
+      const config = await ConfigService.Config();
       if (config.error) {
         return {
           status: false,
@@ -205,7 +202,9 @@ export default class PointService {
         };
       }
 
-      const pointsAfterFee = config.data ? Number(amount) / config.data?.point_conversion_rate_ngn : Number(amount) / 100;
+      const pointsAfterFee = config.data
+        ? Number(amount) / config.data?.point_conversion_rate_ngn
+        : Number(amount) / 100;
 
       return {
         status: true,
@@ -225,11 +224,11 @@ export default class PointService {
     amount,
     user,
     usd_amount,
-    platformFee
+    platformFee,
   }: CreatePaystackPaymentProps): Promise<any> {
     try {
       const referenceId = `PNT${GenerateUniqueId()}`;
-      const config = await ConfigService.Config()
+      const config = await ConfigService.Config();
       if (config.error) {
         return {
           status: false,
@@ -237,7 +236,9 @@ export default class PointService {
           message: config.message,
         };
       }
-      const points = config.data ? amount / config?.data?.point_conversion_rate_ngn : amount / 100;
+      const points = config.data
+        ? amount / config?.data?.point_conversion_rate_ngn
+        : amount / 100;
       await query.userPointsPurchase.create({
         data: {
           purchase_id: referenceId,
@@ -251,7 +252,6 @@ export default class PointService {
           usd_equivalent: usd_amount,
         },
       });
-      query.$disconnect();
 
       const billableAmount = (amount + platformFee) * 100;
       const CreateOrder = await fetch(
@@ -362,8 +362,6 @@ export default class PointService {
         status: false,
         message: "An error occurred during payment verification",
       };
-    } finally {
-      await query.$disconnect();
     }
   }
 

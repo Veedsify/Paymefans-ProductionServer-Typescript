@@ -5,6 +5,7 @@ import LoginService from "@services/LoginService";
 import PointService from "@services/PointService";
 import WalletService from "@services/WalletService";
 import UserService from "@services/UserService";
+import { serialize } from "cookie";
 
 export default class AuthController {
   // Register Service
@@ -19,9 +20,7 @@ export default class AuthController {
           .json({ message: CreateAccount.message, status: false });
       }
 
-      return res
-        .status(201)
-        .json(CreateAccount);
+      return res.status(201).json(CreateAccount);
     } catch (error) {
       console.log(error);
       return res
@@ -44,13 +43,12 @@ export default class AuthController {
         message: "Account verified successfully",
         status: true,
       });
-
     } catch (error) {
       console.log(error);
       res.status(500).json({
         message: "Internal server error",
         status: false,
-      })
+      });
     }
   }
 
@@ -72,7 +70,24 @@ export default class AuthController {
   static async Login(req: Request, res: Response): Promise<any> {
     try {
       const LoginAccount = await LoginService.LoginUser(req.body);
-      return res.status(200).json(LoginAccount);
+      if (LoginAccount.error) {
+        return res.status(400).json(LoginAccount);
+      }
+
+      if (LoginAccount.token) {
+        res.setHeader(
+          "Set-Cookie",
+          serialize("token", LoginAccount.token as string, {
+            httpOnly: false,
+            secure: false,
+            sameSite: "lax",
+            path: "/",
+            maxAge: 3600,
+          }),
+        );
+      }
+
+      res.status(200).json(LoginAccount);
     } catch (error) {
       console.log(error);
       return res

@@ -27,15 +27,13 @@ import { redis } from "@libs/RedisStore";
 import { PaystackService } from "./PaystackService";
 
 export default class ModelService {
-  static async GetModels(
-    body: { limit: number },
-  ): Promise<GetModelsResponse> {
+  static async GetModels(body: { limit: number }): Promise<GetModelsResponse> {
     const { limit } = body;
     try {
       const models = await redis.get(`models`);
       if (!models) {
         return await query.$transaction(async (tx) => {
-            const models: Models = await tx.$queryRaw`
+          const models: Models = await tx.$queryRaw`
                   SELECT "User"."id", "User"."username", "User"."fullname", "User"."name", "User"."profile_image", "User"."profile_banner", "User"."is_model",
                        "Model"."hookup", "Model"."verification_status"
                   FROM "User"
@@ -288,8 +286,6 @@ export default class ModelService {
           message: "An error occurred while signing you up",
         };
       }
-
-      query.$disconnect();
       return {
         errorTitle: "You are now a model",
         message: "You have been signed up as a model",
@@ -331,11 +327,13 @@ export default class ModelService {
     return { newUser, create: true };
   }
 
-  static async ValidateModelPayment(data: ValidateModelPaymentProps): Promise<ValidateModelPaymentResponse> {
+  static async ValidateModelPayment(
+    data: ValidateModelPaymentProps,
+  ): Promise<ValidateModelPaymentResponse> {
     try {
       const { reference } = data;
 
-      const verifyPayment = await PaystackService.ValidatePayment(reference)
+      const verifyPayment = await PaystackService.ValidatePayment(reference);
 
       if (verifyPayment.error) {
         return {
@@ -350,8 +348,7 @@ export default class ModelService {
         error: false,
         status: true,
         message: "Payment verification successful",
-      }
-
+      };
     } catch (err) {
       console.log(err);
       throw new Error("Error validating model payment");

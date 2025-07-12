@@ -15,11 +15,15 @@ import HookupRedisPubSub from "@libs/HookupRedisPubSub";
 import type { Request, Response } from "express";
 import ModelsJobs from "@jobs/ModelsJobs";
 import { connectDB } from "@utils/mongodb";
-import { activeUsersQueue, pruneInactiveUsersQueue } from "@jobs/ActiveUsers/activeUserJobs";
+import cookieParser from "cookie-parser";
+import {
+  activeUsersQueue,
+  pruneInactiveUsersQueue,
+} from "@jobs/ActiveUsers/activeUserJobs";
 import { pruneInactiveSubscribersQueue } from "@jobs/Subscribers/ModelSubscriberJobs";
 import { deleteUserQueue } from "@jobs/DeleteAccountActions/DeleteAccountMedia";
-const { ADMIN_PANEL_URL, VERIFICATION_URL, APP_URL, LIVESTREAM_PORT } =
-  process.env;
+import InitializeQueueJobs from "@libs/InitializeQueueJobs";
+const { ADMIN_PANEL_URL, VERIFICATION_URL, APP_URL } = process.env;
 
 const app = express();
 const server = http.createServer(app);
@@ -28,64 +32,39 @@ const port = 3009;
 // HTTP request logging
 app.use(logger("dev"));
 
+// Cookie parser
+app.use(cookieParser());
+
+// Cors Origins
+const origins = [
+  "http://localhost:5173",
+  "http://localhost:4173",
+  "http://192.168.18.126",
+  "http://192.168.18.126:3009",
+  "http://192.168.18.126:3000",
+  "http://192.168.0.115:3000",
+  "http://192.168.0.115:3009",
+  "http://23.20.241.255:3000",
+  VERIFICATION_URL!,
+  ADMIN_PANEL_URL!,
+  APP_URL!,
+].filter(Boolean);
+
 // Cors
 app.use(
   cors({
-    origin: [
-      VERIFICATION_URL!,
-      ADMIN_PANEL_URL!,
-      APP_URL!,
-      LIVESTREAM_PORT!,
-      "http://localhost:5173",
-      "http://localhost:4173",
-      "http://192.168.18.126",
-      "http://192.168.18.126:3009",
-      "http://192.168.18.126:3000",
-      "http://192.168.0.115:3000",
-      "http://192.168.0.115:3009",
-      "http://23.20.241.255:3000",
-    ].filter(Boolean),
+    origin: origins,
     credentials: true,
     optionsSuccessStatus: 200,
-  })
+  }),
 );
-
 
 // Instance of Socket.IO
 IoInstance.init(server).then(async (instance) => {
-  // Emit active users to the socket - reduced frequency since we now use event-driven updates
-  await activeUsersQueue.add("activeUsersQueue", {}, {
-    repeat: {
-      every: 30000, // 30 seconds - fallback for missed events
-    },
-    jobId: "activeUsersJob",
-  });
-  // Prune inactive users
-  await pruneInactiveUsersQueue.add("pruneInactiveUsersQueue", {}, {
-    repeat: {
-      every: 60000, // 1 minute
-    },
-    removeOnComplete: true,
-    jobId: "pruneInactiveUsersJob",
-  });
-  await pruneInactiveSubscribersQueue.add("pruneInactiveSubscribersQueue", {}, {
-    repeat: {
-      pattern: "0 0 */12 * * *" // Every 12 hours
-    },
-    removeOnComplete: true,
-    jobId: "pruneInactiveSubscribersJob",
-  });
-
-  // Delete users
-  await deleteUserQueue.add("deleteUserQueue", {}, {
-    repeat: {
-      every: 60 * 60 * 24, // Every 24 hours
-    },
-    jobId: "deleteUserJob",
-  });
-
+  // Initialize Queue Jobs
+  await InitializeQueueJobs();
   // Socket.IO instance
-  await AppSocket(instance)
+  await AppSocket(instance);
   // Redis Model PubSub
   await ModelsRedisPubSub(instance);
   // Hookup Redis PubSub
@@ -103,11 +82,9 @@ app.use(express.static(path.join("public")));
 app.use(express.urlencoded({ extended: false }));
 app.use(express.json());
 
-
-
 // Basic route
 app.use("/api", api);
-app.use("/admin", admin)
+app.use("/admin", admin);
 
 // Analytics Job
 ModelsJobs();
