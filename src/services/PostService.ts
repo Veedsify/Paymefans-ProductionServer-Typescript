@@ -32,7 +32,7 @@ import { MediaState, PostAudience } from "@prisma/client";
 import RemoveCloudflareMedia from "@libs/RemoveCloudflareMedia";
 import { CommentLikes, Comments } from "@utils/mongoSchema";
 import { GenerateUniqueId } from "@utils/GenerateUniqueId";
-import { UserTransactionQueue } from "@jobs/notifications/UserTransactionJob";
+import { UserTransactionQueue } from "@jobs/UserTransactionJob";
 import EmailService from "./EmailService";
 import GetSinglename from "@utils/GetSingleName";
 import { redis } from "@libs/RedisStore";
@@ -1750,6 +1750,11 @@ export default class PostService {
             { username: { contains: searchQuery, mode: "insensitive" } },
             { name: { contains: searchQuery, mode: "insensitive" } },
           ],
+          NOT: {
+            flags: {
+              array_contains: Permissions.CANT_MENTION,
+            }
+          },
           id: { not: userId }, // Exclude the current user
         },
         select: {

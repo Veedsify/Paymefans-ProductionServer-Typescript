@@ -1,4 +1,4 @@
-import { UserTransactionQueue } from "@jobs/notifications/UserTransactionJob";
+import { UserTransactionQueue } from "@jobs/UserTransactionJob";
 import { Permissions, RBAC } from "@utils/FlagsConfig";
 import { GenerateUniqueId } from "@utils/GenerateUniqueId";
 import query from "@utils/prisma";

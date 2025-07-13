@@ -200,25 +200,6 @@ export default class RegisterService {
         if (!userCountry) {
             throw new Error("Invalid country");
         }
-        // let currency: any;
-
-        // switch (userCountry) {
-        //   case "Nigeria":
-        //     currency = "NGN";
-        //     break;
-        //   case "Ghana":
-        //     currency = "GHS";
-        //     break;
-        //   case "Kenya":
-        //     currency = "KES";
-        //     break;
-        //   case "South Africa":
-        //     currency = "ZAR";
-        //     break;
-        //   default:
-        //     currency = "USD"; // Default to USD if country is not recognized
-        // }
-
         return await query.$transaction(async (tx) => {
             const user = await tx.user.create({
                 data: {

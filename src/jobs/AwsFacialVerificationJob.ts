@@ -6,7 +6,7 @@ import GetSinglename from "@utils/GetSingleName";
 import { NameMatchingService } from "@utils/NameMatchingService";
 import query from "@utils/prisma";
 import { Queue, Worker } from "bullmq";
-import type { AwsRekognitionObject } from "types/verification";
+import type { AwsRekognitionObject } from "../types/verification";
 import { RekognitionClient, DetectTextCommand } from "@aws-sdk/client-rekognition";
 
 const {

@@ -6,8 +6,8 @@ import type {
   VerificationControllerResponse,
 } from "../types/user";
 import query from "@utils/prisma";
-import TriggerModels from "@jobs/models";
-import TriggerHookups from "@jobs/hookup";
+import TriggerModels from "@jobs/Models";
+import TriggerHookups from "@jobs/Hookup";
 import LoginHistoryService from "./LoginHistory";
 
 export default class UserService {

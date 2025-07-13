@@ -1,5 +1,5 @@
 import express from "express";
-import Auth from "@middleware/auth";
+import Auth from "@middleware/Auth";
 import ConversationController from "@controllers/ConversationController";
 import { CreateUpload } from "@middleware/FileUploadConfig";
 const conversations = express.Router();

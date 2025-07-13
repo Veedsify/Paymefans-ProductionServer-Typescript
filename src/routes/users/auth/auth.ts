@@ -1,6 +1,6 @@
 import express from "express"
 import AuthController from "@controllers/AuthController"
-import Auth from "@middleware/auth"
+import Auth from "@middleware/Auth"
 const auth = express.Router()
 
 

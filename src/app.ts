@@ -19,9 +19,9 @@ import cookieParser from "cookie-parser";
 import {
   activeUsersQueue,
   pruneInactiveUsersQueue,
-} from "@jobs/ActiveUsers/activeUserJobs";
-import { pruneInactiveSubscribersQueue } from "@jobs/Subscribers/ModelSubscriberJobs";
-import { deleteUserQueue } from "@jobs/DeleteAccountActions/DeleteAccountMedia";
+} from "@jobs/ActiveUserJobs";
+import { pruneInactiveSubscribersQueue } from "@jobs/ModelSubscriberJobs";
+import { deleteUserQueue } from "@jobs/DeleteAccountMedia";
 import InitializeQueueJobs from "@libs/InitializeQueueJobs";
 const { ADMIN_PANEL_URL, VERIFICATION_URL, APP_URL } = process.env;
 

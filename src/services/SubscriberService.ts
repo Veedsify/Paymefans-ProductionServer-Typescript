@@ -8,7 +8,7 @@ import type {
   GetActiveSubscribersResponse,
 } from "../types/subscribers";
 import { GenerateUniqueId } from "@utils/GenerateUniqueId";
-import { UserTransactionQueue } from "@jobs/notifications/UserTransactionJob";
+import { UserTransactionQueue } from "@jobs/UserTransactionJob";
 import EmailService from "./EmailService";
 
 export default class SubscriberService {

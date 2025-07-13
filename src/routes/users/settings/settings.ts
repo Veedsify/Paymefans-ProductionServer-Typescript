@@ -1,5 +1,5 @@
 import SettingsController from "@controllers/SettingsController";
-import Auth from "@middleware/auth";
+import Auth from "@middleware/Auth";
 import express from "express";
 const settings = express.Router();
 

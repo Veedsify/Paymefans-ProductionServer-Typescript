@@ -2,6 +2,18 @@ import { JsonValue } from "@prisma/client/runtime/library";
 
 // Permission definitions
 const Permissions = {
+  // Special Permissions
+  SUPER_ADMIN: "super_admin",
+  ADMIN: "admin",
+  MODERATOR: "moderator",
+  PROFILE_HIDDEN: "profile_hidden",
+  CANT_REPORT: "cant_report",
+  CANT_BLOCK: "cant_block",
+  CANT_COMMENT: "cant_comment",
+  PROFILE_NOT_CACHED: "profile_not_cached",
+  CANT_MENTION: "cant_mention",
+  CANT_FOLLOW: "cant_follow",
+
   // User Management
   DELETE_ACCOUNTS: "delete_accounts",
   VIEW_SENSITIVE_CONTENT: "view_sensitive_content",

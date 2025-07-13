@@ -1,8 +1,8 @@
 // Queue setup
 import { Queue, Worker } from "bullmq";
 import { redis } from "@libs/RedisStore";
-import TriggerModels from "@jobs/models";
-import TriggerHookups from "@jobs/hookup";
+import TriggerModels from "@jobs/Models";
+import TriggerHookups from "@jobs/Hookup";
 
 // Create queue using the same Redis connection
 const queue = new Queue("model-hookup-sync", {

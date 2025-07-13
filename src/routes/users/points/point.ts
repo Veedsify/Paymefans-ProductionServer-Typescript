@@ -1,5 +1,5 @@
 import PointController from "@controllers/PointController"
-import Auth from "@middleware/auth"
+import Auth from "@middleware/Auth"
 import express from "express"
 const point = express.Router()
 

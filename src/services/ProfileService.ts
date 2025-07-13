@@ -11,13 +11,14 @@ import type {
 import query from "@utils/prisma";
 import { UploadImageToS3 } from "@libs/UploadImageToS3";
 import type { UploadOptions } from "@libs/UploadImageToS3";
-import { UpdateAvatarQueue } from "@jobs/comments/UpdateCommentsAvatar";
+import { UpdateAvatarQueue } from "@jobs/UpdateCommentsAvatar";
 import { redis } from "@libs/RedisStore";
 import { AuthUser } from "types/user";
 import { GenerateUniqueId } from "@utils/GenerateUniqueId";
-import { UserNotificationQueue } from "@jobs/notifications/UserNotificaton";
+import { UserNotificationQueue } from "@jobs/UserNotificaton";
 import getSingleName from "@utils/GetSingleName";
-import { UserTransactionQueue } from "@jobs/notifications/UserTransactionJob";
+import { UserTransactionQueue } from "@jobs/UserTransactionJob";
+import { Permissions, RBAC } from "@utils/FlagsConfig";
 
 class ProfileService {
   // Get Profile
@@ -63,6 +64,7 @@ class ProfileService {
           profile_image: true,
           profile_banner: true,
           bio: true,
+          flags: true,
           created_at: true,
           Settings: {
             select: {
@@ -82,6 +84,16 @@ class ProfileService {
       });
 
       if (!user) return { message: "User not found", status: false };
+
+      const checkFlags = RBAC.checkUserFlag(user.flags, Permissions.PROFILE_HIDDEN);
+
+      if (checkFlags && user.id !== authUserId) { 
+        return {
+          message: "User profile is hidden",
+          status: false,
+          user: undefined,
+        };
+      }
       // Batch follow checks
       const [iFollowThem, theyFollowMe] = await Promise.all([
         query.follow.findFirst({
@@ -100,7 +112,7 @@ class ProfileService {
           followsYou: !!theyFollowMe,
         },
       };
-      await redis.set(cacheKey, JSON.stringify(response), "EX", 30);
+      await redis.set(cacheKey, JSON.stringify(response), "EX", 20);
       return response;
     } catch (error: any) {
       throw new Error(error.message);
@@ -138,13 +150,15 @@ class ProfileService {
   static async ProfileUpdate(req: Request): Promise<ProfileUpdateResponse> {
     const { user } = req;
     const file = req.file;
-    if (!user?.id)
-      return { message: "User not authenticated", status: false, url: "" };
+    if (!user?.id) {
+      return { message: "User not authenticated", status: false, url: "", error: true };
+    }
 
     try {
       if (!file) {
         const updateProfile = await this.ProfileUpdateInfo(req.body, user);
         return {
+          error: updateProfile.error,
           message: updateProfile.error
             ? updateProfile.message
             : "Profile updated",
@@ -167,11 +181,13 @@ class ProfileService {
         quality: 100,
       };
       await UploadImageToS3(options);
-      if (!AvatarUrl)
-        return { message: "Failed to upload image", status: false, url: "" };
+      if (!AvatarUrl) {
+        return { message: "Failed to upload image", status: false, url: "", error: true };
+      }
       const updateProfile = await this.ProfileUpdateInfo(req.body, user);
-      if (updateProfile.error)
-        return { message: updateProfile.message, status: false, url: "" };
+      if (updateProfile.error) {
+        return { message: updateProfile.message, status: false, url: "", error: true };
+      }
 
       await query.user.update({
         where: { id: user.id },
@@ -191,16 +207,19 @@ class ProfileService {
         },
       );
 
-      return { message: "Avatar updated", status: true, url: AvatarUrl };
+      return { message: "Avatar updated", status: true, url: AvatarUrl, error: false };
     } catch (error) {
       console.error("Profile update error:", error);
-      return { message: "Failed to update profile", status: false, url: "" };
+      throw new Error("Error updating profile");
     }
   }
 
   // Update Profile Info
-  static async ProfileUpdateInfo(
-    {
+  static async ProfileUpdateInfo(data
+    : ProfileUpdateInfo,
+    user: AuthUser,
+  ): Promise<{ error: boolean; message: string }> {
+    const {
       name,
       location,
       bio,
@@ -214,9 +233,10 @@ class ProfileService {
       youtube,
       snapchat,
       telegram,
-    }: ProfileUpdateInfo,
-    user: AuthUser,
-  ): Promise<{ error: boolean; message: string }> {
+    } = data
+    console.log("ProfileUpdateInfo data:", data);
+    console.log(state, website)
+
     const trimmedUsername = bodyUsername?.trim();
     let username;
 
@@ -521,9 +541,9 @@ class ProfileService {
       );
       const followingRelations = otherUserIds.length
         ? await query.follow.findMany({
-            where: { follower_id: user.id, user_id: { in: otherUserIds } },
-            select: { user_id: true },
-          })
+          where: { follower_id: user.id, user_id: { in: otherUserIds } },
+          select: { user_id: true },
+        })
         : [];
 
       const followingSet = new Set(followingRelations.map((f) => f.user_id));

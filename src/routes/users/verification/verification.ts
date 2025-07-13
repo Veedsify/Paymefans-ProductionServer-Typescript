@@ -1,5 +1,5 @@
 import VerificationController from "@controllers/VerificationController"
-import Auth from "@middleware/auth"
+import Auth from "@middleware/Auth"
 import express from "express"
 import { CreateUpload } from "@middleware/FileUploadConfig";
 

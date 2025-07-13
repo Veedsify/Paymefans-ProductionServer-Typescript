@@ -8,7 +8,7 @@ import EmailService from "./EmailService";
 import { Configurations, UserBanks } from "@prisma/client";
 import ConfigService from "./ConfigService";
 import bcryptjs from "bcryptjs";
-import { UserTransactionQueue } from "@jobs/notifications/UserTransactionJob";
+import { UserTransactionQueue } from "@jobs/UserTransactionJob";
 export default class WithdrawService {
     // Verify Withdraw Pin
     static async VerifyWithdrawPin(data: { user: AuthUser, pin: string }): Promise<CreateWithdrawRequestResponse> {

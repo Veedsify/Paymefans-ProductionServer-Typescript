@@ -1,5 +1,5 @@
 import express from "express";
-import Auth from "@middleware/auth";
+import Auth from "@middleware/Auth";
 import SubscriberController from "@controllers/SubscriberController";
 import SubscriptionTierController from "@controllers/SubscriptionTierController";
 

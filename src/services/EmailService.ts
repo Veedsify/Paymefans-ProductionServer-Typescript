@@ -6,7 +6,7 @@ import type {
     SendEmailServiceProp,
     SendNewMessageEmailProps,
 } from "../types/email";
-import { EmailQueue } from "@jobs/emails/EmailQueueHandler";
+import { EmailQueue } from "@jobs/EmailQueueHandler";
 
 export default class EmailService {
     // Send Welcome Email

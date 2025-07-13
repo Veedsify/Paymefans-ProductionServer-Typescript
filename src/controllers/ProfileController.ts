@@ -32,6 +32,9 @@ class ProfileController {
     static async ProfileUpdate(req: Request, res: Response): Promise<any> {
         try {
             const user = await ProfileService.ProfileUpdate(req)
+            if(user.error) {
+                return res.status(400).json(user)
+            }
             res.json(user)
         } catch (error) {
             console.error('Avatar error:', error)

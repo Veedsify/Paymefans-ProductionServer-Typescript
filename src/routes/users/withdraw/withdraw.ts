@@ -1,6 +1,6 @@
 import express from "express"
 import WithdrawController from "@controllers/WithdrawController";
-import Auth from "@middleware/auth";
+import Auth from "@middleware/Auth";
 
 const withdraw = express.Router()
 

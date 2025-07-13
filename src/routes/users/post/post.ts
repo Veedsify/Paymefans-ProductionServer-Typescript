@@ -1,5 +1,5 @@
 import express from "express"
-import Auth from "@middleware/auth";
+import Auth from "@middleware/Auth";
 import UploadController from "@controllers/UploadController";
 import PostController from "@controllers/PostController";
 import { CreateUpload } from "@middleware/FileUploadConfig";

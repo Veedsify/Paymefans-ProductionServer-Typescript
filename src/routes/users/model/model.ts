@@ -1,5 +1,5 @@
 import ModelController from "@controllers/ModelController";
-import Auth from "@middleware/auth";
+import Auth from "@middleware/Auth";
 import express from "express";
 const model = express.Router();
 

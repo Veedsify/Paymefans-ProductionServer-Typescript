@@ -1,9 +1,9 @@
 import {
   activeUsersQueue,
   pruneInactiveUsersQueue,
-} from "@jobs/ActiveUsers/activeUserJobs";
-import { deleteUserQueue } from "@jobs/DeleteAccountActions/DeleteAccountMedia";
-import { pruneInactiveSubscribersQueue } from "@jobs/Subscribers/ModelSubscriberJobs";
+} from "@jobs/ActiveUserJobs";
+import { deleteUserQueue } from "@jobs/DeleteAccountMedia";
+import { pruneInactiveSubscribersQueue } from "@jobs/ModelSubscriberJobs";
 
 async function InitializeQueueJobs() {
   // Emit active users to the socket - reduced frequency since we now use event-driven updates

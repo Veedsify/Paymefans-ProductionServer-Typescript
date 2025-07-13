@@ -44,6 +44,7 @@ export type ProfileUpdateResponse = {
   message: string;
   status: boolean;
   url?: string;
+  error: boolean;
 };
 
 export type ProfileUpdateInfo = {
@@ -51,8 +52,8 @@ export type ProfileUpdateInfo = {
   location: string;
   email: string;
   bio: string;
-  state: string;
-  website: string;
+  state?: string;
+  website?: string;
   username: string;
   instagram?: string;
   twitter?: string;

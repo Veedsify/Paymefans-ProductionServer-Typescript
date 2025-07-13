@@ -1,5 +1,5 @@
 import express from "express"
-import Auth from "@middleware/auth"
+import Auth from "@middleware/Auth"
 import HomeFeedController from "@controllers/HomeFeedControllers"
 const feed = express.Router()
 

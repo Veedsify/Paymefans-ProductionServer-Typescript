@@ -3,7 +3,7 @@ import type { Request, Response } from "express";
 import type { AuthUser } from "types/user";
 import fs from "fs";
 import { AwsVerificationService } from "@services/AwsVerificationService";
-import { AwsVerificationQueue } from "@jobs/verifications/AwsFacialVerificationJob";
+import { AwsVerificationQueue } from "@jobs/AwsFacialVerificationJob";
 import query from "@utils/prisma";
 
 export default class VerificationController {
@@ -208,7 +208,7 @@ export default class VerificationController {
   // This function checks the current queue status for debugging
   static async DebugQueueStatus(_: Request, res: Response): Promise<any> {
     try {
-      const { AwsVerificationQueue } = await import("@jobs/verifications/AwsFacialVerificationJob");
+      const { AwsVerificationQueue } = await import("@jobs/AwsFacialVerificationJob");
 
       const waiting = await AwsVerificationQueue.getWaiting();
       const active = await AwsVerificationQueue.getActive();
@@ -263,7 +263,7 @@ export default class VerificationController {
       }
 
       // Trigger manual processing (for debugging)
-      const { AwsVerificationQueue } = await import("@jobs/verifications/AwsFacialVerificationJob");
+      const { AwsVerificationQueue } = await import("@jobs/AwsFacialVerificationJob");
 
       // Add a job to process this verification manually
       const job = await AwsVerificationQueue.add(

@@ -108,6 +108,11 @@ export default class SearchService {
           { bio: { contains: searchQuery, mode: "insensitive" } },
           { country: { contains: searchQuery, mode: "insensitive" } },
         ],
+        NOT: {
+          flags: {
+            array_contains: Permissions.PROFILE_HIDDEN
+          }
+        }
       },
       select: {
         id: true,
@@ -120,6 +125,7 @@ export default class SearchService {
         profile_banner: true,
         bio: true,
         location: true,
+        state: true,
         country: true,
         is_model: true,
         admin: true,

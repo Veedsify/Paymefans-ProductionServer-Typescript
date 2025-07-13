@@ -1,9 +1,9 @@
-import TriggerModels from "@jobs/models";
+import TriggerModels from "@jobs/Models";
 import type { LoginUserProps, LoginUserResponse } from "../types/auth";
 import ComparePasswordHash from "@libs/ComparePassordHash";
 import { Authenticate } from "@libs/jwt";
 import query from "@utils/prisma";
-import TriggerHookups from "@jobs/hookup";
+import TriggerHookups from "@jobs/Hookup";
 import LoginHistoryService from "@services/LoginHistory";
 import _ from "lodash";
 import EmailService from "./EmailService";

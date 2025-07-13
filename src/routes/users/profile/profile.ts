@@ -1,5 +1,5 @@
 import express from "express"
-import Auth from "@middleware/auth"
+import Auth from "@middleware/Auth"
 import ProfileController from "@controllers/ProfileController"
 import { CreateUpload } from "@middleware/FileUploadConfig"
 const profile = express.Router()

@@ -1,5 +1,5 @@
 import NotificationController from "@controllers/NotificationController"
-import Auth from "@middleware/auth"
+import Auth from "@middleware/Auth"
 import express from "express"
 const notifications = express.Router()
 
