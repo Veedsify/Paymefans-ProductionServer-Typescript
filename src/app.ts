@@ -16,14 +16,7 @@ import type { Request, Response } from "express";
 import ModelsJobs from "@jobs/ModelsJobs";
 import { connectDB } from "@utils/mongodb";
 import cookieParser from "cookie-parser";
-import {
-  activeUsersQueue,
-  pruneInactiveUsersQueue,
-} from "@jobs/ActiveUserJobs";
-import { pruneInactiveSubscribersQueue } from "@jobs/ModelSubscriberJobs";
-import { deleteUserQueue } from "@jobs/DeleteAccountMedia";
 import InitializeQueueJobs from "@libs/InitializeQueueJobs";
-import { redis } from "@libs/RedisStore";
 const { ADMIN_PANEL_URL, VERIFICATION_URL, APP_URL } = process.env;
 
 const app = express();
