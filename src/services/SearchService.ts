@@ -91,13 +91,10 @@ export default class SearchService {
     await redis.set(cacheKey, JSON.stringify(resolvedPosts), "EX", 30); // Cache for 30 seconds
     return resolvedPosts;
   }
-  private static async searchInUsers(searchQuery: string): Promise<any> {
-    const cacheKey = `search:users:${searchQuery}`;
-    const cachedResult = await redis.get(cacheKey);
-    if (cachedResult) {
-      return JSON.parse(cachedResult);
-    }
-
+  private static async searchInUsers(
+    searchQuery: string,
+    authUserId: number,
+  ): Promise<any> {
     const results = await query.user.findMany({
       where: {
         OR: [
@@ -110,9 +107,9 @@ export default class SearchService {
         ],
         NOT: {
           flags: {
-            array_contains: Permissions.PROFILE_HIDDEN
-          }
-        }
+            array_contains: Permissions.PROFILE_HIDDEN,
+          },
+        },
       },
       select: {
         id: true,
@@ -140,9 +137,24 @@ export default class SearchService {
       return [];
     }
 
+    const usersWithFollowing = await Promise.all(
+      results.map(async (result) => {
+        const following = await query.follow.findFirst({
+          where: {
+            user_id: result.id,
+            follower_id: authUserId,
+          },
+        });
+        return {
+          ...result,
+          following: !!following,
+        };
+      }),
+    );
+
     // Cache the results
-    await redis.set(cacheKey, JSON.stringify(results), "EX", 30); // Cache for 30 seconds
-    return results;
+    // await redis.set(cacheKey, JSON.stringify(usersWithFollowing), "EX", 5); // Cache for 5 seconds
+    return usersWithFollowing;
   }
   private static async searchInMedia(searchQuery: string): Promise<any> {
     const cacheKey = `search:media:${searchQuery}`;
@@ -216,7 +228,7 @@ export default class SearchService {
       if (category === "posts") {
         results = await this.searchInPosts(query, authUser.id);
       } else if (category === "users") {
-        results = await this.searchInUsers(query);
+        results = await this.searchInUsers(query, authUser.id);
       } else if (category === "media") {
         results = await this.searchInMedia(query);
       } else {
@@ -227,9 +239,6 @@ export default class SearchService {
         return { message: "No results found", error: true };
       }
 
-      // Cache the results
-      const cacheKey = `search:${category}:${query}`;
-      await redis.set(cacheKey, JSON.stringify(results), "EX", 60); //
       return {
         message: "Search results retrieved successfully",
         results: results,

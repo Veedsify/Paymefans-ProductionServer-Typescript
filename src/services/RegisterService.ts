@@ -62,7 +62,7 @@ export default class RegisterService {
             };
         }
 
-        if (!this.isValidUsername(data.username)) {
+        if (!await this.isValidUsername(data.username)) {
             return {
                 message: "Username can only contain letters, numbers, and underscores",
                 error: true,
@@ -90,9 +90,9 @@ export default class RegisterService {
         }
 
         const user = await this.CreateUser(data);
-        const admin = await this.CheckForAdmin(user);
-        if (admin?.error) {
-            return { message: admin.message, error: true };
+        const welcomeAccount = await this.CheckForAdmin(user);
+        if (welcomeAccount?.error) {
+            return { message: welcomeAccount.message, error: true };
         }
 
         const EmailData: EmailServiceProp = {
@@ -104,10 +104,10 @@ export default class RegisterService {
         };
 
         const WelcomeData = [
-            this.CreateWelcomeConversationAndMessage(user, admin.userId),
-            this.CreateWelcomeNotification(user),
-            this.CreateFollowing(user, admin.id),
-            EmailService.SendWelcomeEmail(EmailData),
+            await this.CreateWelcomeConversationAndMessage(user, welcomeAccount.userId),
+            await this.CreateWelcomeNotification(user),
+            await this.CreateFollowing(user, welcomeAccount.id),
+            await EmailService.SendWelcomeEmail(EmailData),
         ];
         await Promise.all(WelcomeData);
 
@@ -200,7 +200,7 @@ export default class RegisterService {
         if (!userCountry) {
             throw new Error("Invalid country");
         }
-        return await query.$transaction(async (tx) => {
+        return query.$transaction(async (tx) => {
             const user = await tx.user.create({
                 data: {
                     fullname: data.name,
@@ -259,7 +259,7 @@ export default class RegisterService {
         user: RegisteredUser,
     ): Promise<CheckForAdminResponse> {
         const admin = await query.user.findFirst({
-            where: { username: "@paymefans" },
+            where: { username: "@welcome" },
             select: {
                 user_id: true,
                 id: true,
@@ -280,7 +280,7 @@ export default class RegisterService {
     // Create Welcome Conversation and Message
     static async CreateWelcomeConversationAndMessage(
         data: RegisteredUser,
-        adminId: string,
+        welcomeAccountId: string,
     ) {
         const conversationId = `CONV${GenerateUniqueId()}`;
         const messageId = `MSG${GenerateUniqueId()}`;
@@ -290,7 +290,7 @@ export default class RegisterService {
                 participants: {
                     create: {
                         user_1: data.user_id,
-                        user_2: adminId,
+                        user_2: welcomeAccountId,
                     },
                 },
             },
@@ -298,7 +298,7 @@ export default class RegisterService {
         await query.messages.create({
             data: {
                 message_id: messageId,
-                sender_id: adminId,
+                sender_id: welcomeAccountId,
                 conversationsId: conversationId,
                 message: `Welcome to PayMeFans, ${data.username}! <br>We are excited to have you here.<br>If you have any questions or need help, feel free to reach out to us.`,
                 seen: false,

@@ -22,6 +22,7 @@ async function main() {
       phone: "1234567890",
       location: "Nigeria",
       role: "admin",
+      is_verified: true,
       profile_image: SERVER_ORIGINAL_URL + "/site/avatar.png",
       user_id: "paymefans",
       username: "@paymefans",
@@ -91,6 +92,90 @@ async function main() {
         "view_paid_posts",
         "view_paid_media",
       ]),
+      UserWallet: {
+        create: {
+          wallet_id: uniqueUserId,
+          balance: 0,
+        },
+      },
+      UserPoints: {
+        create: {
+          conversion_rate: 0,
+          points: 0,
+        },
+      },
+      Settings: {
+        create: {
+          price_per_message: 0,
+          enable_free_message: true,
+          subscription_price: 0,
+          subscription_duration: "1 Month",
+          subscription_type: "free",
+        },
+      },
+    },
+  });
+  await prisma.user.upsert({
+    where: { email: "welcome@paymefans.com" },
+    update: {},
+    create: {
+      email: "welcome@paymefans.com",
+      fullname: "Welcome To Paymefans",
+      name: "Welcome To Paymefans",
+      password,
+      admin: true,
+      phone: "1234567892",
+      location: "Nigeria",
+      is_verified: true,
+      role: "admin",
+      profile_image: SERVER_ORIGINAL_URL + "/site/avatar.png",
+      user_id: "welcome",
+      username: "@welcome",
+      flags: [
+        "profile_hidden"
+      ],
+      UserWallet: {
+        create: {
+          wallet_id: uniqueUserId,
+          balance: 0,
+        },
+      },
+      UserPoints: {
+        create: {
+          conversion_rate: 0,
+          points: 0,
+        },
+      },
+      Settings: {
+        create: {
+          price_per_message: 0,
+          enable_free_message: true,
+          subscription_price: 0,
+          subscription_duration: "1 Month",
+          subscription_type: "free",
+        },
+      },
+    },
+  });
+  await prisma.user.upsert({
+    where: { email: "technical@paymefans.com" },
+    update: {},
+    create: {
+      email: "technical@paymefans.com",
+      fullname: "Technical Support",
+      name: "Technical Support",
+      password,
+      admin: true,
+      phone: "1234567891",
+      location: "Nigeria",
+      role: "admin",
+      is_verified: true,
+      profile_image: SERVER_ORIGINAL_URL + "/site/avatar.png",
+      user_id: "technical",
+      username: "@technical",
+      flags: [
+        "profile_hidden"
+      ],
       UserWallet: {
         create: {
           wallet_id: uniqueUserId,

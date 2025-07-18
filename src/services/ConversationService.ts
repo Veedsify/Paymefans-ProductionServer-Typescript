@@ -20,6 +20,7 @@ import _ from "lodash";
 import type { Messages } from "@prisma/client";
 import { UploadImageToS3 } from "@libs/UploadImageToS3";
 import tusUploader from "@libs/tus";
+import {Permissions, RBAC} from "@utils/FlagsConfig";
 
 export default class ConversationService {
   // Conversation Receiver
@@ -74,11 +75,18 @@ export default class ConversationService {
           username: true,
           profile_image: true,
           active_status: true,
+          is_verified: true,
           Settings: true,
+          flags: true,
         },
       });
 
-      return { receiver, error: false };
+      const receiverWithFlags = {
+        ...receiver,
+        isProfileHidden: RBAC.checkUserFlag(receiver?.flags, Permissions.PROFILE_HIDDEN)
+      }
+
+      return { receiver:receiverWithFlags, error: false };
     } catch (error) {
       console.error("Error fetching conversation receiver:", error);
       throw new Error("Failed to fetch conversation receiver");

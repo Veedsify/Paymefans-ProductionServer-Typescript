@@ -194,7 +194,8 @@ export class RBAC {
   static hasPermission(userRoles: string[], permission:string): boolean {
     return userRoles.some((role) => {
       const roleConfig = Object.values(Roles).find((r) => r.name === role);
-      return roleConfig?.permissions.includes(permission) || false;
+      // @ts-ignore
+      return roleConfig?.permissions?.includes(permission) || false;
     });
   }
 
