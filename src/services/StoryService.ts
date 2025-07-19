@@ -60,7 +60,7 @@ export default class StoryService {
           where: {
             created_at: {
               gte: new Date(
-                new Date().setHours(0, 0, 0, 0) - 24 * 60 * 60 * 1000
+                new Date().setHours(0, 0, 0, 0) - 24 * 60 * 60 * 1000,
               ),
             },
           },
@@ -100,7 +100,7 @@ export default class StoryService {
             acc[userId].stories.push(story);
             acc[userId].storyCount += 1;
             return acc;
-          }, {})
+          }, {}),
         );
 
         return {
@@ -116,7 +116,7 @@ export default class StoryService {
           user_id: { in: userIdsToFetch },
           created_at: {
             gte: new Date(
-              new Date().setHours(0, 0, 0, 0) - 24 * 60 * 60 * 1000
+              new Date().setHours(0, 0, 0, 0) - 24 * 60 * 60 * 1000,
             ),
           },
         },
@@ -155,7 +155,7 @@ export default class StoryService {
           acc[userId].stories.push(story);
           acc[userId].storyCount += 1;
           return acc;
-        }, {})
+        }, {}),
       );
 
       return {
@@ -240,7 +240,7 @@ export default class StoryService {
           } else {
             return 5000;
           }
-        })
+        }),
       );
 
       // Save stories
@@ -316,7 +316,7 @@ export default class StoryService {
                 });
               },
             });
-          }
+          },
         );
       });
 
@@ -336,6 +336,170 @@ export default class StoryService {
     } catch (error) {
       console.log(error);
       throw new Error("An error occurred while uploading stories");
+    }
+  }
+
+  // View Story
+  static async ViewStory({
+    storyMediaId,
+    viewerId,
+  }: {
+    storyMediaId: string;
+    viewerId: number;
+  }): Promise<{ error: boolean; message: string; data?: any }> {
+    try {
+      // Check if story media exists
+      const storyMedia = await query.storyMedia.findUnique({
+        where: { media_id: storyMediaId },
+        include: {
+          story: {
+            include: { user: true },
+          },
+        },
+      });
+
+      if (!storyMedia) {
+        return {
+          error: true,
+          message: "Story not found",
+        };
+      }
+
+      // Don't record view if user is viewing their own story
+      if (storyMedia.story.user_id === viewerId) {
+        return {
+          error: false,
+          message: "Own story view not recorded",
+        };
+      }
+
+      // Check if view already exists
+      const existingView = await query.storyView.findUnique({
+        where: {
+          story_media_id_viewer_id: {
+            story_media_id: storyMediaId,
+            viewer_id: viewerId,
+          },
+        },
+      });
+
+      if (existingView) {
+        return {
+          error: false,
+          message: "Story view already recorded",
+          data: existingView,
+        };
+      }
+
+      // Create new view record
+      const newView = await query.storyView.create({
+        data: {
+          story_media_id: storyMediaId,
+          viewer_id: viewerId,
+        },
+        include: {
+          viewer: {
+            select: {
+              id: true,
+              username: true,
+              name: true,
+              profile_image: true,
+            },
+          },
+        },
+      });
+
+      return {
+        error: false,
+        message: "Story view recorded successfully",
+        data: newView,
+      };
+    } catch (error) {
+      console.error(error);
+      throw new Error("An error occurred while recording story view");
+    }
+  }
+
+  // Get Story Views for a specific media
+  static async GetStoryViews({
+    storyMediaId,
+    userId,
+    cursor,
+  }: {
+    storyMediaId: string;
+    cursor?: number;
+    userId: number;
+  }): Promise<{
+    error: boolean;
+    message: string;
+    data?: any;
+    nextCursor?: number;
+  }> {
+    try {
+      // Check if story media exists and belongs to the user
+      const storyMedia = await query.storyMedia.findUnique({
+        where: { media_id: storyMediaId },
+        include: {
+          story: {
+            include: { user: true },
+          },
+        },
+      });
+
+      if (!storyMedia) {
+        return {
+          error: true,
+          message: "Story not found",
+        };
+      }
+
+      // Only allow story owner to view the views
+      if (storyMedia.story.user_id !== userId) {
+        return {
+          error: true,
+          message: "You can only view your own story views",
+        };
+      }
+
+      // Get all views for this story media
+      const views = await query.storyView.findMany({
+        where: {
+          ...(cursor && { id: { lt: cursor } }),
+          story_media_id: storyMediaId,
+        },
+        include: {
+          viewer: {
+            select: {
+              id: true,
+              username: true,
+              name: true,
+              profile_image: true,
+            },
+          },
+        },
+        take: 20,
+        orderBy: { id: "desc" },
+      });
+
+      const viewCount = views.length;
+      const nextCursor =
+        views.length === 20 ? views[views.length - 1].id : undefined;
+
+      console.log("nextCursor", nextCursor);
+
+      return {
+        error: false,
+        message: "Story views fetched successfully",
+        nextCursor,
+        data: {
+          views,
+          viewCount,
+          storyMediaId,
+        },
+      };
+    } catch (error) {
+      console.error(error);
+      throw new Error("An error occurred while fetching story views");
     }
   }
 }

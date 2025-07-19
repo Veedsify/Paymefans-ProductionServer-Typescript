@@ -77,3 +77,42 @@ export interface UploadStoryResponse {
     mimetype: string;
   }[];
 }
+
+export interface ViewStoryProps {
+  storyId: string;
+  viewerId: number;
+}
+
+export interface ViewStoryResponse {
+  error: boolean;
+  message: string;
+  data?: any;
+}
+
+export interface GetStoryViewsProps {
+  storyId: string;
+  userId: number;
+}
+
+export interface GetStoryViewsResponse {
+  error: boolean;
+  message: string;
+  data?: {
+    views: StoryViewWithViewer[];
+    viewCount: number;
+    storyId: string;
+  };
+}
+
+export interface StoryViewWithViewer {
+  id: number;
+  story_id: string;
+  viewer_id: number;
+  viewed_at: Date;
+  viewer: {
+    id: number;
+    username: string;
+    name: string;
+    profile_image: string;
+  };
+}

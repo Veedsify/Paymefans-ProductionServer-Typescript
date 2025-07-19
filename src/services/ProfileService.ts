@@ -28,7 +28,7 @@ class ProfileService {
   ): Promise<ProfileServiceResponse> {
     try {
       if (!username)
-        return { message: "User not found", status: false, user: undefined };
+        return { message: "User not found", status: false, user: undefined, profileImpressions: 0 };
 
       const cacheKey = `user_profile_${username}`;
       const cached = await redis.get(cacheKey);
@@ -83,7 +83,7 @@ class ProfileService {
         },
       });
 
-      if (!user) return { message: "User not found", status: false };
+      if (!user) return { message: "User not found", status: false, profileImpressions: 0 };
 
       const checkFlags = RBAC.checkUserFlag(user.flags, Permissions.PROFILE_HIDDEN);
 
@@ -91,6 +91,7 @@ class ProfileService {
         return {
           message: "User profile is hidden",
           status: false,
+          profileImpressions: 0,
           user: undefined,
         };
       }
@@ -103,9 +104,17 @@ class ProfileService {
           where: { user_id: authUserId, follower_id: user.id },
         }),
       ]);
+
+      const impression = await query.profileView.count({
+        where: {
+          profile_id: user.id
+        }
+      })
+
       const response = {
         message: "User found",
         status: true,
+        profileImpressions: impression,
         user: {
           ...user,
           isFollowing: !!iFollowThem,

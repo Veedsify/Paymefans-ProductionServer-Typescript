@@ -3,6 +3,7 @@ import { AuthUser } from "./user";
 export type ProfileServiceResponse = {
   message: string;
   status: boolean;
+  profileImpressions: number;
   user?: {
     id: number;
     username: string;

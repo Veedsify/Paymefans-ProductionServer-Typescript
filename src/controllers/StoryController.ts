@@ -43,7 +43,7 @@ export default class StoryController {
   // Save Story
   static async SaveStory(req: Request, res: Response): Promise<any> {
     try {
-      console.log(req.body)
+      console.log(req.body);
       const options = {
         stories: req.body.stories as StoryType[],
         user: req.user as AuthUser,
@@ -76,6 +76,71 @@ export default class StoryController {
       console.log(error);
       res.status(500).json({
         message: "An error occurred while uploading stories",
+        error: error.message,
+        status: false,
+      });
+    }
+  }
+
+  // View Story
+  static async ViewStory(req: Request, res: Response): Promise<any> {
+    try {
+      const { storyMediaId } = req.body;
+      const viewerId = req.user?.id!;
+
+      if (!storyMediaId) {
+        return res.status(400).json({
+          message: "Story Media ID is required",
+          status: false,
+        });
+      }
+
+      const result = await StoryService.ViewStory({ storyMediaId, viewerId });
+
+      if (result.error) {
+        return res.status(400).json(result);
+      }
+
+      res.status(200).json(result);
+    } catch (error: any) {
+      console.log(error);
+      res.status(500).json({
+        message: "An error occurred while recording story view",
+        error: error.message,
+        status: false,
+      });
+    }
+  }
+
+  // Get Story Views
+  static async GetStoryViews(req: Request, res: Response): Promise<any> {
+    try {
+      const { storyMediaId } = req.params;
+      const userId = req.user?.id!;
+      const cursor = parseInt(req.query.cursor as string);
+
+      if (!storyMediaId) {
+        return res.status(400).json({
+          message: "Story Media ID is required",
+          status: false,
+        });
+      }
+
+      const result = await StoryService.GetStoryViews({
+        storyMediaId,
+        userId,
+        cursor,
+      });
+
+      if (result.error) {
+        return res.status(400).json(result);
+      }
+
+      res.status(200).json(result);
+    } catch (error: any) {
+      console.log(error);
+      res.status(500).json({
+        message: "An error occurred while fetching story views",
         error: error.message,
         status: false,
       });

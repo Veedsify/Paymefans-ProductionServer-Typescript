@@ -118,6 +118,7 @@ model User {
   ProfileViewsReceived      ProfileView[]               @relation("ProfileViewed")
   ProfileViewsGiven         ProfileView[]               @relation("ProfileViewer")
   CommentViews              CommentView[]               @relation("CommentViews")
+  StoryViews                StoryView[]                 @relation("StoryViews")
 }
 
 model Participants {
@@ -217,19 +218,20 @@ model UserRepost {
 
 model UserStory {
   id         Int          @id @default(autoincrement())
-  story_id   String
+  story_id   String       @unique
   user_id    Int
   created_at DateTime     @default(now())
   updated_at DateTime     @updatedAt
   StoryMedia StoryMedia[]
+  StoryView  StoryView[]
   user       User         @relation(fields: [user_id], references: [id], onDelete: Cascade)
 
   @@index([user_id])
 }
 
 model StoryMedia {
-  id              Int       @id @default(autoincrement())
-  media_id        String
+  id              Int         @id @default(autoincrement())
+  media_id        String      @unique
   filename        String
   captionElements Json?
   story_content   String?
@@ -237,9 +239,25 @@ model StoryMedia {
   media_url       String?
   duration        Int?
   user_id         Int
-  created_at      DateTime  @default(now())
-  updated_at      DateTime  @updatedAt
-  story           UserStory @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  created_at      DateTime    @default(now())
+  updated_at      DateTime    @updatedAt
+  story           UserStory   @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  StoryView       StoryView[]
+}
+
+model StoryView {
+  id             Int        @id @default(autoincrement())
+  story_media_id String
+  viewer_id      Int
+  viewed_at      DateTime   @default(now())
+  story_media    StoryMedia @relation(fields: [story_media_id], references: [media_id], onDelete: Cascade)
+  viewer         User       @relation("StoryViews", fields: [viewer_id], references: [id], onDelete: Cascade)
+  UserStory      UserStory? @relation(fields: [userStoryId], references: [id])
+  userStoryId    Int?
+
+  @@unique([story_media_id, viewer_id]) // Prevent duplicate views from same user
+  @@index([story_media_id])
+  @@index([viewer_id])
 }
 
 model Post {
@@ -335,6 +353,7 @@ model PostComment {
   ReportComment          ReportComment[]
 
   @@index([post_id])
+  @@index([created_at])
 }
 
 model CommentImpression {
