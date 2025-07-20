@@ -97,4 +97,11 @@ interface SaveMessageToDBProps {
   seen: boolean;
   receiver: string;
   attachment?: string[];
+  story_reply?: {
+    story_media_id: string;
+    story_preview_url: string;
+    story_type: string;
+    story_owner_username: string;
+    story_owner_profile_image: string;
+  } | null;
 }

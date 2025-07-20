@@ -147,6 +147,7 @@ model Messages {
   seen            Boolean         @default(false)
   message         String
   attachment      Json?
+  story_reply     Json? // Store story reply data: { story_media_id, story_preview_url, story_type }
   created_at      DateTime        @default(now())
   updated_at      DateTime        @updatedAt
   conversationsId String?

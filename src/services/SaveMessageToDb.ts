@@ -17,7 +17,13 @@ class SaveMessageToDb {
         conversationId,
         message,
         attachment = [],
+        story_reply = null,
       } = data;
+
+      // Debug: Log story reply data
+      if (story_reply) {
+        console.log("📖 Story reply data received:", story_reply);
+      }
 
       const user = await query.user.findFirst({
         where: {
@@ -93,6 +99,7 @@ class SaveMessageToDb {
           seen: false,
           receiver_id: receiver,
           attachment: modifiedAttachment,
+          story_reply: story_reply,
         },
         select: {
           id: true,
