@@ -139,7 +139,7 @@ export default class ConversationService {
       });
 
       const nextCursor =
-        messages && messages.length > 0 && messages[messages.length - 1].id >= 1
+        messages && messages.length === messagesPerPage
           ? messages[messages.length - 1].id
           : undefined;
 

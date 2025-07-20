@@ -59,9 +59,7 @@ export default class StoryService {
         const randomStories = await query.userStory.findMany({
           where: {
             created_at: {
-              gte: new Date(
-                new Date().setHours(0, 0, 0, 0) - 24 * 60 * 60 * 1000,
-              ),
+              gte: new Date(Date.now() - 24 * 60 * 60 * 1000),
             },
           },
           take: 15,

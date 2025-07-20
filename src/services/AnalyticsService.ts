@@ -517,7 +517,7 @@ class AnalyticsService {
 
                 return {
                     id: post.id,
-                    thumbnail: post.UserMedia[0]?.url || "/site/avatar.png",
+                    thumbnail: post.UserMedia[0]?.url || "/site/banner.png",
                     likes: post.post_likes,
                     comments: post.post_comments,
                     views: realViews,

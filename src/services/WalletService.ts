@@ -267,7 +267,7 @@ export default class WalletService {
         }
       });
 
-      const nextCursor = history.length > 0 ? history[history.length - 1].id : null;
+      const nextCursor = history.length === 10 ? history[history.length - 1].id : null;
 
       return {
         status: "success",
