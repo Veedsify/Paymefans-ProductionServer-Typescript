@@ -13,7 +13,6 @@ import ModelsRedisPubSub from "@libs/ModelsRedisPubSub";
 import IoInstance from "@libs/io";
 import HookupRedisPubSub from "@libs/HookupRedisPubSub";
 import type { Request, Response } from "express";
-import ModelsJobs from "@jobs/ModelsJobs";
 import { connectDB } from "@utils/mongodb";
 import cookieParser from "cookie-parser";
 import InitializeQueueJobs from "@libs/InitializeQueueJobs";
@@ -79,10 +78,6 @@ app.use(express.json());
 // Basic route
 app.use("/api", api);
 app.use("/admin", admin);
-
-// Analytics Job
-ModelsJobs();
-
 //Bullmq For Emails,
 
 // Custom error-handling middleware

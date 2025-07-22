@@ -2,7 +2,7 @@ import type { NextFunction, Request, Response } from "express";
 import jwt from "jsonwebtoken";
 import type { AuthUser } from "../types/user";
 
-export default async function Auth(
+export async function Auth(
   req: Request,
   res: Response,
   next: NextFunction,
@@ -34,3 +34,6 @@ export default async function Auth(
     return res.status(403).json({ message: "Unauthorized", status: false });
   }
 }
+
+// Export the Auth function as default as well for backward compatibility
+export default Auth

@@ -99,7 +99,7 @@ class SaveMessageToDb {
           seen: false,
           receiver_id: receiver,
           attachment: modifiedAttachment,
-          story_reply: story_reply,
+          story_reply: story_reply as any,
         },
         select: {
           id: true,
@@ -115,7 +115,10 @@ class SaveMessageToDb {
         },
       });
       // Return the data
-      return newMessage;
+      return {
+        error: false,
+        ...newMessage,
+      };
     } catch (error) {
       console.error("❌ Error in SaveMessage:", error);
       const err = error as Error;
@@ -134,11 +137,6 @@ class SaveMessageToDb {
     receiver_id: string,
   ): Promise<DatabaseOperationResult> {
     try {
-      console.log("🔍 RemovePointsFromUser called:", {
-        sender_id,
-        receiver_id,
-      });
-
       const sender = await query.user.findFirst({
         where: {
           user_id: sender_id,
@@ -177,24 +175,6 @@ class SaveMessageToDb {
         },
       });
 
-      console.log("👤 Sender found:", {
-        exists: !!sender,
-        username: sender?.username,
-        hasUserPoints: !!sender?.UserPoints,
-        currentPoints: sender?.UserPoints?.points,
-        hasWallet: !!sender?.UserWallet,
-        walletId: sender?.UserWallet?.id,
-      });
-
-      console.log("👤 Receiver found:", {
-        exists: !!receiver,
-        username: receiver?.username,
-        hasSettings: !!receiver?.Settings,
-        pricePerMessage: receiver?.Settings?.price_per_message,
-        hasWallet: !!receiver?.UserWallet,
-        walletId: receiver?.UserWallet?.id,
-      });
-
       if (!sender || !receiver) {
         console.error("❌ Sender or receiver not found");
         return {
@@ -205,7 +185,6 @@ class SaveMessageToDb {
       }
 
       const receiverPrice = receiver?.Settings?.price_per_message || 0;
-      console.log("💰 Message price:", receiverPrice);
 
       // If receiver hasn't set a price, allow the message to go through
       if (receiverPrice === 0) {
@@ -217,10 +196,6 @@ class SaveMessageToDb {
 
       // Check if sender has enough points
       if (!sender?.UserPoints || senderPoints < receiverPrice) {
-        console.error("❌ Insufficient points:", {
-          senderPoints,
-          requiredPoints: receiverPrice,
-        });
         return {
           success: false,
           message: `You have ${senderPoints} points but need ${receiverPrice} points to send this message`,
@@ -229,8 +204,6 @@ class SaveMessageToDb {
           requiredPoints: receiverPrice,
         };
       }
-
-      console.log("💰 Processing point transaction...");
 
       // Update sender points (decrement)
       await query.user.update({
@@ -325,7 +298,6 @@ class SaveMessageToDb {
         } catch (error: any) {
           // If wallet already exists due to race condition, fetch it
           if (error.code === "P2002") {
-            console.log("📱 Wallet already exists for receiver, fetching...");
             const existingWallet = await query.userWallet.findUnique({
               where: { user_id: receiver.id },
               select: { id: true },
@@ -338,12 +310,6 @@ class SaveMessageToDb {
       }
 
       if (receiverPrice > 0 && senderWallet && receiverWallet) {
-        console.log("💰 Creating transaction records...", {
-          senderWallet,
-          receiverWallet,
-          amount: receiverPrice,
-        });
-
         const optionsForSender = {
           transactionId: purchase_id,
           transaction: `Message to ${receiver?.username} with id ${receiver_id}`,

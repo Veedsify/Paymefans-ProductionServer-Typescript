@@ -215,6 +215,7 @@ export default class WithdrawService {
                 status: "pending",
             }
         });
+
         if (!CreateWithdrawal) {
             return {
                 error: true,
@@ -237,7 +238,7 @@ export default class WithdrawService {
                 message: `Hi, ${GetSinglename(user.name)}, your withdrawal request of ₦${amount.toLocaleString()} has been initiated successfully.`,
                 read: false,
                 notification_id: `NOT${GenerateUniqueId()}`,
-                url: "/withdraw/history",
+                url: "/wallet/withdraw/history",
             }
         });
         const sendWithDrawalConfirmation = await EmailService.ConfirmWithdrawalEmail({

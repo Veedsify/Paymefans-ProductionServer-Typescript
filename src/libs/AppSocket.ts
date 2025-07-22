@@ -2,16 +2,17 @@ import type { SocketUser } from "types/socket";
 import { redis } from "./RedisStore";
 import SocketService from "@services/SocketService";
 import EmitActiveUsers from "@jobs/EmitActiveUsers";
-import query from "@utils/prisma";
+import HandleLocationUpdate from "./socket-handlers/LocationHandler";
 
 async function AppSocket(io: any) {
   io.on("connection", (socket: any) => {
     let userRoom = "";
+    const username = socket.handshake.query.username as string;
 
     let user: SocketUser = {
       socketId: socket.id,
       userId: "",
-      username: "",
+      username: username,
     };
 
     const AddToUserRoom = async (data: any) => {
@@ -21,18 +22,19 @@ async function AppSocket(io: any) {
       await redis.set(`user:${user.userId}:room`, data);
     };
 
-    const username = socket.handshake.query.username as string;
     if (!username) {
       console.error("No username provided in socket connection");
       return;
     }
 
-    if (username.startsWith("support-agent-")) {
-      socket.join("support-agents");
-      console.log(`Support agent ${username} joined the support-agents room.`);
-    }
-
-    console.log("🔌 Socket connected:", username, "Socket ID:", socket.id);
+    console.log(
+      "🔌 Socket connected:",
+      username,
+      "Socket ID:",
+      socket.id,
+      "Time:",
+      new Date().toISOString(),
+    );
 
     // Initialize user object and immediately emit active users
     SocketService.HandleUserActive(username, socket);
@@ -72,9 +74,13 @@ async function AppSocket(io: any) {
       }),
     );
     socket.on("get-active-users", () => EmitActiveUsers(io));
-    socket.on("user-connected", (data: any) =>
-      SocketService.HandleUserConnected(socket, user, data),
-    );
+    socket.on("user-connected", (data: any) => {
+      user = {
+        ...user,
+        userId: data.userId,
+      };
+      return SocketService.HandleUserConnected(socket, user, data);
+    });
     socket.on("new-message", (data: any) => {
       SocketService.HandleMessage(data, socket, userRoom, user, io);
     });
@@ -83,6 +89,43 @@ async function AppSocket(io: any) {
     });
     socket.on("restoreNotifications", (data: { userId: string }) => {
       SocketService.HandleRestoreNotifications(socket, data.userId);
+    });
+
+    // Handle location updates for hookup feature
+    socket.on(
+      "user-location",
+      (data: { latitude: number; longitude: number }) => {
+        if (user && username) {
+          HandleLocationUpdate(socket, data, username);
+        }
+      },
+    );
+
+    // Model & Hookup Pooling
+    socket.on("pool-models-and-hookup", () =>
+      SocketService.HandleModelHookupPooling(username),
+    );
+
+    socket.on("disconnect", async (reason: any) => {
+      console.log(
+        "🔌 Socket disconnected:",
+        username,
+        "Socket ID:",
+        socket.id,
+        "Reason:",
+        reason,
+        "Time:",
+        new Date().toISOString(),
+      );
+
+      // Remove user from Redis
+      await redis.hdel("activeUsers", user.userId);
+      // Emit updated list
+      const activeUsers = await redis.hgetall("activeUsers");
+      io.emit(
+        "active_users",
+        Object.values(activeUsers).map((v) => JSON.parse(v)),
+      );
     });
   });
 }

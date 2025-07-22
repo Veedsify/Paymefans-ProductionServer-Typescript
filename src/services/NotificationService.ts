@@ -8,14 +8,14 @@ export interface CreateNotificationData {
   user_id: string;
   message: string;
   action?:
-    | "follow"
-    | "like"
-    | "purchase"
-    | "comment"
-    | "repost"
-    | "message"
-    | "live"
-    | "sparkle";
+  | "follow"
+  | "like"
+  | "purchase"
+  | "comment"
+  | "repost"
+  | "message"
+  | "live"
+  | "sparkle";
   url?: string | null;
 }
 
@@ -25,14 +25,14 @@ export interface NotificationResult {
   user_id: number;
   message: string;
   action:
-    | "follow"
-    | "like"
-    | "purchase"
-    | "comment"
-    | "repost"
-    | "message"
-    | "live"
-    | "sparkle";
+  | "follow"
+  | "like"
+  | "purchase"
+  | "comment"
+  | "repost"
+  | "message"
+  | "live"
+  | "sparkle";
   url: string | null;
   read: boolean;
   created_at: Date;
@@ -72,10 +72,6 @@ export default class NotificationService {
       hasMore: hasMore,
       data: notifications,
     };
-  }
-  catch(err: any) {
-    console.log(err);
-    throw new Error(err);
   }
   // Read Notification
   // This function is used to read the notification

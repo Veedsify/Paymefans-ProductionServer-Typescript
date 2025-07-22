@@ -16,11 +16,6 @@ import type {
   ValidateModelPaymentResponse,
 } from "../types/models";
 
-const apiKey = process.env.GETSTREAM_API_KEY as string;
-const secret = process.env.GETSTREAM_API_SECRET as string;
-import { StreamClient } from "@stream-io/node-sdk";
-
-const client = new StreamClient(apiKey, secret, { timeout: 6000 });
 import query from "@utils/prisma";
 import { GenerateUniqueId } from "@utils/GenerateUniqueId";
 import { redis } from "@libs/RedisStore";
@@ -39,6 +34,7 @@ export default class ModelService {
                   FROM "User"
                   INNER JOIN "Model" ON "User"."id" = "Model"."user_id"
                   WHERE "User"."is_model" = true
+                  AND "User".active_status = true
                   AND "Model"."verification_status" = true
                   ORDER BY RANDOM()
                   LIMIT ${limit};
@@ -175,6 +171,7 @@ export default class ModelService {
                              INNER JOIN Model ON User.id = Model.user_id
                              LEFT JOIN Settings ON User.id = Settings.user_id
                     WHERE Model.verification_status = true
+                      AND "User".active_status = true
                       AND Model.hookup = true
                       AND User.id != ${user.id}
                     ORDER BY RAND()
@@ -319,11 +316,6 @@ export default class ModelService {
       name: name,
       image: (process.env.SERVER_ORIGINAL_URL as string) + image,
     };
-    await client.upsertUsers({
-      users: {
-        [newUser.id]: newUser,
-      },
-    });
     return { newUser, create: true };
   }
 

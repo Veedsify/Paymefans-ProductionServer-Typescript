@@ -8,49 +8,48 @@ datasource db {
 }
 
 model User {
-  id                Int           @id @default(autoincrement())
-  email             String        @unique
-  name              String
-  password          String
-  fullname          String
-  user_id           String        @unique
-  username          String        @unique
-  admin             Boolean       @default(false)
-  role              UserRole      @default(fan)
-  is_active         Boolean       @default(false)
-  is_verified       Boolean       @default(false)
-  is_email_verified Boolean       @default(false)
-  is_model          Boolean       @default(false)
-  email_verify_code String?
-  email_verify_time DateTime?
-  is_phone_verified Boolean       @default(false)
-  phone             String        @unique
-  profile_image     String?       @default("/site/avatar.png")
-  profile_banner    String?       @default("/site/banner.png")
-  bio               String?
-  location          String?
-  website           String?
-  country           String?
-  state             String?
-  city              String?
-  zip               String?
-  currency          String?       @default("NGN")
-  post_watermark    String?
-  total_followers   Int           @default(0)
-  total_following   Int           @default(0)
-  total_subscribers Int           @default(0)
-  active_status     Boolean       @default(true)
-  max_post_count    Int           @default(0)
-  hasPin            Boolean       @default(false)
-  watermarkEnabled  Boolean       @default(true)
-  flags             Json?         @default("[]")
-  created_at        DateTime      @default(now())
-  updated_at        DateTime      @updatedAt
-  show_active       Boolean       @default(true)
-  should_delete     Boolean       @default(false)
-  delete_date       DateTime?
-  ActivityLog       ActivityLog[]
-
+  id                        Int                         @id @default(autoincrement())
+  email                     String                      @unique
+  name                      String
+  password                  String
+  fullname                  String
+  user_id                   String                      @unique
+  username                  String                      @unique
+  admin                     Boolean                     @default(false)
+  role                      UserRole                    @default(fan)
+  is_active                 Boolean                     @default(false)
+  is_verified               Boolean                     @default(false)
+  is_email_verified         Boolean                     @default(false)
+  is_model                  Boolean                     @default(false)
+  email_verify_code         String?
+  email_verify_time         DateTime?
+  is_phone_verified         Boolean                     @default(false)
+  phone                     String                      @unique
+  profile_image             String?                     @default("/site/avatar.png")
+  profile_banner            String?                     @default("/site/banner.png")
+  bio                       String?
+  location                  String?
+  website                   String?
+  country                   String?
+  state                     String?
+  city                      String?
+  zip                       String?
+  currency                  String?                     @default("NGN")
+  post_watermark            String?
+  total_followers           Int                         @default(0)
+  total_following           Int                         @default(0)
+  total_subscribers         Int                         @default(0)
+  active_status             Boolean                     @default(true)
+  max_post_count            Int                         @default(0)
+  hasPin                    Boolean                     @default(false)
+  watermarkEnabled          Boolean                     @default(true)
+  flags                     Json?                       @default("[]")
+  created_at                DateTime                    @default(now())
+  updated_at                DateTime                    @updatedAt
+  show_active               Boolean                     @default(true)
+  should_delete             Boolean                     @default(false)
+  delete_date               DateTime?
+  ActivityLog               ActivityLog[]
   Cart                      Cart[]
   CommentImpression         CommentImpression[]
   Followers                 Follow[]                    @relation("Followers")
@@ -119,6 +118,7 @@ model User {
   ProfileViewsGiven         ProfileView[]               @relation("ProfileViewer")
   CommentViews              CommentView[]               @relation("CommentViews")
   StoryViews                StoryView[]                 @relation("StoryViews")
+  UserLocation              UserLocation?
 }
 
 model Participants {
@@ -751,6 +751,22 @@ model UserSubscriptionHistory {
   updated_at      DateTime @updatedAt
   model           User     @relation("UserSubscriptionHistory", fields: [model_id], references: [id], onDelete: Cascade)
   user            User     @relation("UserSubscription", fields: [user_id], references: [id], onDelete: Cascade)
+}
+
+model UserLocation {
+  id         Int      @id @default(autoincrement())
+  user_id    Int      @unique
+  latitude   Float    @default(0.0)
+  longitude  Float    @default(0.0)
+  city       String?
+  state      String?
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  // Relations
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id])
 }
 
 model GlobalPointsBuy {

@@ -372,12 +372,10 @@ export default class StoryService {
       }
 
       // Check if view already exists
-      const existingView = await query.storyView.findUnique({
+      const existingView = await query.storyView.findFirst({
         where: {
-          story_media_id_viewer_id: {
-            story_media_id: storyMediaId,
-            viewer_id: viewerId,
-          },
+          story_media_id: storyMediaId,
+          viewer_id: viewerId,
         },
       });
 

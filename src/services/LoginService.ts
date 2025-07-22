@@ -95,7 +95,7 @@ export default class LoginService {
       } else {
         const token = await Authenticate(rest);
         await TriggerModels();
-        await TriggerHookups(user.id);
+        await TriggerHookups(user.username);
 
         // Save Login History
         try {

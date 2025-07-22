@@ -26,6 +26,7 @@ import search from "@routes/users/search/search";
 import groups from "@routes/users/groups/groups";
 import support from "@routes/users/support/support";
 import analytics from "@routes/users/analytics/analytics";
+import hookup from "@routes/users/hookup/hookup";
 const api = express.Router();
 
 // Authentication
@@ -84,4 +85,6 @@ api.use("/groups", groups);
 api.use("/support", support);
 // Analytics
 api.use("/analytics", analytics);
+// Hookup
+api.use("/hookup", hookup);
 export default api;

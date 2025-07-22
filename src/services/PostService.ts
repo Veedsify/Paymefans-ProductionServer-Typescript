@@ -931,6 +931,14 @@ export default class PostService {
       const validPage =
         Number.isNaN(parsedPage) || parsedPage <= 0 ? 1 : parsedPage;
 
+      const user = await query.user.findUnique({
+        where: {
+          id: Number(authUserId),
+        },
+      });
+
+      if (!user) throw new Error("User not found");
+
       const posts = await query.post.findMany({
         where: {
           user_id: Number(userId),
@@ -1145,8 +1153,8 @@ export default class PostService {
           likedByme: !!postLike,
           wasReposted: !!isReposted,
           hasPaid:
-            (!!isPaid || checkIfUserCanViewPaidPost) &&
-            post.post_audience !== "price",
+            checkIfUserCanViewPaidPost ||
+            (!!isPaid && post.post_audience !== "price"),
           isSubscribed:
             !!isSubscribed ||
             checkIfUserCanViewPaidPost ||

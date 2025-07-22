@@ -16,6 +16,8 @@ import NotificationService from "./NotificationService";
 import SaveMessageToDb from "./SaveMessageToDb";
 import EmailService from "./EmailService";
 import EmitActiveUsers from "@jobs/EmitActiveUsers";
+import TriggerModels from "@jobs/Models";
+import TriggerHookups from "@jobs/Hookup";
 
 // --- Support Chat Handlers ---
 // import SupportChatSession from "../models/SupportChatSession";
@@ -207,24 +209,14 @@ export default class SocketService {
     io: any,
   ) {
     try {
-      console.log("🚀 HandleMessage called with data:", {
-        message_id: data.message_id,
-        sender_id: data.sender_id,
-        receiver_id: data.receiver_id,
-        conversationId: data.conversationId,
-        userRoom,
-        socketId: socket.id,
-      });
-
       const messageResult = await SaveMessageToDb.SaveMessage(data);
+
       if (
         messageResult &&
-        typeof messageResult === "object" &&
         "success" in messageResult &&
-        !messageResult.success
+        messageResult.success === false
       ) {
         // Handle specific error cases
-        console.error("❌ SaveMessageToDb error:", messageResult);
 
         if (messageResult.error === "INSUFFICIENT_POINTS") {
           const errorResponse: MessageErrorResponse = {
@@ -488,4 +480,9 @@ export default class SocketService {
     }
   }
 
+  // Model & Hookup Pooling
+  static async HandleModelHookupPooling(username: string): Promise<any> {
+    TriggerModels();
+    TriggerHookups(username);
+  }
 }

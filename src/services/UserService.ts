@@ -100,6 +100,13 @@ export default class UserService {
         where: {
           code: code,
         },
+        include: {
+          user: {
+            select: {
+              username: true,
+            }
+          }
+        }
       });
 
       if (!verify) {
@@ -126,7 +133,7 @@ export default class UserService {
 
       const token = await Authenticate(user as AuthUser);
       await TriggerModels();
-      await TriggerHookups(verify.user_id);
+      await TriggerHookups(verify.user.username);
 
       // Save Login History
       try {

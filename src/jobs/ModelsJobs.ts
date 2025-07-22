@@ -1,8 +1,6 @@
 // Queue setup
 import { Queue, Worker } from "bullmq";
 import { redis } from "@libs/RedisStore";
-import TriggerModels from "@jobs/Models";
-import TriggerHookups from "@jobs/Hookup";
 
 // Create queue using the same Redis connection
 const queue = new Queue("model-hookup-sync", {
@@ -12,6 +10,7 @@ const queue = new Queue("model-hookup-sync", {
         backoff: 5000,
     }
 });
+
 let queueCount: number = 0;
 
 // Create worker with the same Redis connection (outside the function)
@@ -19,8 +18,6 @@ const worker = new Worker(
     "model-hookup-sync",
     async (_) => {
         // Trigger Model Jobs
-        await TriggerModels();
-        await TriggerHookups(1);
     },
     { connection: redis }
 );
