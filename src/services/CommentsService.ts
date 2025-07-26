@@ -5,6 +5,8 @@ import ParseContentToHtml from "@utils/ParseHtmlContent";
 import query from "@utils/prisma";
 import type { LikeCommentResponse, NewCommentResponse } from "types/comments";
 import type { AuthUser } from "types/user";
+import { MentionService } from "./MentionService";
+import { MentionNotificationQueue } from "@jobs/MentionNotificationJob";
 export default class CommentsService {
     // New Comment
     // This is for creating a new comment on a post
@@ -100,6 +102,39 @@ export default class CommentsService {
                     },
                 },
             });
+
+            // Process mentions if any
+            if (mentions && mentions !== "[]") {
+
+                try {
+                    const parsedMentions = JSON.parse(mentions);
+                    const validMentions = await MentionService.validateMentions(parsedMentions);
+
+                    if (validMentions.length > 0) {
+                        await MentionNotificationQueue.add(
+                            "processMentions",
+                            {
+                                mentions: validMentions,
+                                mentioner: {
+                                    id: user.id,
+                                    username: user.username,
+                                    name: user.name || user.username,
+                                },
+                                type: "comment",
+                                contentId: post_id,
+                                content: comment,
+                            },
+                            {
+                                removeOnComplete: true,
+                                attempts: 3,
+                            }
+                        );
+                    }
+                } catch (error) {
+                    console.error("Error processing comment mentions:", error);
+                }
+            }
+
             return {
                 status: true,
                 error: false,

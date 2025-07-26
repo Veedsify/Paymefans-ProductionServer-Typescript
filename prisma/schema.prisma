@@ -77,6 +77,7 @@ model User {
   PostLike                  PostLike[]
   PostShared                PostShared[]
   PurchasedPosts            PurchasedPosts[]
+  AutomatedMessage          AutomatedMessage[]
   ReportComment             ReportComment[]
   ReportLive                ReportLive[]
   ReportMessage             ReportMessage[]
@@ -1335,6 +1336,21 @@ model PurchasedPosts {
   @@index([user_id])
 }
 
+model AutomatedMessage {
+  id           Int                  @id @default(autoincrement())
+  user_id      Int
+  message_type AutomatedMessageType
+  message_text String?
+  attachments  Json?                @default("[]")
+  is_active    Boolean              @default(false)
+  created_at   DateTime             @default(now())
+  updated_at   DateTime             @updatedAt
+  user         User                 @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@unique([user_id, message_type])
+  @@index([user_id])
+}
+
 enum WithdrawalRequestStatus {
   pending
   processing
@@ -1412,6 +1428,11 @@ enum GroupMemberRole {
   ADMIN
   MODERATOR
   MEMBER
+}
+
+enum AutomatedMessageType {
+  followers
+  subscribers
 }
 
 enum JoinRequestStatus {

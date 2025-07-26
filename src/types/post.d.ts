@@ -378,9 +378,9 @@ export interface GetMentionsResponse {
 }
 
 export interface MentionUser {
-  id: string;
+  id: number;
   username: string;
-  displayName: string;
+  name: string;
   avatar?: string;
   isVerified?: boolean;
 }

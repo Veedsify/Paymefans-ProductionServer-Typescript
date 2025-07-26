@@ -10,6 +10,7 @@ import type {
 import { GenerateUniqueId } from "@utils/GenerateUniqueId";
 import { UserTransactionQueue } from "@jobs/UserTransactionJob";
 import EmailService from "./EmailService";
+import AutomatedMessageTriggerService from "./AutomatedMessageTriggerService";
 
 export default class SubscriberService {
   static async CheckSubscriber({
@@ -245,6 +246,11 @@ export default class SubscriberService {
               },
             },
           },
+        });
+
+        // Send automated message for new subscriber (don't await to avoid blocking)
+        AutomatedMessageTriggerService.sendSubscriberMessage(profileData.id, userdata.id).catch(error => {
+          console.error("Failed to send automated subscriber message:", error);
         });
 
         return true;

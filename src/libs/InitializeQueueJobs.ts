@@ -4,8 +4,12 @@ import {
 } from "@jobs/ActiveUserJobs";
 import { deleteUserQueue } from "@jobs/DeleteAccountMedia";
 import { pruneInactiveSubscribersQueue } from "@jobs/ModelSubscriberJobs";
+import { mentionWorker } from "@jobs/MentionNotificationJob";
 
 async function InitializeQueueJobs() {
+  // Initialize mention notification worker (no recurring jobs needed)
+  console.log("Mention notification worker initialized");
+
   // Emit active users to the socket - reduced frequency since we now use event-driven updates
   await activeUsersQueue.add(
     "activeUsersQueue",

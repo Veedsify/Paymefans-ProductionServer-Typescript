@@ -35,5 +35,6 @@ export async function Auth(
   }
 }
 
+
 // Export the Auth function as default as well for backward compatibility
 export default Auth

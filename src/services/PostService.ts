@@ -38,6 +38,8 @@ import GetSinglename from "@utils/GetSingleName";
 import { redis } from "@libs/RedisStore";
 import ParseContentToHtml from "@utils/ParseHtmlContent";
 import { Permissions, RBAC } from "@utils/FlagsConfig";
+import { MentionService } from "./MentionService";
+import { MentionNotificationQueue } from "@jobs/MentionNotificationJob";
 
 export default class PostService {
   // Create Post
@@ -160,6 +162,33 @@ export default class PostService {
           },
         },
       });
+
+      // Process mentions if any
+      if (mentions && mentions.length > 0) {
+
+        const validMentions = await MentionService.validateMentions(mentions);
+
+        if (validMentions.length > 0) {
+          await MentionNotificationQueue.add(
+            "processMentions",
+            {
+              mentions: validMentions,
+              mentioner: {
+                id: user.id,
+                username: user.username,
+                name: user.name || user.username,
+              },
+              type: "post",
+              contentId: postId,
+              content: content,
+            },
+            {
+              removeOnComplete: true,
+              attempts: 3,
+            }
+          );
+        }
+      }
 
       return {
         status: true,
@@ -1154,7 +1183,8 @@ export default class PostService {
           wasReposted: !!isReposted,
           hasPaid:
             checkIfUserCanViewPaidPost ||
-            (!!isPaid && post.post_audience !== "price"),
+            post.post_audience !== "price" ||
+            !!isPaid,
           isSubscribed:
             !!isSubscribed ||
             checkIfUserCanViewPaidPost ||

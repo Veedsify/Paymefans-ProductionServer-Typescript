@@ -1,6 +1,7 @@
 import query from "@utils/prisma"
 import type { CheckFollowerProps, CheckFollowerResponse, CheckUserIsFollowingResponse, FollowUserResponse, GetAllFollowersProps, GetAllFollowersResponse } from "../types/follower";
 import { GenerateUniqueId } from "@utils/GenerateUniqueId";
+import AutomatedMessageTriggerService from "./AutomatedMessageTriggerService";
 
 export default class FollowerService {
     // Check Follower
@@ -181,6 +182,14 @@ export default class FollowerService {
                     },
                 });
             });
+
+            // Send automated message if user just followed (not unfollowed)
+            if (status) {
+                // Trigger automated message in background (don't await to avoid blocking)
+                AutomatedMessageTriggerService.sendFollowerMessage(profileId, userId).catch(error => {
+                    console.error("Failed to send automated follower message:", error);
+                });
+            }
 
             return {
                 status: true,

@@ -19,6 +19,7 @@ import { UserNotificationQueue } from "@jobs/UserNotificaton";
 import getSingleName from "@utils/GetSingleName";
 import { UserTransactionQueue } from "@jobs/UserTransactionJob";
 import { Permissions, RBAC } from "@utils/FlagsConfig";
+import AutomatedMessageTriggerService from "./AutomatedMessageTriggerService";
 
 class ProfileService {
   // Get Profile
@@ -87,7 +88,7 @@ class ProfileService {
 
       const checkFlags = RBAC.checkUserFlag(user.flags, Permissions.PROFILE_HIDDEN);
 
-      if (checkFlags && user.id !== authUserId) { 
+      if (checkFlags && user.id !== authUserId) {
         return {
           message: "User profile is hidden",
           status: false,
@@ -627,6 +628,7 @@ class ProfileService {
             data: { total_following: { increment: 1 } },
           }),
         ]);
+        await AutomatedMessageTriggerService.sendFollowerMessage(userId, authUser.id)
         await UserNotificationQueue.add("new-follow-notification", {
           user_id: userId,
           url: `/${authUser?.username}`,

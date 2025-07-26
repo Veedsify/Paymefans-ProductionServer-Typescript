@@ -27,6 +27,8 @@ import groups from "@routes/users/groups/groups";
 import support from "@routes/users/support/support";
 import analytics from "@routes/users/analytics/analytics";
 import hookup from "@routes/users/hookup/hookup";
+import report from "@routes/users/report/report";
+import automatedMessages from "@routes/users/automated-messages/automated-messages";
 const api = express.Router();
 
 // Authentication
@@ -87,4 +89,8 @@ api.use("/support", support);
 api.use("/analytics", analytics);
 // Hookup
 api.use("/hookup", hookup);
+// Report
+api.use("/report", report);
+// Automated Messages
+api.use("/automated-messages", automatedMessages);
 export default api;
