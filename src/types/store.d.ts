@@ -14,6 +14,7 @@ export type StoreProduct = {
   }[];
   sizes: {
     size: {
+      id: number;
       name: string;
     };
   }[];
@@ -25,7 +26,6 @@ export type StoreSingleProductResponse = {
   data: StoreProduct | null;
 };
 
-
 export type StoreAllProductsResponse = {
   error: boolean;
   message: string;
@@ -33,9 +33,9 @@ export type StoreAllProductsResponse = {
   hasMore: boolean;
   perPage: number;
   data: StoreProduct[];
-}
+};
 
 export type AllProductProps = {
   page: string;
   limit: string;
-}
+};

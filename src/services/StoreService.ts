@@ -20,7 +20,7 @@ export default class StoreService {
             if (err) return reject(err);
             resolve(reply as string | null);
           });
-        }
+        },
       );
 
       if (cachedProducts) {
@@ -52,6 +52,7 @@ export default class StoreService {
             select: {
               size: {
                 select: {
+                  id: true,
                   name: true,
                 },
               },
@@ -83,7 +84,7 @@ export default class StoreService {
           ...product,
           images: modifiedImages,
         };
-      })
+      });
 
       const response = {
         error: false,
@@ -105,7 +106,7 @@ export default class StoreService {
   }
 
   static async SingleProduct(
-    productId: string
+    productId: string,
   ): Promise<StoreSingleProductResponse> {
     // Check if the productId is valid
     try {
@@ -135,6 +136,7 @@ export default class StoreService {
             select: {
               size: {
                 select: {
+                  id: true,
                   name: true,
                 },
               },
@@ -151,7 +153,6 @@ export default class StoreService {
           data: null,
         };
       }
-
 
       const modifiedProductDetails = {
         ...productDetails,

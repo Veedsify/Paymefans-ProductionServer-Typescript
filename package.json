@@ -12,7 +12,8 @@
     "start": "node -r tsconfig-paths/register ./dist/app.js",
     "dev2": "nodemon --exec tsx -r tsconfig-paths/register src/app.ts",
     "dev": "bun --watch ./src/app.ts --ext .ts",
-    "ngrok": "ngrok http --url=current-early-hippo.ngrok-free.app 3009"
+    "ngrok": "ngrok http --url=current-early-hippo.ngrok-free.app 3009",
+    "cleanup-checkouts": "tsx -r tsconfig-paths/register src/scripts/cleanup-expired-checkouts.ts"
   },
   "keywords": [],
   "author": "",
@@ -43,6 +44,7 @@
     "@types/fluent-ffmpeg": "^2.1.27",
     "@types/lodash": "^4.17.20",
     "@types/module-alias": "^2.0.4",
+    "@types/node-cron": "^3.0.11",
     "@types/sanitize-html": "^2.16.0",
     "axios": "^1.10.0",
     "bcryptjs": "^3.0.2",
@@ -63,6 +65,7 @@
     "mongoose": "^8.16.2",
     "morgan": "^1.10.0",
     "multer": "^1.4.5-lts.2",
+    "node-cron": "^4.2.1",
     "nodemailer": "^6.10.1",
     "nodemon": "^3.1.10",
     "sanitize-html": "^2.17.0",

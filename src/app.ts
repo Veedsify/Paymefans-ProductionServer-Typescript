@@ -16,6 +16,7 @@ import type { Request, Response } from "express";
 import { connectDB } from "@utils/mongodb";
 import cookieParser from "cookie-parser";
 import InitializeQueueJobs from "@libs/InitializeQueueJobs";
+import { CronJobService } from "@services/CronJobService";
 const { ADMIN_PANEL_URL, VERIFICATION_URL, APP_URL } = process.env;
 
 const app = express();
@@ -62,6 +63,8 @@ IoInstance.init(server).then(async (instance) => {
   await ModelsRedisPubSub(instance);
   // Hookup Redis PubSub
   await HookupRedisPubSub(instance);
+  // Initialize Cron Jobs
+  CronJobService.initialize();
 });
 
 // Connect to MongoDB
@@ -97,6 +100,7 @@ app.use((err: any, _: Request, res: Response, next: NextFunction) => {
 // Graceful shutdown
 process.on("SIGINT", () => {
   console.log("Shutting down gracefully...");
+  CronJobService.destroy();
   server.close(() => {
     console.log("Server closed.");
     process.exit(0);

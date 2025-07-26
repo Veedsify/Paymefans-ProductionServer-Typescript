@@ -67,6 +67,7 @@ model User {
   ModelSubscriptionPack     ModelSubscriptionPack?
   Notifications             Notifications[]
   Order                     Order[]
+  PendingCheckout           PendingCheckout[]
   PointConversionRateUsers  PointConversionRateUsers[]
   Post                      Post[]
   PostComment               PostComment[]
@@ -864,24 +865,25 @@ model ProductSize {
   description        String?
   created_at         DateTime           @default(now())
   Cart               Cart[]
+  OrderItem          OrderItem[]
   product_size_links ProductSizePivot[]
 }
 
 model Product {
-  id           Int                @id @default(autoincrement())
-  product_id   String             @unique
-  user_id      Int
-  name         String
-  description  String?
-  price        Float
-  category_id  Int
-  instock      Int
-  Cart         Cart[]
-  OrderProduct OrderProduct[]
-  category     ProductCategory    @relation(fields: [category_id], references: [id], onDelete: Cascade)
-  images       ProductImages[]
-  sizes        ProductSizePivot[]
-  WishList     WishList[]
+  id          Int                @id @default(autoincrement())
+  product_id  String             @unique
+  user_id     Int
+  name        String
+  description String?
+  price       Float
+  category_id Int
+  instock     Int
+  Cart        Cart[]
+  OrderItem   OrderItem[]
+  category    ProductCategory    @relation(fields: [category_id], references: [id], onDelete: Cascade)
+  images      ProductImages[]
+  sizes       ProductSizePivot[]
+  WishList    WishList[]
 }
 
 model ProductSizePivot {
@@ -927,28 +929,53 @@ model WishList {
 }
 
 model Order {
-  id             Int            @id @default(autoincrement())
-  order_id       String         @unique
-  transaction_id String         @unique
-  user_id        Int
-  total_amount   Float
-  paid_status    Boolean        @default(false)
-  created_at     DateTime       @default(now())
-  updated_at     DateTime       @updatedAt
-  user           User           @relation(fields: [user_id], references: [id], onDelete: Cascade)
-  OrderProduct   OrderProduct[]
+  id                Int           @id @default(autoincrement())
+  order_id          String        @unique
+  user_id           Int
+  total_amount      Float
+  status            OrderStatus   @default(pending)
+  payment_status    PaymentStatus @default(pending)
+  payment_reference String?
+  shipping_address  Json
+  created_at        DateTime      @default(now())
+  updated_at        DateTime      @updatedAt
+  user              User          @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  items             OrderItem[]
+
+  @@index([user_id])
+  @@index([status])
+  @@index([payment_reference])
 }
 
-model OrderProduct {
-  id         Int         @id @default(autoincrement())
-  order_id   Int
-  product_id Int
+model OrderItem {
+  id         Int          @id @default(autoincrement())
+  order_id   String
+  product_id String
   quantity   Int
-  status     OrderStatus
-  created_at DateTime    @default(now())
-  updated_at DateTime    @updatedAt
-  order      Order       @relation(fields: [order_id], references: [id], onDelete: Cascade)
-  product    Product     @relation(fields: [product_id], references: [id], onDelete: Cascade)
+  price      Float
+  size_id    Int?
+  created_at DateTime     @default(now())
+  updated_at DateTime     @updatedAt
+  order      Order        @relation(fields: [order_id], references: [order_id], onDelete: Cascade)
+  product    Product      @relation(fields: [product_id], references: [product_id], onDelete: Cascade)
+  size       ProductSize? @relation(fields: [size_id], references: [id], onDelete: SetNull)
+
+  @@index([order_id])
+  @@index([product_id])
+}
+
+model PendingCheckout {
+  id         Int      @id @default(autoincrement())
+  reference  String   @unique
+  user_id    Int
+  order_data Json
+  created_at DateTime @default(now())
+  expires_at DateTime
+  user       User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([reference])
+  @@index([user_id])
+  @@index([expires_at])
 }
 
 model HelpCategory {
@@ -1365,6 +1392,12 @@ enum OrderStatus {
   shipped
   delivered
   cancelled
+}
+
+enum PaymentStatus {
+  pending
+  paid
+  failed
 }
 
 enum UserRole {
