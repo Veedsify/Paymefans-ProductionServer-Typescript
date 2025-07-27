@@ -82,7 +82,7 @@ export class MentionService {
 
       // Get blocking relationships
       const [blockedByUsers, userBlockedUsers] = await Promise.all([
-        (query as any).userBlock.findMany({
+        query.userBlock.findMany({
           where: {
             blocked_id: mentionerId,
             blocker_id: { in: userIds },
@@ -91,7 +91,7 @@ export class MentionService {
             blocker_id: true,
           },
         }),
-        (query as any).userBlock.findMany({
+        query.userBlock.findMany({
           where: {
             blocker_id: mentionerId,
             blocked_id: { in: userIds },
