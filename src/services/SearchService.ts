@@ -105,6 +105,13 @@ export default class SearchService {
           { bio: { contains: searchQuery, mode: "insensitive" } },
           { country: { contains: searchQuery, mode: "insensitive" } },
         ],
+        AND: {
+          BlockedByUsers: {
+            none: {
+              blocked_id: authUserId,
+            },
+          },
+        },
         NOT: [
           {
             active_status: false,

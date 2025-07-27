@@ -42,19 +42,26 @@ model User {
   active_status             Boolean                     @default(true)
   max_post_count            Int                         @default(0)
   hasPin                    Boolean                     @default(false)
-  watermarkEnabled          Boolean                     @default(true)
-  flags                     Json?                       @default("[]")
   created_at                DateTime                    @default(now())
   updated_at                DateTime                    @updatedAt
   show_active               Boolean                     @default(true)
-  should_delete             Boolean                     @default(false)
+  watermarkEnabled          Boolean                     @default(true)
   delete_date               DateTime?
+  should_delete             Boolean                     @default(false)
+  flags                     Json?                       @default("[]")
   ActivityLog               ActivityLog[]
+  AutomatedMessage          AutomatedMessage[]
+  blockedUsers              BlockedGroupParticipant[]   @relation("BlockedByUser")
+  blockedFromGroups         BlockedGroupParticipant[]   @relation("BlockedUser")
   Cart                      Cart[]
   CommentImpression         CommentImpression[]
+  CommentViews              CommentView[]               @relation("CommentViews")
   Followers                 Follow[]                    @relation("Followers")
   Follow                    Follow[]
+  mutedUsers                GroupMember[]               @relation("MutedByUser")
+  groupMemberships          GroupMember[]               @relation("GroupMembers")
   GroupMessage              GroupMessage[]
+  adminGroups               Groups[]                    @relation("GroupAdmin")
   HelpContact               HelpContact[]
   LiveStream                LiveStream[]
   LiveStreamComment         LiveStreamComment[]
@@ -77,8 +84,9 @@ model User {
   PostImpression            PostImpression[]
   PostLike                  PostLike[]
   PostShared                PostShared[]
+  ProfileViewsReceived      ProfileView[]               @relation("ProfileViewed")
+  ProfileViewsGiven         ProfileView[]               @relation("ProfileViewer")
   PurchasedPosts            PurchasedPosts[]
-  AutomatedMessage          AutomatedMessage[]
   ReportComment             ReportComment[]
   ReportLive                ReportLive[]
   ReportMessage             ReportMessage[]
@@ -86,6 +94,7 @@ model User {
   ReportUser                ReportUser[]
   ResetPasswordRequests     ResetPasswordRequests[]
   Settings                  Settings?
+  StoryViews                StoryView[]                 @relation("StoryViews")
   UserSubscribers           Subscribers[]               @relation("Subscribers")
   Subscribers               Subscribers[]
   SupportTicketReplies      SupportTicketReplies[]
@@ -94,6 +103,9 @@ model User {
   TwoFactorAuth             TwoFactorAuth[]
   UserAttachments           UserAttachments[]
   UserBanks                 UserBanks[]
+  BlockedUsersList          UserBlock[]                 @relation("UserBlocked")
+  BlockedByUsers            UserBlock[]                 @relation("UserBlocker")
+  UserLocation              UserLocation?
   UserMedia                 UserMedia[]
   UserPoints                UserPoints?
   UserRepost                UserRepost[]
@@ -109,18 +121,6 @@ model User {
   WishList                  WishList[]
   WithdrawalRequest         WithdrawalRequest[]
   WithWithdrawalRequestCode WithdrawalRequestCode[]
-  // Group relationships
-  adminGroups               Groups[]                    @relation("GroupAdmin")
-  groupMemberships          GroupMember[]               @relation("GroupMembers")
-  blockedFromGroups         BlockedGroupParticipant[]   @relation("BlockedUser")
-  blockedUsers              BlockedGroupParticipant[]   @relation("BlockedByUser")
-  mutedUsers                GroupMember[]               @relation("MutedByUser")
-  // View tracking relationships
-  ProfileViewsReceived      ProfileView[]               @relation("ProfileViewed")
-  ProfileViewsGiven         ProfileView[]               @relation("ProfileViewer")
-  CommentViews              CommentView[]               @relation("CommentViews")
-  StoryViews                StoryView[]                 @relation("StoryViews")
-  UserLocation              UserLocation?
 }
 
 model Participants {
@@ -149,11 +149,11 @@ model Messages {
   seen            Boolean         @default(false)
   message         String
   attachment      Json?
-  story_reply     Json? // Store story reply data: { story_media_id, story_preview_url, story_type }
   created_at      DateTime        @default(now())
   updated_at      DateTime        @updatedAt
   conversationsId String?
   groupsId        Int?
+  story_reply     Json?
   Conversations   Conversations?  @relation(fields: [conversationsId], references: [conversation_id])
   receiver        User            @relation("MessageReceiver", fields: [receiver_id], references: [user_id], onDelete: Cascade)
   sender          User            @relation("MessageSender", fields: [sender_id], references: [user_id], onDelete: Cascade)
@@ -173,7 +173,6 @@ model Model {
   country             String
   hookup              Boolean               @default(false)
   payment_status      Boolean               @default(false)
-  watermark           String?               @default("/site/watermark.png")
   payment_reference   String?               @unique
   verification_video  String?
   verification_image  String?
@@ -181,6 +180,7 @@ model Model {
   verification_state  VerificationStateEnum @default(not_started)
   token               String?               @unique
   created_at          DateTime              @default(now())
+  watermark           String?               @default("/site/watermark.png")
   user                User                  @relation(fields: [user_id], references: [id], onDelete: Cascade)
 }
 
@@ -188,7 +188,6 @@ model UserMedia {
   id            Int        @id @default(autoincrement())
   media_id      String     @unique
   post_id       Int
-  user_id       Int
   media_type    String
   media_state   MediaState @default(processing)
   duration      String?    @default("")
@@ -199,6 +198,7 @@ model UserMedia {
   accessible_to String
   created_at    DateTime   @default(now())
   updated_at    DateTime   @updatedAt
+  user_id       Int
   post          Post       @relation(fields: [post_id], references: [id], onDelete: Cascade)
   user          User       @relation(fields: [user_id], references: [id], onDelete: Cascade)
 
@@ -235,15 +235,15 @@ model UserStory {
 model StoryMedia {
   id              Int         @id @default(autoincrement())
   media_id        String      @unique
-  filename        String
-  captionElements Json?
-  story_content   String?
   media_type      String
-  media_url       String?
+  filename        String
+  story_content   String?
   duration        Int?
   user_id         Int
   created_at      DateTime    @default(now())
   updated_at      DateTime    @updatedAt
+  captionElements Json?
+  media_url       String?
   story           UserStory   @relation(fields: [user_id], references: [id], onDelete: Cascade)
   StoryView       StoryView[]
 }
@@ -253,12 +253,12 @@ model StoryView {
   story_media_id String
   viewer_id      Int
   viewed_at      DateTime   @default(now())
-  story_media    StoryMedia @relation(fields: [story_media_id], references: [media_id], onDelete: Cascade)
-  viewer         User       @relation("StoryViews", fields: [viewer_id], references: [id], onDelete: Cascade)
-  UserStory      UserStory? @relation(fields: [userStoryId], references: [id])
   userStoryId    Int?
+  story_media    StoryMedia @relation(fields: [story_media_id], references: [media_id], onDelete: Cascade)
+  UserStory      UserStory? @relation(fields: [userStoryId], references: [id])
+  viewer         User       @relation("StoryViews", fields: [viewer_id], references: [id], onDelete: Cascade)
 
-  @@unique([story_media_id, viewer_id]) // Prevent duplicate views from same user
+  @@unique([story_media_id, viewer_id])
   @@index([story_media_id])
   @@index([viewer_id])
 }
@@ -310,14 +310,14 @@ model PostImpression {
 
 model ProfileView {
   id         Int      @id @default(autoincrement())
-  profile_id Int // The profile being viewed
-  viewer_id  Int? // Who viewed it (nullable for anonymous)
-  ip_address String? // Track anonymous views by IP
+  profile_id Int
+  viewer_id  Int?
+  ip_address String?
   created_at DateTime @default(now())
   profile    User     @relation("ProfileViewed", fields: [profile_id], references: [id], onDelete: Cascade)
   viewer     User?    @relation("ProfileViewer", fields: [viewer_id], references: [id], onDelete: Cascade)
 
-  @@unique([profile_id, viewer_id, ip_address]) // Prevent duplicate views
+  @@unique([profile_id, viewer_id, ip_address])
   @@index([profile_id])
   @@index([viewer_id])
   @@index([created_at])
@@ -326,13 +326,13 @@ model ProfileView {
 model CommentView {
   id         Int         @id @default(autoincrement())
   comment_id Int
-  user_id    Int? // Nullable for anonymous views
-  ip_address String? // Track anonymous views by IP
+  user_id    Int?
+  ip_address String?
   created_at DateTime    @default(now())
   comment    PostComment @relation(fields: [comment_id], references: [id], onDelete: Cascade)
   user       User?       @relation("CommentViews", fields: [user_id], references: [id], onDelete: Cascade)
 
-  @@unique([comment_id, user_id, ip_address]) // Prevent duplicate views
+  @@unique([comment_id, user_id, ip_address])
   @@index([comment_id])
   @@index([user_id])
   @@index([created_at])
@@ -443,10 +443,10 @@ model Subscribers {
   id            Int      @id @default(autoincrement())
   sub_id        String
   user_id       Int
-  status        String   @default("active")
   subscriber_id Int
   created_at    DateTime @default(now())
   updated_at    DateTime @updatedAt
+  status        String   @default("active")
   subscriber    User     @relation("Subscribers", fields: [subscriber_id], references: [id], onDelete: Cascade)
   user          User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
 
@@ -735,8 +735,8 @@ model UserSubscriptionCurrent {
   subscription    String
   created_at      DateTime @default(now())
   updated_at      DateTime @updatedAt
-  ends_at         BigInt
   userId          Int?
+  ends_at         BigInt
   model           User     @relation("ModelCurrentSubscriptions", fields: [model_id], references: [id], onDelete: Cascade)
   user            User     @relation("UserCurrentSubscription", fields: [user_id], references: [id], onDelete: Cascade)
 
@@ -764,9 +764,7 @@ model UserLocation {
   state      String?
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
-
-  // Relations
-  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  user       User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
 
   @@index([user_id])
 }
@@ -933,12 +931,12 @@ model Order {
   order_id          String        @unique
   user_id           Int
   total_amount      Float
-  status            OrderStatus   @default(pending)
-  payment_status    PaymentStatus @default(pending)
-  payment_reference String?
-  shipping_address  Json
   created_at        DateTime      @default(now())
   updated_at        DateTime      @updatedAt
+  payment_reference String?
+  payment_status    PaymentStatus @default(pending)
+  shipping_address  Json
+  status            OrderStatus   @default(pending)
   user              User          @relation(fields: [user_id], references: [id], onDelete: Cascade)
   items             OrderItem[]
 
@@ -958,7 +956,7 @@ model OrderItem {
   updated_at DateTime     @updatedAt
   order      Order        @relation(fields: [order_id], references: [order_id], onDelete: Cascade)
   product    Product      @relation(fields: [product_id], references: [product_id], onDelete: Cascade)
-  size       ProductSize? @relation(fields: [size_id], references: [id], onDelete: SetNull)
+  size       ProductSize? @relation(fields: [size_id], references: [id])
 
   @@index([order_id])
   @@index([product_id])
@@ -1027,18 +1025,18 @@ model GroupMessage {
   id          Int               @id @default(autoincrement())
   content     String?
   senderId    Int
-  groupId     Int
-  messageType String            @default("text") // text, image, video, audio, file
-  isEdited    Boolean           @default(false)
-  editedAt    DateTime?
-  replyToId   Int?
   createdAt   DateTime          @default(now())
+  editedAt    DateTime?
+  groupId     Int
+  isEdited    Boolean           @default(false)
+  messageType String            @default("text")
+  replyToId   Int?
   updatedAt   DateTime          @updatedAt
   attachments GroupAttachment[]
   group       Groups            @relation(fields: [groupId], references: [id], onDelete: Cascade)
-  sender      User              @relation(fields: [senderId], references: [id])
   replyTo     GroupMessage?     @relation("MessageReplies", fields: [replyToId], references: [id])
   replies     GroupMessage[]    @relation("MessageReplies")
+  sender      User              @relation(fields: [senderId], references: [id])
   tags        Tag[]
 }
 
@@ -1054,30 +1052,30 @@ model Tag {
 model GroupAttachment {
   id        Int          @id @default(autoincrement())
   url       String
-  type      String // image, video, audio, document
-  fileName  String?
-  fileSize  Int?
+  type      String
   messageId Int
   createdAt DateTime     @default(now())
+  fileName  String?
+  fileSize  Int?
   message   GroupMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
 }
 
 model Groups {
   id                  Int                       @id @default(autoincrement())
-  name                String
+  adminId             Int
+  createdAt           DateTime                  @default(now())
   description         String?
   groupIcon           String?
   groupType           GroupType                 @default(PUBLIC)
   isActive            Boolean                   @default(true)
   maxMembers          Int                       @default(100)
-  adminId             Int
-  createdAt           DateTime                  @default(now())
+  name                String
   updatedAt           DateTime                  @updatedAt
-  admin               User                      @relation("GroupAdmin", fields: [adminId], references: [id])
+  blockedParticipants BlockedGroupParticipant[]
   members             GroupMember[]
   messages            GroupMessage[]
-  blockedParticipants BlockedGroupParticipant[]
   settings            GroupSettings?
+  admin               User                      @relation("GroupAdmin", fields: [adminId], references: [id])
 
   @@index([adminId])
   @@index([groupType])
@@ -1085,29 +1083,29 @@ model Groups {
 
 model GroupSettings {
   id                  Int       @id @default(autoincrement())
-  groupId             Int       @unique
-  allowMemberInvites  Boolean   @default(true)
-  allowMediaSharing   Boolean   @default(true)
   allowFileSharing    Boolean   @default(true)
-  moderateMessages    Boolean   @default(false)
+  allowMediaSharing   Boolean   @default(true)
+  allowMemberInvites  Boolean   @default(true)
   autoApproveJoinReqs Boolean   @default(true)
-  mutedUntil          DateTime?
   createdAt           DateTime  @default(now())
+  groupId             Int       @unique
+  moderateMessages    Boolean   @default(false)
+  mutedUntil          DateTime?
   updatedAt           DateTime  @updatedAt
   group               Groups    @relation(fields: [groupId], references: [id], onDelete: Cascade)
 }
 
 model BlockedGroupParticipant {
   id        Int      @id @default(autoincrement())
-  userId    Int
-  groupId   Int
   blockedBy Int
-  reason    String?
   createdAt DateTime @default(now())
+  groupId   Int
+  reason    String?
   updatedAt DateTime @updatedAt
+  userId    Int
+  blocker   User     @relation("BlockedByUser", fields: [blockedBy], references: [id])
   group     Groups   @relation(fields: [groupId], references: [id], onDelete: Cascade)
   user      User     @relation("BlockedUser", fields: [userId], references: [id], onDelete: Cascade)
-  blocker   User     @relation("BlockedByUser", fields: [blockedBy], references: [id])
 
   @@unique([userId, groupId])
   @@index([groupId])
@@ -1125,9 +1123,9 @@ model GroupMember {
   mutedUntil  DateTime?
   createdAt   DateTime        @default(now())
   updatedAt   DateTime        @updatedAt
-  user        User            @relation("GroupMembers", fields: [userId], references: [id], onDelete: Cascade)
   group       Groups          @relation(fields: [groupId], references: [id], onDelete: Cascade)
   mutedByUser User?           @relation("MutedByUser", fields: [mutedBy], references: [id])
+  user        User            @relation("GroupMembers", fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, groupId])
   @@index([groupId])
@@ -1205,13 +1203,13 @@ model WithdrawalRequest {
   amount            Int
   recipient_code    String
   bank_account_id   Int
-  reference         String?
   reason            String                  @default("Paymefans Model Withdrawal")
   status            WithdrawalRequestStatus
-  transfer_code     String?
-  paystack_response Json?
   created_at        DateTime                @default(now())
   updated_at        DateTime                @updatedAt
+  reference         String?
+  transfer_code     String?
+  paystack_response Json?
   bank              UserBanks               @relation(fields: [bank_account_id], references: [id], onDelete: Cascade)
   user              User                    @relation(fields: [user_id], references: [id], onDelete: Cascade)
 }
@@ -1275,8 +1273,6 @@ model Configurations {
   point_conversion_rate_ngn             Float    @default(1.0) @map("point_conversion_rate_ngn")
   min_withdrawal_amount                 Float    @default(0.0) @map("min_withdrawal_amount")
   min_withdrawal_amount_ngn             Float    @default(0.0) @map("min_withdrawal_amount_ngn")
-  platform_deposit_fee                  Float    @default(0.0) @map("platform_deposit_fee")
-  platform_withdrawal_fee               Float    @default(0.0) @map("platform_withdrawal_fee")
   min_deposit_amount                    Float    @default(0.0) @map("min_deposit_amount")
   min_deposit_amount_ngn                Float    @default(0.0) @map("min_deposit_amount_ngn")
   default_mode                          String   @default("light") @map("default_mode")
@@ -1321,6 +1317,8 @@ model Configurations {
   point_purchase_minimum_message        String   @default("Minimum purchase amount not met") @map("point_purchase_minimum_message")
   created_at                            DateTime @default(now()) @map("created_at")
   updated_at                            DateTime @updatedAt @map("updated_at")
+  platform_deposit_fee                  Float    @default(0.0) @map("platform_deposit_fee")
+  platform_withdrawal_fee               Float    @default(0.0) @map("platform_withdrawal_fee")
 
   @@index([app_name])
 }
@@ -1347,6 +1345,21 @@ model UserWithdrawalPin {
   user       User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
 
   @@index([user_id])
+}
+
+model UserBlock {
+  id         Int      @id @default(autoincrement())
+  block_id   String   @unique
+  blocker_id Int
+  blocked_id Int
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+  blocked    User     @relation("UserBlocked", fields: [blocked_id], references: [id], onDelete: Cascade)
+  blocker    User     @relation("UserBlocker", fields: [blocker_id], references: [id], onDelete: Cascade)
+
+  @@unique([blocker_id, blocked_id])
+  @@index([blocker_id])
+  @@index([blocked_id])
 }
 
 model PurchasedPosts {
@@ -1381,9 +1394,9 @@ model AutomatedMessage {
 enum WithdrawalRequestStatus {
   pending
   processing
-  approved
   rejected
   completed
+  approved
 }
 
 enum OrderStatus {

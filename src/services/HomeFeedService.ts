@@ -81,11 +81,27 @@ class FeedService {
       }
     }
 
+    // Get list of users who have blocked the current user
+    const blockedByUsers = await query.userBlock.findMany({
+      where: {
+        blocked_id: authUserid,
+      },
+      select: {
+        blocker_id: true,
+      },
+    });
+
+    const blockedByUserIds = blockedByUsers.map((block) => block.blocker_id);
+
     let whereClause: any = {
       post_is_visible: true,
       post_status: "approved",
       user: {
         active_status: true,
+      },
+      // Exclude posts from users who have blocked the current user
+      user_id: {
+        notIn: blockedByUserIds,
       },
       OR: [
         // Public post
@@ -269,6 +285,23 @@ class FeedService {
       } catch (error) {
         console.error("Invalid cursor:", error);
       }
+    }
+
+    // Check if the target user has blocked the viewer
+    const isBlockedByTarget = await query.userBlock.findFirst({
+      where: {
+        blocker_id: targetUserId,
+        blocked_id: viewerId,
+      },
+    });
+
+    // If blocked, return empty result
+    if (isBlockedByTarget) {
+      return {
+        posts: [],
+        nextCursor: undefined,
+        hasMore: false,
+      };
     }
 
     const [isFollowing, isSubscribed] = await Promise.all([

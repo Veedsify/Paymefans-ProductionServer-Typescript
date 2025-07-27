@@ -29,6 +29,7 @@ import analytics from "@routes/users/analytics/analytics";
 import hookup from "@routes/users/hookup/hookup";
 import report from "@routes/users/report/report";
 import automatedMessages from "@routes/users/automated-messages/automated-messages";
+import block from "@routes/users/block/block";
 import wishlist from "@routes/wishlist";
 const api = express.Router();
 
@@ -94,6 +95,8 @@ api.use("/hookup", hookup);
 api.use("/report", report);
 // Automated Messages
 api.use("/automated-messages", automatedMessages);
+// Block
+api.use("/block", block);
 // Wishlist
 api.use("/wishlist", wishlist);
 export default api;

@@ -29,7 +29,12 @@ class ProfileService {
   ): Promise<ProfileServiceResponse> {
     try {
       if (!username)
-        return { message: "User not found", status: false, user: undefined, profileImpressions: 0 };
+        return {
+          message: "User not found",
+          status: false,
+          user: undefined,
+          profileImpressions: 0,
+        };
 
       const cacheKey = `user_profile_${username}`;
       const cached = await redis.get(cacheKey);
@@ -84,9 +89,17 @@ class ProfileService {
         },
       });
 
-      if (!user) return { message: "User not found", status: false, profileImpressions: 0 };
+      if (!user)
+        return {
+          message: "User not found",
+          status: false,
+          profileImpressions: 0,
+        };
 
-      const checkFlags = RBAC.checkUserFlag(user.flags, Permissions.PROFILE_HIDDEN);
+      const checkFlags = RBAC.checkUserFlag(
+        user.flags,
+        Permissions.PROFILE_HIDDEN,
+      );
 
       if (checkFlags && user.id !== authUserId) {
         return {
@@ -96,6 +109,25 @@ class ProfileService {
           user: undefined,
         };
       }
+      // Check if either user has blocked the other
+      const [iBlockedThem, theyBlockedMe] = await Promise.all([
+        query.userBlock.findFirst({
+          where: { blocker_id: authUserId, blocked_id: user.id },
+        }),
+        query.userBlock.findFirst({
+          where: { blocker_id: user.id, blocked_id: authUserId },
+        }),
+      ]);
+
+      // If the profile user blocked the requesting user, return user not found
+      if (theyBlockedMe) {
+        return {
+          message: "User not found",
+          status: false,
+          profileImpressions: 0,
+        };
+      }
+
       // Batch follow checks
       const [iFollowThem, theyFollowMe] = await Promise.all([
         query.follow.findFirst({
@@ -108,9 +140,9 @@ class ProfileService {
 
       const impression = await query.profileView.count({
         where: {
-          profile_id: user.id
-        }
-      })
+          profile_id: user.id,
+        },
+      });
 
       const response = {
         message: "User found",
@@ -161,7 +193,12 @@ class ProfileService {
     const { user } = req;
     const file = req.file;
     if (!user?.id) {
-      return { message: "User not authenticated", status: false, url: "", error: true };
+      return {
+        message: "User not authenticated",
+        status: false,
+        url: "",
+        error: true,
+      };
     }
 
     try {
@@ -192,11 +229,21 @@ class ProfileService {
       };
       await UploadImageToS3(options);
       if (!AvatarUrl) {
-        return { message: "Failed to upload image", status: false, url: "", error: true };
+        return {
+          message: "Failed to upload image",
+          status: false,
+          url: "",
+          error: true,
+        };
       }
       const updateProfile = await this.ProfileUpdateInfo(req.body, user);
       if (updateProfile.error) {
-        return { message: updateProfile.message, status: false, url: "", error: true };
+        return {
+          message: updateProfile.message,
+          status: false,
+          url: "",
+          error: true,
+        };
       }
 
       await query.user.update({
@@ -217,7 +264,12 @@ class ProfileService {
         },
       );
 
-      return { message: "Avatar updated", status: true, url: AvatarUrl, error: false };
+      return {
+        message: "Avatar updated",
+        status: true,
+        url: AvatarUrl,
+        error: false,
+      };
     } catch (error) {
       console.error("Profile update error:", error);
       throw new Error("Error updating profile");
@@ -225,8 +277,8 @@ class ProfileService {
   }
 
   // Update Profile Info
-  static async ProfileUpdateInfo(data
-    : ProfileUpdateInfo,
+  static async ProfileUpdateInfo(
+    data: ProfileUpdateInfo,
     user: AuthUser,
   ): Promise<{ error: boolean; message: string }> {
     const {
@@ -243,9 +295,9 @@ class ProfileService {
       youtube,
       snapchat,
       telegram,
-    } = data
+    } = data;
     console.log("ProfileUpdateInfo data:", data);
-    console.log(state, website)
+    console.log(state, website);
 
     const trimmedUsername = bodyUsername?.trim();
     let username;
@@ -551,9 +603,9 @@ class ProfileService {
       );
       const followingRelations = otherUserIds.length
         ? await query.follow.findMany({
-          where: { follower_id: user.id, user_id: { in: otherUserIds } },
-          select: { user_id: true },
-        })
+            where: { follower_id: user.id, user_id: { in: otherUserIds } },
+            select: { user_id: true },
+          })
         : [];
 
       const followingSet = new Set(followingRelations.map((f) => f.user_id));
@@ -628,7 +680,10 @@ class ProfileService {
             data: { total_following: { increment: 1 } },
           }),
         ]);
-        await AutomatedMessageTriggerService.sendFollowerMessage(userId, authUser.id)
+        await AutomatedMessageTriggerService.sendFollowerMessage(
+          userId,
+          authUser.id,
+        );
         await UserNotificationQueue.add("new-follow-notification", {
           user_id: userId,
           url: `/${authUser?.username}`,
