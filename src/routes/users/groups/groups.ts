@@ -71,4 +71,12 @@ groups.post(
   GroupController.declineInvitation,
 );
 
+// File upload route for group attachments
+groups.post(
+  "/upload-attachment",
+  groupAttachments.array("attachments", 10),
+  Auth,
+  GroupController.uploadAttachment,
+);
+
 export default groups;

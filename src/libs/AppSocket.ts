@@ -3,6 +3,7 @@ import { redis } from "./RedisStore";
 import SocketService from "@services/SocketService";
 import EmitActiveUsers from "@jobs/EmitActiveUsers";
 import HandleLocationUpdate from "./socket-handlers/LocationHandler";
+import GroupChatHandler from "./socket-handlers/GroupChatHandler";
 
 async function AppSocket(io: any) {
   io.on("connection", (socket: any) => {
@@ -106,6 +107,60 @@ async function AppSocket(io: any) {
       SocketService.HandleModelHookupPooling(username),
     );
 
+    // Group chat event handlers
+    socket.on("group-user-connected", (data: any) => {
+      user = {
+        ...user,
+        userId: data.userId,
+      };
+    });
+
+    socket.on(
+      "join-group-room",
+      (data: { groupId: string; userId: string }) => {
+        GroupChatHandler.handleJoinGroupRoom(socket, user, data);
+      },
+    );
+
+    socket.on(
+      "leave-group-room",
+      (data: { groupId: string; userId: string }) => {
+        GroupChatHandler.handleLeaveGroupRoom(socket, user, data);
+      },
+    );
+
+    socket.on("send-group-message", (data: any) => {
+      GroupChatHandler.handleGroupMessage(socket, user, data, io);
+    });
+
+    socket.on(
+      "group-typing",
+      (data: { groupId: string; isTyping: boolean }) => {
+        GroupChatHandler.handleGroupTyping(socket, user, data);
+      },
+    );
+
+    socket.on(
+      "group-message-seen",
+      (data: { groupId: string; messageId: number }) => {
+        GroupChatHandler.handleGroupMessageSeen(socket, user, data);
+      },
+    );
+
+    socket.on("restore-group-rooms", (data: { userId: string }) => {
+      GroupChatHandler.handleRestoreGroupRooms(socket, data.userId);
+    });
+
+    socket.on("get-group-active-members", async (data: { groupId: string }) => {
+      const activeMembers = await GroupChatHandler.getActiveGroupMembers(
+        data.groupId,
+      );
+      socket.emit("group-active-members", {
+        groupId: data.groupId,
+        members: activeMembers,
+      });
+    });
+
     socket.on("disconnect", async (reason: any) => {
       console.log(
         "🔌 Socket disconnected:",
@@ -121,6 +176,23 @@ async function AppSocket(io: any) {
       // Remove user from Redis
       const userKey = `user:${user.username}`;
       await redis.hdel("activeUsers", userKey);
+
+      // Clean up user from all group rooms
+      if (user.userId) {
+        try {
+          const userGroupKeys = await redis.keys(`group-rooms:${user.userId}`);
+
+          for (const key of userGroupKeys) {
+            const groupRooms = await redis.hgetall(key);
+
+            for (const [groupId] of Object.entries(groupRooms)) {
+              await GroupChatHandler.cleanupGroupRoom(groupId, user.userId);
+            }
+          }
+        } catch (error) {
+          console.error("Error cleaning up group rooms on disconnect:", error);
+        }
+      }
     });
   });
 }

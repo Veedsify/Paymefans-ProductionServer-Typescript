@@ -1513,13 +1513,13 @@ export default class GroupService {
       const { query: searchQuery, page = 1, limit = 20, groupType } = params;
       const skip = (page - 1) * limit;
 
-      if (!searchQuery) {
-        return {
-          success: false,
-          error: true,
-          message: "Search query is required",
-        };
-      }
+      // if (!searchQuery) {
+      //   return {
+      //     success: false,
+      //     error: true,
+      //     message: "Search query is required",
+      //   };
+      // }
 
       let whereClause: any = {
         AND: [

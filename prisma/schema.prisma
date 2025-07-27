@@ -121,6 +121,10 @@ model User {
   WishList                  WishList[]
   WithdrawalRequest         WithdrawalRequest[]
   WithWithdrawalRequestCode WithdrawalRequestCode[]
+  GroupMessageRead          GroupMessageRead[]
+  GroupJoinRequests         GroupJoinRequest[]          @relation("GroupJoinRequests")
+  GroupInvitationsSent      GroupInvitation[]           @relation("GroupInvitationsSent")
+  GroupInvitationsReceived  GroupInvitation[]           @relation("GroupInvitationsReceived")
 }
 
 model Participants {
@@ -1022,22 +1026,23 @@ model FAQAnswers {
 }
 
 model GroupMessage {
-  id          Int               @id @default(autoincrement())
-  content     String?
-  senderId    Int
-  createdAt   DateTime          @default(now())
-  editedAt    DateTime?
-  groupId     Int
-  isEdited    Boolean           @default(false)
-  messageType String            @default("text")
-  replyToId   Int?
-  updatedAt   DateTime          @updatedAt
-  attachments GroupAttachment[]
-  group       Groups            @relation(fields: [groupId], references: [id], onDelete: Cascade)
-  replyTo     GroupMessage?     @relation("MessageReplies", fields: [replyToId], references: [id])
-  replies     GroupMessage[]    @relation("MessageReplies")
-  sender      User              @relation(fields: [senderId], references: [id])
-  tags        Tag[]
+  id               Int                @id @default(autoincrement())
+  content          String?
+  senderId         Int
+  createdAt        DateTime           @default(now())
+  editedAt         DateTime?
+  groupId          Int
+  isEdited         Boolean            @default(false)
+  messageType      String             @default("text")
+  replyToId        Int?
+  updatedAt        DateTime           @updatedAt
+  attachments      GroupAttachment[]
+  group            Groups             @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  replyTo          GroupMessage?      @relation("MessageReplies", fields: [replyToId], references: [id])
+  replies          GroupMessage[]     @relation("MessageReplies")
+  sender           User               @relation(fields: [senderId], references: [id])
+  tags             Tag[]
+  GroupMessageRead GroupMessageRead[]
 }
 
 model Tag {
@@ -1075,6 +1080,8 @@ model Groups {
   members             GroupMember[]
   messages            GroupMessage[]
   settings            GroupSettings?
+  joinRequests        GroupJoinRequest[]
+  invitations         GroupInvitation[]
   admin               User                      @relation("GroupAdmin", fields: [adminId], references: [id])
 
   @@index([adminId])
@@ -1389,6 +1396,57 @@ model AutomatedMessage {
 
   @@unique([user_id, message_type])
   @@index([user_id])
+}
+
+model GroupMessageRead {
+  id        Int          @id @default(autoincrement())
+  messageId Int
+  userId    String
+  readAt    DateTime     @default(now())
+  message   GroupMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  user      User         @relation(fields: [userId], references: [user_id], onDelete: Cascade)
+
+  @@unique([messageId, userId])
+  @@index([messageId])
+  @@index([userId])
+}
+
+model GroupJoinRequest {
+  id        Int               @id @default(autoincrement())
+  groupId   Int
+  userId    Int
+  message   String?
+  status    JoinRequestStatus @default(PENDING)
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
+  group     Groups            @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  user      User              @relation("GroupJoinRequests", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([groupId, userId])
+  @@index([groupId])
+  @@index([userId])
+  @@index([status])
+}
+
+model GroupInvitation {
+  id        Int              @id @default(autoincrement())
+  groupId   Int
+  inviterId Int
+  inviteeId Int
+  message   String?
+  status    InvitationStatus @default(PENDING)
+  expiresAt DateTime?
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+  group     Groups           @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  inviter   User             @relation("GroupInvitationsSent", fields: [inviterId], references: [id], onDelete: Cascade)
+  invitee   User             @relation("GroupInvitationsReceived", fields: [inviteeId], references: [id], onDelete: Cascade)
+
+  @@unique([groupId, inviteeId])
+  @@index([groupId])
+  @@index([inviterId])
+  @@index([inviteeId])
+  @@index([status])
 }
 
 enum WithdrawalRequestStatus {

@@ -655,7 +655,7 @@ export default class GroupController {
     try {
       const user = req.user as AuthUser;
       const params: GroupSearchParams = {
-        query: req.query.q as string,
+        query: req.query.query as string,
         groupType: req.query.groupType as any,
         page: req.query.page ? parseInt(req.query.page as string) : undefined,
         limit: req.query.limit
@@ -759,6 +759,54 @@ export default class GroupController {
       });
     } catch (error) {
       console.error("Error in getUserInvitations:", error);
+      return res.status(500).json({
+        success: false,
+        error: true,
+        message: `Internal Server Error: ${error}`,
+      });
+    }
+  }
+
+  // Upload attachment for group messages
+  static async uploadAttachment(req: Request, res: Response): Promise<any> {
+    try {
+      const user = req.user as AuthUser;
+      const files = req.files as Express.Multer.File[];
+
+      if (!files || files.length === 0) {
+        return res.status(400).json({
+          success: false,
+          error: true,
+          message: "No files uploaded",
+        });
+      }
+
+      // Process each file and return upload URLs
+      const uploadResults = [];
+
+      for (const file of files) {
+        // Here you would typically upload to your storage service (S3, Cloudflare, etc.)
+        // For now, we'll simulate the upload and return a URL
+        const fileUrl = `/uploads/group-attachments/${Date.now()}-${file.originalname}`;
+
+        uploadResults.push({
+          fileName: file.originalname,
+          fileUrl: fileUrl,
+          fileType: file.mimetype,
+          fileSize: file.size,
+        });
+      }
+
+      return res.status(200).json({
+        success: true,
+        error: false,
+        message: "Files uploaded successfully",
+        data: {
+          attachments: uploadResults,
+        },
+      });
+    } catch (error) {
+      console.error("Error in uploadAttachment:", error);
       return res.status(500).json({
         success: false,
         error: true,
