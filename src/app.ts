@@ -98,9 +98,9 @@ app.use((err: any, _: Request, res: Response, next: NextFunction) => {
 });
 
 // Graceful shutdown
-process.on("SIGINT", () => {
+process.on("SIGINT", async () => {
   console.log("Shutting down gracefully...");
-  CronJobService.destroy();
+  await CronJobService.destroy();
   server.close(() => {
     console.log("Server closed.");
     process.exit(0);

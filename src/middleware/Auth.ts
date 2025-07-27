@@ -1,6 +1,7 @@
 import type { NextFunction, Request, Response } from "express";
 import jwt from "jsonwebtoken";
 import type { AuthUser } from "../types/user";
+import Instance from "@libs/io";
 
 export async function Auth(
   req: Request,
@@ -35,6 +36,5 @@ export async function Auth(
   }
 }
 
-
 // Export the Auth function as default as well for backward compatibility
-export default Auth
+export default Auth;

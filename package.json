@@ -13,7 +13,8 @@
     "dev2": "nodemon --exec tsx -r tsconfig-paths/register src/app.ts",
     "dev": "bun --watch ./src/app.ts --ext .ts",
     "ngrok": "ngrok http --url=current-early-hippo.ngrok-free.app 3009",
-    "cleanup-checkouts": "tsx -r tsconfig-paths/register src/scripts/cleanup-expired-checkouts.ts"
+    "cleanup-checkouts": "tsx -r tsconfig-paths/register src/scripts/cleanup-expired-checkouts.ts",
+    "queue-manager": "tsx -r tsconfig-paths/register src/scripts/queue-manager.ts"
   },
   "keywords": [],
   "author": "",
@@ -65,6 +66,7 @@
     "mongoose": "^8.16.2",
     "morgan": "^1.10.0",
     "multer": "^1.4.5-lts.2",
+    "nanoid": "^5.1.5",
     "node-cron": "^4.2.1",
     "nodemailer": "^6.10.1",
     "nodemon": "^3.1.10",

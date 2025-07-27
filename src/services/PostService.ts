@@ -43,7 +43,10 @@ import { MentionNotificationQueue } from "@jobs/MentionNotificationJob";
 
 export default class PostService {
   // Create Post
-  static async CreatePost(data: CreatePostProps): Promise<CreatePostResponse> {
+  static async CreatePost(
+    data: CreatePostProps,
+    authUserId: number,
+  ): Promise<CreatePostResponse> {
     try {
       const postId = uuid();
       const user = await query.user.findUnique({
@@ -165,8 +168,10 @@ export default class PostService {
 
       // Process mentions if any
       if (mentions && mentions.length > 0) {
-
-        const validMentions = await MentionService.validateMentions(mentions);
+        const validMentions = await MentionService.validateMentions(
+          mentions,
+          authUserId,
+        );
 
         if (validMentions.length > 0) {
           await MentionNotificationQueue.add(
@@ -185,7 +190,7 @@ export default class PostService {
             {
               removeOnComplete: true,
               attempts: 3,
-            }
+            },
           );
         }
       }

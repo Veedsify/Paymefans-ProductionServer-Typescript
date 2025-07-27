@@ -6,7 +6,7 @@ type MentionData = MentionJobData;
 
 export class MentionService {
   static async processMentions(data: MentionData): Promise<void> {
-    const { mentions, mentioner, type, contentId, content } = data;
+    const { mentions, mentioner, type, contentId } = data;
 
     if (!mentions || mentions.length === 0) {
       return;

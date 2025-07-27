@@ -119,13 +119,8 @@ async function AppSocket(io: any) {
       );
 
       // Remove user from Redis
-      await redis.hdel("activeUsers", user.userId);
-      // Emit updated list
-      const activeUsers = await redis.hgetall("activeUsers");
-      io.emit(
-        "active_users",
-        Object.values(activeUsers).map((v) => JSON.parse(v)),
-      );
+      const userKey = `user:${user.username}`;
+      await redis.hdel("activeUsers", userKey);
     });
   });
 }

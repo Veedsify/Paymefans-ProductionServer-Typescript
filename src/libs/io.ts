@@ -31,7 +31,6 @@ const socketOptions = {
 
 export default {
   init: async (server: http.Server) => {
-
     io = new Server(server, socketOptions);
 
     // Optional: Handle Redis connection errors
@@ -45,5 +44,11 @@ export default {
       throw new Error("Socket.io not initialized!");
     }
     return io;
+  },
+  disconnect: () => {
+    if (!io) {
+      throw new Error("Socket.io not initialized!");
+    }
+    io.close();
   },
 };
