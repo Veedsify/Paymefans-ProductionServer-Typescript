@@ -34,7 +34,10 @@ interface RemovedMedia {
 export type GetMyMediaResponse = {
   status: boolean;
   message: string;
-  data: (UserMedia & { isSubscribed: boolean; post: {watermark_enabled: boolean} })[];
+  data: (UserMedia & {
+    isSubscribed: boolean;
+    post: { watermark_enabled: boolean };
+  })[];
   total: number;
 };
 /**
@@ -283,6 +286,21 @@ export interface EditPostProps {
   postId: string;
   userId: number;
 }
+
+/**
+ * Props for updating a post
+ */
+export interface UpdatePostProps {
+  postId: string;
+  userId: number;
+  content?: string;
+  visibility?: string;
+  media?: CreateMedia[];
+  removedMedia?: RemovedMedia[];
+  mentions?: MentionUser[];
+  price?: number;
+  isWaterMarkEnabled?: boolean;
+}
 /**
  * Response for editing a post
  */
@@ -290,6 +308,16 @@ export interface EditPostResponse {
   status: boolean;
   message: string;
   data: EditPost | null;
+}
+
+/**
+ * Response for updating a post
+ */
+export interface UpdatePostResponse {
+  status: boolean;
+  message: string;
+  data?: any;
+  error?: boolean;
 }
 // --------------------------------------
 // Repost Related Types
@@ -325,6 +353,7 @@ export interface RepostResponse {
  */
 export interface GetPostCommentsProps extends GetMyPostProps {
   postId: string;
+  userId: number;
 }
 /**
  * Response for fetching post comments
@@ -333,9 +362,13 @@ export interface GetPostCommentsResponse {
   error: boolean;
   hasMore: boolean;
   message: string;
-  data: Comments & {
+  data: (Comments & {
     likedByme: boolean;
-  };
+    children: Comments[];
+    totalReplies: number;
+    hasMoreReplies: boolean;
+    relevanceScore?: number;
+  })[];
   total: number;
 }
 
@@ -348,11 +381,10 @@ export interface GiftPointsProps {
   points_buy_id: string;
 }
 
-
 export interface PayForPostProps {
-  postId: string,
-  user: AuthUser,
-  price: string,
+  postId: string;
+  user: AuthUser;
+  price: string;
 }
 
 export interface PayForPostResponse {
@@ -374,7 +406,7 @@ export interface GetMentionsResponse {
     username: string;
     profile_image: string | null;
     name: string;
-  }[]
+  }[];
 }
 
 export interface MentionUser {

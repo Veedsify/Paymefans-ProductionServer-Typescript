@@ -2,27 +2,27 @@ import { GenerateUniqueId } from "@utils/GenerateUniqueId";
 import ConfigService from "@services/ConfigService";
 import query from "@utils/prisma";
 
-export interface WithdrawalRejectionData {
+interface WithdrawalRejectionData {
   withdrawal_id: number;
   user_id: string;
   amount: number;
   reason?: string;
 }
 
-export interface WithdrawalApprovalData {
+interface WithdrawalApprovalData {
   withdrawal_id: number;
   transfer_code?: string;
   reference?: string;
 }
 
-export interface WithdrawalRejectionResult {
+interface WithdrawalRejectionResult {
   withdrawal: any;
   userPoints: any;
   user: any;
   pointsRestored: number;
 }
 
-export interface WithdrawalApprovalResult {
+interface WithdrawalApprovalResult {
   withdrawal: any;
   user: any;
 }

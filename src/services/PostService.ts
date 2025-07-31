@@ -25,6 +25,8 @@ import type {
   PayForPostResponse,
   RepostProps,
   RepostResponse,
+  UpdatePostProps,
+  UpdatePostResponse,
 } from "../types/post";
 import { v4 as uuid } from "uuid";
 import query from "@utils/prisma";
@@ -1203,15 +1205,19 @@ export default class PostService {
   }
 
   // Edit Post
-  static async EditPost({ postId }: EditPostProps): Promise<EditPostResponse> {
+  static async EditPost({
+    postId,
+    userId,
+  }: EditPostProps): Promise<EditPostResponse> {
     try {
       const post = await query.post.findFirst({
-        where: { post_id: postId, post_status: "approved" },
+        where: { post_id: postId, user_id: userId },
         select: {
           id: true,
           content: true,
           post_id: true,
           post_audience: true,
+          post_price: true,
           created_at: true,
           post_status: true,
           post_impressions: true,
@@ -1234,6 +1240,205 @@ export default class PostService {
         status: true,
         message: "Post retrieved successfully",
         data: post,
+      };
+    } catch (error: any) {
+      console.log(error);
+      throw new Error(error.message);
+    }
+  }
+
+  // Update Post
+  static async UpdatePost({
+    postId,
+    userId,
+    content,
+    visibility,
+    media,
+    removedMedia,
+    mentions,
+    price,
+    isWaterMarkEnabled,
+  }: UpdatePostProps): Promise<UpdatePostResponse> {
+    try {
+      // First, verify the post exists and belongs to the user
+      const existingPost = await query.post.findFirst({
+        where: { post_id: postId, user_id: userId },
+        include: {
+          UserMedia: true,
+          user: {
+            select: {
+              id: true,
+              username: true,
+              name: true,
+            },
+          },
+        },
+      });
+
+      if (!existingPost) {
+        return {
+          status: false,
+          message: "Post not found or you don't have permission to edit it",
+          error: true,
+        };
+      }
+
+      // Handle removed media - delete from Cloudflare and database
+      if (removedMedia && removedMedia.length > 0) {
+        const removeMedia = await RemoveCloudflareMedia(removedMedia);
+        if (removeMedia?.error) {
+          return {
+            status: false,
+            message: "An error occurred while deleting media",
+            error: true,
+          };
+        }
+
+        // Remove media records from database
+        const mediaIdsToRemove = removedMedia.map((m) => m.id);
+        await query.userMedia.deleteMany({
+          where: {
+            media_id: { in: mediaIdsToRemove },
+            post_id: existingPost.id,
+          },
+        });
+      }
+
+      // Prepare new media data
+      const userMediaData: any[] = [];
+      let allImages = true;
+
+      if (media && media.length > 0) {
+        for (const file of media) {
+          if (!file?.id) continue;
+
+          if (file.type !== "image") {
+            allImages = false;
+          }
+
+          userMediaData.push({
+            media_id: file.id,
+            user_id: userId,
+            post_id: existingPost.id,
+            media_type: file.type,
+            url: file.public,
+            media_state: (file.type === "image"
+              ? "completed"
+              : "processing") as MediaState,
+            blur: String(file.blur),
+            poster: file.public,
+            accessible_to: visibility || existingPost.post_audience,
+            locked:
+              (visibility || existingPost.post_audience) === "subscribers",
+          });
+        }
+      }
+
+      // Validate price for price posts
+      if (visibility === "price" && (!price || price <= 0)) {
+        return {
+          status: false,
+          error: true,
+          message: "Price is required for price posts",
+        };
+      }
+
+      // Format content with mentions
+      const formattedContent = content
+        ? ParseContentToHtml(content, mentions || [])
+        : existingPost.content;
+
+      // Determine post status based on media
+      const currentMediaImages =
+        existingPost.UserMedia?.filter((m) => m.media_type === "image") || [];
+      const newMediaImages = userMediaData.filter(
+        (m) => m.media_type === "image",
+      );
+      const hasOnlyImages =
+        currentMediaImages.length > 0 || newMediaImages.length > 0
+          ? allImages
+          : true;
+
+      // Update post in transaction
+      const updatedPost = await query.$transaction(async (tx) => {
+        // Update the post
+        const post = await tx.post.update({
+          where: { id: existingPost.id },
+          data: {
+            content: formattedContent,
+            post_audience:
+              (visibility as PostAudience) || existingPost.post_audience,
+            post_status: hasOnlyImages ? "approved" : "pending",
+            watermark_enabled:
+              isWaterMarkEnabled !== undefined
+                ? isWaterMarkEnabled
+                : existingPost.watermark_enabled,
+            post_price:
+              visibility === "price"
+                ? price
+                : visibility === "public" || visibility === "subscribers"
+                  ? null
+                  : existingPost.post_price,
+          },
+        });
+
+        // Add new media if any
+        if (userMediaData.length > 0) {
+          await tx.userMedia.createMany({
+            data: userMediaData,
+          });
+        }
+
+        // Update existing media accessibility if visibility changed
+        if (visibility && visibility !== existingPost.post_audience) {
+          await tx.userMedia.updateMany({
+            where: { post_id: existingPost.id },
+            data: {
+              accessible_to: visibility,
+              locked: visibility === "subscribers",
+            },
+          });
+        }
+
+        return post;
+      });
+
+      // Process mentions if any
+      if (mentions && mentions.length > 0) {
+        const validMentions = await MentionService.validateMentions(
+          mentions,
+          userId,
+        );
+
+        if (validMentions.length > 0) {
+          await MentionNotificationQueue.add(
+            "processMentions",
+            {
+              mentions: validMentions,
+              mentioner: {
+                id: userId,
+                username: existingPost.user?.username || "Unknown",
+                name:
+                  existingPost.user?.name ||
+                  existingPost.user?.username ||
+                  "Unknown",
+              },
+              type: "post",
+              contentId: postId,
+              content: content || "",
+            },
+            {
+              removeOnComplete: true,
+              attempts: 3,
+            },
+          );
+        }
+      }
+
+      return {
+        status: true,
+        message: "Post updated successfully",
+        data: updatedPost,
       };
     } catch (error: any) {
       console.log(error);
@@ -1355,6 +1560,7 @@ export default class PostService {
   // Get Post Comments
   static async GetPostComments({
     postId,
+    userId,
     page = "1",
     limit = "10",
   }: GetPostCommentsProps): Promise<GetPostCommentsResponse> {
@@ -1363,16 +1569,80 @@ export default class PostService {
     });
     const skip = (parseInt(page) - 1) * parseInt(limit);
     const limitInt = parseInt(limit);
-    const comments = await Comments.find({
-      postId: String(postId),
-      parentId: null,
-    })
-      .sort({ date: -1 })
-      .skip(skip)
-      .limit(limitInt + 1); // one extra for hasMore
+
+    // Get post author info for relevance scoring
+    const post = await query.post.findFirst({
+      where: { post_id: String(postId) },
+      select: { user_id: true },
+    });
+
+    // Get user's relationships for relevance scoring
+    const [following, subscriptions] = await Promise.all([
+      query.follow.findMany({
+        where: { user_id: userId },
+        select: { follower_id: true },
+      }),
+      query.subscribers.findMany({
+        where: { subscriber_id: userId },
+        select: { user_id: true },
+      }),
+    ]);
+
+    const followingIds = following.map((f) => f.follower_id);
+    const subscribedToIds = subscriptions.map((s) => s.user_id);
+
+    // Get comments with relevance scoring
+    const comments = await Comments.aggregate([
+      {
+        $match: {
+          postId: String(postId),
+          parentId: null,
+        },
+      },
+      {
+        $addFields: {
+          relevanceScore: {
+            $add: [
+              // Own comments get highest priority
+              { $cond: [{ $eq: ["$userId", userId] }, 1000, 0] },
+              // Post author comments get high priority
+              { $cond: [{ $eq: ["$userId", post?.user_id || 0] }, 100, 0] },
+              // Comments from subscribed users
+              { $cond: [{ $in: ["$userId", subscribedToIds] }, 75, 0] },
+              // Comments from followed users
+              { $cond: [{ $in: ["$userId", followingIds] }, 50, 0] },
+              // Engagement score (likes + replies)
+              { $add: ["$likes", "$replies"] },
+              // Recent comments get slight boost (within 24 hours)
+              {
+                $cond: [
+                  {
+                    $gte: [
+                      "$date",
+                      { $subtract: [new Date(), 24 * 60 * 60 * 1000] },
+                    ],
+                  },
+                  10,
+                  0,
+                ],
+              },
+            ],
+          },
+        },
+      },
+      {
+        $sort: {
+          relevanceScore: -1,
+          date: -1,
+        },
+      },
+      { $skip: skip },
+      { $limit: limitInt + 1 },
+    ]);
 
     const hasMore = comments.length > limitInt;
     if (hasMore) comments.pop();
+
     if (!comments || comments.length == 0) {
       return {
         error: false,
@@ -1383,18 +1653,63 @@ export default class PostService {
       };
     }
 
+    // Get comment likes for current user
     const commentLikes = await CommentLikes.find({
       commentId: { $in: comments.map((c) => c.comment_id) },
-      userId: { $in: comments.map((c) => c.userId) },
+      userId: userId,
     });
 
+    // Get child comments for each parent comment (limited to 3 initially)
+    const commentIds = comments.map((c) => c.comment_id);
+    const childComments = await Comments.find({
+      parentId: { $in: commentIds },
+    })
+      .sort({ date: 1 }) // Child comments in chronological order
+      .limit(commentIds.length * 3); // Max 3 child comments per parent initially
+
+    // Group child comments by parent
+    const childCommentsMap = childComments.reduce(
+      (acc, child) => {
+        if (!acc[child.parentId]) {
+          acc[child.parentId] = [];
+        }
+        acc[child.parentId].push(child);
+        return acc;
+      },
+      {} as Record<string, any[]>,
+    );
+
+    // Get total child comment counts
+    const childCounts = await Comments.aggregate([
+      {
+        $match: {
+          parentId: { $in: commentIds },
+        },
+      },
+      {
+        $group: {
+          _id: "$parentId",
+          totalReplies: { $sum: 1 },
+        },
+      },
+    ]);
+
+    const childCountsMap = childCounts.reduce(
+      (acc, item) => {
+        acc[item._id] = item.totalReplies;
+        return acc;
+      },
+      {} as Record<string, number>,
+    );
+
     const checkedComments = comments.map((comment) => ({
-      ...comment.toObject(),
+      ...comment,
       likedByme: commentLikes.some(
-        (like) =>
-          like.commentId === comment.comment_id &&
-          like.userId === comment.userId,
+        (like) => like.commentId === comment.comment_id,
       ),
+      children: childCommentsMap[comment.comment_id] || [],
+      totalReplies: childCountsMap[comment.comment_id] || 0,
+      hasMoreReplies: (childCountsMap[comment.comment_id] || 0) > 3,
     }));
 
     return {
@@ -1403,6 +1718,73 @@ export default class PostService {
       data: checkedComments,
       hasMore,
       total: countComments,
+    };
+  }
+
+  // Get Comment Replies
+  static async GetCommentReplies({
+    commentId,
+    userId,
+    page = "1",
+    limit = "10",
+  }: {
+    commentId: string;
+    userId: number;
+    page?: string;
+    limit?: string;
+  }): Promise<{
+    error: boolean;
+    message: string;
+    data: any[];
+    hasMore: boolean;
+    total: number;
+  }> {
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+    const limitInt = parseInt(limit);
+
+    // Get total count of replies
+    const totalReplies = await Comments.countDocuments({
+      parentId: commentId,
+    });
+
+    // Get replies with pagination
+    const replies = await Comments.find({
+      parentId: commentId,
+    })
+      .sort({ date: 1 }) // Chronological order for replies
+      .skip(skip)
+      .limit(limitInt + 1);
+
+    const hasMore = replies.length > limitInt;
+    if (hasMore) replies.pop();
+
+    if (!replies || replies.length === 0) {
+      return {
+        error: false,
+        message: "No replies found",
+        data: [],
+        hasMore: false,
+        total: 0,
+      };
+    }
+
+    // Get likes for current user on these replies
+    const replyLikes = await CommentLikes.find({
+      commentId: { $in: replies.map((r) => r.comment_id) },
+      userId: userId,
+    });
+
+    const checkedReplies = replies.map((reply) => ({
+      ...reply.toObject(),
+      likedByme: replyLikes.some((like) => like.commentId === reply.comment_id),
+    }));
+
+    return {
+      error: false,
+      message: "Replies found",
+      data: checkedReplies,
+      hasMore,
+      total: totalReplies,
     };
   }
 

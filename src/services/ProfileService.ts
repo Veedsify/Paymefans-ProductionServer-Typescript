@@ -110,10 +110,10 @@ class ProfileService {
         };
       }
       // Check if either user has blocked the other
-      const [iBlockedThem, theyBlockedMe] = await Promise.all([
-        query.userBlock.findFirst({
-          where: { blocker_id: authUserId, blocked_id: user.id },
-        }),
+      const [theyBlockedMe] = await Promise.all([
+        // query.userBlock.findFirst({
+        //   where: { blocker_id: authUserId, blocked_id: user.id },
+        // }),
         query.userBlock.findFirst({
           where: { blocker_id: user.id, blocked_id: authUserId },
         }),

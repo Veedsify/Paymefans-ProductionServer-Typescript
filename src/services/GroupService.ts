@@ -116,7 +116,7 @@ export default class GroupService {
   static async getUserGroups(
     user: AuthUser,
     params: GroupSearchParams = {},
-  ): Promise<GroupServiceResponse<GroupListResponse>> {
+  ): Promise<GroupServiceResponse<any>> {
     try {
       const { page = 1, limit = 20, query: searchQuery, groupType } = params;
       const skip = (page - 1) * limit;
@@ -161,12 +161,30 @@ export default class GroupService {
           include: {
             admin: true,
             members: {
-              take: 5,
+              where: {
+                userId: user.id,
+              },
               include: {
                 user: true,
               },
             },
             settings: true,
+            messages: {
+              take: 1,
+              orderBy: {
+                createdAt: "desc",
+              },
+              include: {
+                sender: {
+                  select: {
+                    user_id: true,
+                    username: true,
+                    profile_image: true,
+                    is_verified: true,
+                  },
+                },
+              },
+            },
             _count: {
               select: {
                 members: true,
@@ -186,12 +204,76 @@ export default class GroupService {
         }),
       ]);
 
+      console.log("GroupService.getUserGroups - Raw groups fetched:", {
+        userId: user.id,
+        username: user.username,
+        groupsCount: groups.length,
+        total,
+        searchQuery,
+        groupType,
+        page,
+        limit,
+      });
+
+      // Transform groups data to match frontend expectations
+      const transformedGroups = groups.map((group: any) => {
+        const userMember = group.members.find(
+          (member: any) => member.userId === user.id,
+        );
+        const lastMessage = group.messages[0];
+
+        return {
+          id: group.id.toString(),
+          name: group.name,
+          description: group.description,
+          groupIcon: group.groupIcon,
+          groupType: group.groupType,
+          maxMembers: group.maxMembers,
+          membersCount: group._count.members,
+          admin: {
+            user_id: group.admin.user_id,
+            username: group.admin.username,
+            profile_image: group.admin.profile_image,
+            is_verified: group.admin.is_verified,
+          },
+          settings: {
+            allowMemberInvites: group.settings?.allowMemberInvites || false,
+            allowMediaSharing: group.settings?.allowMediaSharing || true,
+            allowFileSharing: group.settings?.allowFileSharing || true,
+            moderateMessages: group.settings?.moderateMessages || false,
+            autoApproveJoinReqs: group.settings?.autoApproveJoinReqs || false,
+          },
+          userRole: userMember?.role || "MEMBER",
+          isActive: group.isActive,
+          lastMessage: lastMessage
+            ? {
+                content: lastMessage.content,
+                senderId: lastMessage.senderId.toString(),
+                senderUsername: lastMessage.sender.username,
+                timestamp: lastMessage.createdAt.toISOString(),
+              }
+            : undefined,
+        };
+      });
+
+      console.log("GroupService.getUserGroups - Transformed groups:", {
+        transformedCount: transformedGroups.length,
+        sampleGroup: transformedGroups[0]
+          ? {
+              id: transformedGroups[0].id,
+              name: transformedGroups[0].name,
+              membersCount: transformedGroups[0].membersCount,
+              userRole: transformedGroups[0].userRole,
+            }
+          : null,
+      });
+
       const pages = Math.ceil(total / limit);
 
       return {
         success: true,
         data: {
-          groups: groups as GroupWithDetails[],
+          groups: transformedGroups,
           pagination: {
             page,
             limit,
@@ -201,7 +283,7 @@ export default class GroupService {
             hasPrev: page > 1,
           },
         },
-      };
+      } as GroupServiceResponse<any>;
     } catch (error) {
       console.error("Error fetching user groups:", error);
       return {

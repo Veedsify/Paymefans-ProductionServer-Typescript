@@ -3,6 +3,7 @@ import { CreateHashedPassword } from "../libs/HashPassword";
 import { currencyRates } from "./currency-rates";
 import { pointSeeding } from "./seeders/createPoints";
 import { GenerateUniqueId } from "./GenerateUniqueId";
+import { configurations } from "./seeders/configuration";
 const { SERVER_ORIGINAL_URL } = process.env;
 
 const prisma = new PrismaClient();
@@ -131,9 +132,7 @@ async function main() {
       profile_image: SERVER_ORIGINAL_URL + "/site/avatar.png",
       user_id: "welcome",
       username: "@welcome",
-      flags: [
-        "profile_hidden"
-      ],
+      flags: ["profile_hidden"],
       UserWallet: {
         create: {
           wallet_id: uniqueUserId,
@@ -173,9 +172,7 @@ async function main() {
       profile_image: SERVER_ORIGINAL_URL + "/site/avatar.png",
       user_id: "technical",
       username: "@technical",
-      flags: [
-        "profile_hidden"
-      ],
+      flags: ["profile_hidden"],
       UserWallet: {
         create: {
           wallet_id: uniqueUserId,
@@ -249,7 +246,14 @@ async function main() {
       app_description:
         "Paymefans is a social media platform that connects models and fans.",
       app_logo: "https://api.paymefans.com/site/logo.png",
-      app_url: "https://yourapp.com",
+      app_url: "https://paymefans.com",
+      //Platform Fees
+      platform_withdrawal_fee: configurations.find(
+        (config) => config.key === "platform_withdrawal_fee",
+      )?.value as number,
+      platform_deposit_fee: configurations.find(
+        (config) => config.key === "platform_deposit_fee",
+      )?.value as number,
       // Currency Settings
       default_currency: "NGN",
       default_rate: 1632.0,
@@ -324,7 +328,10 @@ async function main() {
       app_description:
         "Paymefans is a social media platform that connects models and fans.",
       app_logo: "https://api.paymefans.com/site/logo.png",
-      app_url: "https://yourapp.com",
+      app_url: "https://paymefans.com",
+      //Platform Fees
+      platform_withdrawal_fee: 0.25,
+      platform_deposit_fee: 0.1,
       // Currency Settings
       default_currency: "NGN",
       default_rate: 1632.0,

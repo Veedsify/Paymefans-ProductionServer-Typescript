@@ -15,9 +15,9 @@ export default class WishlistController {
       }
 
       const result = await WishlistService.addToWishlist(
-        user.id,
+        user?.id!,
         productId,
-        product
+        product,
       );
 
       if (result.error) {
@@ -47,8 +47,8 @@ export default class WishlistController {
       }
 
       const result = await WishlistService.removeFromWishlist(
-        user.id,
-        productId
+        user?.id!,
+        productId,
       );
 
       if (result.error) {
@@ -69,7 +69,7 @@ export default class WishlistController {
     try {
       const user = req.user;
 
-      const result = await WishlistService.getUserWishlist(user.id);
+      const result = await WishlistService.getUserWishlist(user?.id!);
 
       if (result.error) {
         return res.status(500).json(result);
@@ -98,8 +98,8 @@ export default class WishlistController {
       }
 
       const result = await WishlistService.checkIfInWishlist(
-        user.id,
-        productId
+        user?.id!,
+        productId,
       );
 
       if (result.error) {
@@ -120,7 +120,7 @@ export default class WishlistController {
     try {
       const user = req.user;
 
-      const result = await WishlistService.getWishlistCount(user.id);
+      const result = await WishlistService.getWishlistCount(user?.id!);
 
       if (result.error) {
         return res.status(500).json(result);
@@ -140,7 +140,7 @@ export default class WishlistController {
     try {
       const user = req.user;
 
-      const result = await WishlistService.clearWishlist(user.id);
+      const result = await WishlistService.clearWishlist(user?.id!);
 
       if (result.error) {
         return res.status(500).json(result);

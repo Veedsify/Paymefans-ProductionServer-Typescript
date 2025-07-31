@@ -1,6 +1,6 @@
 import mongoose, { Schema, Document } from 'mongoose';
 
-export interface ISupportChatSession extends Document {
+interface ISupportChatSession extends Document {
     userId: string;
     agentId?: string;
     status: 'waiting' | 'active' | 'ended';

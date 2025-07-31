@@ -1,12 +1,12 @@
 import query from "@utils/prisma";
 
-export interface UpdatePointsData {
+interface UpdatePointsData {
   user_id: string;
   points: number;
   operation: "add" | "subtract";
 }
 
-export interface UserPointsInfo {
+interface UserPointsInfo {
   user_id: string;
   name: string;
   email: string;
@@ -15,7 +15,7 @@ export interface UserPointsInfo {
   last_updated: Date | null;
 }
 
-export interface PointsUpdateResult {
+interface PointsUpdateResult {
   user_id: string;
   user_name: string;
   user_email: string;

@@ -21,6 +21,27 @@ interface GroupJoinData {
 }
 
 export default class GroupChatHandler {
+  // Helper function to resolve user ID (convert string user_id to numeric id if needed)
+  static async resolveUserId(userId: string): Promise<number | null> {
+    // Try parsing as integer first
+    const userIdInt = parseInt(userId);
+    if (!isNaN(userIdInt)) {
+      return userIdInt;
+    }
+
+    // If not a number, treat as user_id string and look up the numeric id
+    try {
+      const user = await query.user.findUnique({
+        where: { user_id: userId },
+        select: { id: true },
+      });
+      return user?.id || null;
+    } catch (error) {
+      console.error("Error resolving user ID:", error);
+      return null;
+    }
+  }
+
   // Handle user joining a group chat room
   static async handleJoinGroupRoom(
     socket: any,
@@ -28,17 +49,83 @@ export default class GroupChatHandler {
     data: GroupJoinData,
   ) {
     try {
+      console.log("handleJoinGroupRoom - Input data:", {
+        groupId: data?.groupId,
+        userId: data?.userId,
+        userFromSocket: user,
+        socketId: socket?.id,
+      });
+
       const { groupId, userId } = data;
+
+      // Validate input data
+      if (!groupId || !userId) {
+        console.error("handleJoinGroupRoom - Missing required data:", {
+          groupId,
+          userId,
+        });
+        socket.emit("group-error", {
+          message: "Group ID and User ID are required",
+        });
+        return;
+      }
+
+      // Parse and validate IDs
+      const groupIdInt = parseInt(groupId);
+      if (isNaN(groupIdInt)) {
+        console.error("handleJoinGroupRoom - Invalid group ID format:", {
+          groupId,
+          groupIdInt,
+        });
+        socket.emit("group-error", {
+          message: "Invalid group ID format",
+        });
+        return;
+      }
+
+      // Resolve user ID (handle both numeric and string formats)
+      const userIdInt = await this.resolveUserId(userId);
+      if (!userIdInt) {
+        console.error("handleJoinGroupRoom - Could not resolve user ID:", {
+          userId,
+        });
+        socket.emit("group-error", {
+          message: "Invalid user ID or user not found",
+        });
+        return;
+      }
+
+      console.log("handleJoinGroupRoom - Checking membership:", {
+        groupIdInt,
+        userIdInt,
+        originalUserId: userId,
+      });
 
       // Verify user is a member of the group
       const membership = await query.groupMember.findFirst({
         where: {
-          groupId: parseInt(groupId),
-          userId: parseInt(userId),
+          groupId: groupIdInt,
+          userId: userIdInt,
         },
       });
 
+      console.log("handleJoinGroupRoom - Membership result:", {
+        found: !!membership,
+        membership: membership
+          ? {
+              id: membership.id,
+              role: membership.role,
+              joinedAt: membership.joinedAt,
+            }
+          : null,
+      });
+
       if (!membership) {
+        console.error("handleJoinGroupRoom - User not a member:", {
+          groupIdInt,
+          userIdInt,
+          originalUserId: userId,
+        });
         socket.emit("group-error", {
           message: "You are not a member of this group",
         });
@@ -49,28 +136,53 @@ export default class GroupChatHandler {
       const roomName = `group:${groupId}`;
       socket.join(roomName);
 
-      // Store user's group room mapping in Redis
+      console.log("handleJoinGroupRoom - Joined socket room:", {
+        roomName,
+        socketId: socket.id,
+      });
+
+      // Store user's group room mapping in Redis (use original userId for consistency)
       await redis.hset(`group-rooms:${userId}`, groupId, roomName);
       await redis.hset(
         `group-members:${groupId}`,
         userId,
         JSON.stringify({
           ...user,
+          userId: userIdInt,
+          originalUserId: userId,
           joinedAt: new Date().toISOString(),
         }),
       );
+
+      console.log("handleJoinGroupRoom - Stored in Redis:", {
+        userGroupKey: `group-rooms:${userId}`,
+        memberKey: `group-members:${groupId}`,
+        resolvedUserId: userIdInt,
+      });
 
       // Notify other members that user joined
       socket.to(roomName).emit("group-member-joined", {
         groupId,
         user: {
-          id: userId,
+          id: userIdInt,
+          user_id: userId,
           username: user.username,
         },
         timestamp: new Date().toISOString(),
       });
 
-      console.log(`User ${user.username} joined group room: ${roomName}`);
+      console.log(
+        `User ${user.username} (ID: ${userIdInt}) successfully joined group room: ${roomName}`,
+      );
+
+      // Emit success confirmation to the user
+      socket.emit("group-room-joined", {
+        groupId,
+        roomName,
+        userId: userIdInt,
+        originalUserId: userId,
+        message: "Successfully joined group room",
+      });
     } catch (error) {
       console.error("Error joining group room:", error);
       socket.emit("group-error", {
@@ -117,7 +229,6 @@ export default class GroupChatHandler {
     socket: any,
     user: SocketUser,
     data: GroupChatData,
-    io: any,
   ) {
     try {
       const {
@@ -128,11 +239,35 @@ export default class GroupChatHandler {
         attachments,
       } = data;
 
+      // Parse and validate group ID
+      const groupIdInt = parseInt(groupId);
+      if (isNaN(groupIdInt)) {
+        socket.emit("group-error", {
+          message: "Invalid group ID format",
+        });
+        return;
+      }
+
+      // Resolve user ID
+      const userIdInt = await this.resolveUserId(user.userId);
+      if (!userIdInt) {
+        socket.emit("group-error", {
+          message: "Invalid user ID or user not found",
+        });
+        return;
+      }
+
+      console.log("handleGroupMessage - Resolved IDs:", {
+        groupIdInt,
+        userIdInt,
+        originalUserId: user.userId,
+      });
+
       // Verify user is a member of the group
       const membership = await query.groupMember.findFirst({
         where: {
-          groupId: parseInt(groupId),
-          userId: parseInt(user.userId),
+          groupId: groupIdInt,
+          userId: userIdInt,
         },
       });
 
@@ -145,7 +280,7 @@ export default class GroupChatHandler {
 
       // Check group settings for message permissions
       const groupSettings = await query.groupSettings.findFirst({
-        where: { groupId: parseInt(groupId) },
+        where: { groupId: groupIdInt },
       });
 
       // If moderateMessages is enabled, only admins and moderators can send messages
@@ -163,8 +298,8 @@ export default class GroupChatHandler {
       // Create the message in database
       const message = await query.groupMessage.create({
         data: {
-          groupId: parseInt(groupId),
-          senderId: parseInt(user.userId),
+          groupId: groupIdInt,
+          senderId: userIdInt,
           content: content || "",
           messageType: messageType,
           replyToId: replyToId || null,
@@ -194,6 +329,11 @@ export default class GroupChatHandler {
 
       // Handle attachments if any
       if (attachments && attachments.length > 0) {
+        console.log(
+          "handleGroupMessage - Processing attachments:",
+          attachments.length,
+        );
+
         const attachmentData = attachments.map((attachment: any) => ({
           messageId: message.id,
           url: attachment.fileUrl,
@@ -205,25 +345,44 @@ export default class GroupChatHandler {
         await query.groupAttachment.createMany({
           data: attachmentData,
         });
+
+        console.log(
+          "handleGroupMessage - Attachments saved:",
+          attachmentData.length,
+        );
       }
+
+      // Fetch attachments from database to include in response
+      const messageAttachments =
+        attachments && attachments.length > 0
+          ? await query.groupAttachment.findMany({
+              where: { messageId: message.id },
+            })
+          : [];
 
       // Emit message to all group members
       const roomName = `group:${groupId}`;
       const messageData = {
         id: message.id,
-        groupId: message.groupId,
+        groupId: message.groupId.toString(),
         content: message.content,
         messageType: message.messageType,
         senderId: message.senderId.toString(),
         sender: (message as any).sender,
         replyTo: (message as any).replyTo,
-        attachments: attachments || [],
+        attachments: messageAttachments.map((att) => ({
+          id: att.id,
+          fileName: att.fileName,
+          fileUrl: att.url,
+          fileType: att.type,
+          fileSize: att.fileSize,
+        })),
         createdAt: message.createdAt,
         timestamp: new Date().toISOString(),
       };
 
       // Emit to all members in the group room
-      io.to(roomName).emit("new-group-message", messageData);
+      socket.to(roomName).emit("new-group-message", messageData);
 
       // Store last message info in Redis for quick access
       await redis.hset(
@@ -238,7 +397,9 @@ export default class GroupChatHandler {
         }),
       );
 
-      console.log(`Message sent to group ${groupId} by ${user.username}`);
+      console.log(
+        `Message sent to group ${groupId} by user ${user.username} (ID: ${userIdInt})`,
+      );
     } catch (error) {
       console.error("Error sending group message:", error);
       socket.emit("group-error", {
@@ -257,21 +418,62 @@ export default class GroupChatHandler {
       const { groupId, isTyping } = data;
       const roomName = `group:${groupId}`;
 
+      console.log("handleGroupTyping - Input:", {
+        groupId,
+        userId: user.userId,
+        username: user.username,
+        isTyping,
+      });
+
+      // Resolve user ID
+      const userIdInt = await this.resolveUserId(user.userId);
+      if (!userIdInt) {
+        console.error(
+          "handleGroupTyping - Could not resolve user ID:",
+          user.userId,
+        );
+        return;
+      }
+
       // Emit typing status to other group members
       socket.to(roomName).emit("group-typing", {
         groupId,
-        userId: user.userId,
+        userId: userIdInt.toString(),
         username: user.username,
         isTyping,
         timestamp: new Date().toISOString(),
       });
 
       // Store typing status in Redis with expiration
+      const typingKey = `group-typing:${groupId}:${userIdInt}`;
       if (isTyping) {
-        await redis.setex(`group-typing:${groupId}:${user.userId}`, 5, "true");
+        await redis.setex(typingKey, 5, "true");
+
+        // Auto-cleanup after 5 seconds
+        setTimeout(async () => {
+          const stillTyping = await redis.get(typingKey);
+          if (stillTyping) {
+            await redis.del(typingKey);
+            // Emit typing stopped
+            socket.to(roomName).emit("group-typing", {
+              groupId,
+              userId: userIdInt.toString(),
+              username: user.username,
+              isTyping: false,
+              timestamp: new Date().toISOString(),
+            });
+            console.log(
+              `Auto-stopped typing for user ${user.username} in group ${groupId}`,
+            );
+          }
+        }, 5000);
       } else {
-        await redis.del(`group-typing:${groupId}:${user.userId}`);
+        await redis.del(typingKey);
       }
+
+      console.log(
+        `User ${user.username} typing status in group ${groupId}: ${isTyping}`,
+      );
     } catch (error) {
       console.error("Error handling group typing:", error);
     }
@@ -308,10 +510,28 @@ export default class GroupChatHandler {
   // Restore user to their group rooms on reconnection
   static async handleRestoreGroupRooms(socket: any, userId: string) {
     try {
+      // Validate userId parameter
+      if (!userId) {
+        console.error("userId is required but not provided");
+        return;
+      }
+
+      // Resolve user ID (handle both numeric and string formats)
+      const userIdInt = await this.resolveUserId(userId);
+      if (!userIdInt) {
+        console.error(`Could not resolve userId: ${userId}`);
+        return;
+      }
+
+      console.log("handleRestoreGroupRooms - Resolved user ID:", {
+        originalUserId: userId,
+        resolvedUserId: userIdInt,
+      });
+
       // Get user's active group memberships
       const memberships = await query.groupMember.findMany({
         where: {
-          userId: parseInt(userId),
+          userId: userIdInt,
         },
         include: {
           group: true,
@@ -328,7 +548,7 @@ export default class GroupChatHandler {
       }
 
       console.log(
-        `Restored ${memberships.length} group rooms for user ${userId}`,
+        `Restored ${memberships.length} group rooms for user ${userId} (ID: ${userIdInt})`,
       );
     } catch (error) {
       console.error("Error restoring group rooms:", error);

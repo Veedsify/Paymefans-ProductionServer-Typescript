@@ -5,10 +5,13 @@ export default class PostController {
   // Create Post
   static async CreatePost(req: Request, res: Response): Promise<any> {
     try {
-      const SavePost = await PostService.CreatePost({
-        user: req.user,
-        ...req.body,
-      });
+      const SavePost = await PostService.CreatePost(
+        {
+          user: req.user,
+          ...req.body,
+        },
+        req.user?.id!,
+      );
 
       if ("error" in SavePost && SavePost.error) {
         return res.status(400).json({ message: SavePost.error });
@@ -73,7 +76,7 @@ export default class PostController {
         userId: Number(req.params.userId) as number,
         page: req.query.page as string,
         limit: req.query.limit as string,
-        authUserId: req.user?.id!
+        authUserId: req.user?.id!,
       });
       return res.status(200).json(Reposts);
     } catch (err: any) {
@@ -186,10 +189,32 @@ export default class PostController {
         userId: req.user?.id!,
         ...req.body,
       });
+      if (!EditPost.status) {
+        return res.status(400).json(EditPost);
+      }
+      return res.status(200).json(EditPost);
+    } catch (err: any) {
+      console.error(err.message);
+      res
+        .status(500)
+        .json({ status: false, message: "Internal Server Error!" });
+    }
+  }
+  // Update Post
+  static async UpdatePost(req: Request, res: Response): Promise<any> {
+    try {
+      const UpdatePost = await PostService.UpdatePost({
+        postId: req.params.postId,
+        userId: req.user?.id!,
+        ...req.body,
+      });
+      if (UpdatePost.error) {
+        return res.status(400).json({ ...UpdatePost });
+      }
       return res.status(200).json({
         status: true,
-        message: "Post Updated Successfully",
-        data: EditPost,
+        message: "Post updated successfully",
+        data: UpdatePost,
       });
     } catch (err: any) {
       console.error(err.message);
@@ -250,6 +275,27 @@ export default class PostController {
       });
     }
   }
+
+  // Get Comment Replies
+  static async GetCommentReplies(req: Request, res: Response): Promise<any> {
+    try {
+      const options = {
+        commentId: req.params.commentId as string,
+        userId: req.user?.id!,
+        page: req.query.page as string,
+        limit: req.query.limit as string,
+      };
+      const replies = await PostService.GetCommentReplies(options);
+      return res.status(200).json({ ...replies });
+    } catch (error: any) {
+      console.log(error.message);
+      res.status(500).json({
+        status: false,
+        message: "Internal Server Error",
+      });
+    }
+  }
+
   // Like a Post
   static async LikePost(req: Request, res: Response): Promise<any> {
     try {

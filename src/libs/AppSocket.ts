@@ -130,7 +130,7 @@ async function AppSocket(io: any) {
     );
 
     socket.on("send-group-message", (data: any) => {
-      GroupChatHandler.handleGroupMessage(socket, user, data, io);
+      GroupChatHandler.handleGroupMessage(socket, user, data);
     });
 
     socket.on(
@@ -148,6 +148,10 @@ async function AppSocket(io: any) {
     );
 
     socket.on("restore-group-rooms", (data: { userId: string }) => {
+      if (!data || !data.userId) {
+        console.error("Invalid data provided for restore-group-rooms");
+        return;
+      }
       GroupChatHandler.handleRestoreGroupRooms(socket, data.userId);
     });
 

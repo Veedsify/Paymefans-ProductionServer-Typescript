@@ -1324,8 +1324,8 @@ model Configurations {
   point_purchase_minimum_message        String   @default("Minimum purchase amount not met") @map("point_purchase_minimum_message")
   created_at                            DateTime @default(now()) @map("created_at")
   updated_at                            DateTime @updatedAt @map("updated_at")
-  platform_deposit_fee                  Float    @default(0.0) @map("platform_deposit_fee")
-  platform_withdrawal_fee               Float    @default(0.0) @map("platform_withdrawal_fee")
+  platform_deposit_fee                  Float    @default(0.10) @map("platform_deposit_fee")
+  platform_withdrawal_fee               Float    @default(0.25) @map("platform_withdrawal_fee")
 
   @@index([app_name])
 }

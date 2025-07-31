@@ -4,12 +4,11 @@ import {
 } from "@jobs/ActiveUserJobs";
 import { deleteUserQueue } from "@jobs/DeleteAccountMedia";
 import { pruneInactiveSubscribersQueue } from "@jobs/ModelSubscriberJobs";
-import { mentionWorker } from "@jobs/MentionNotificationJob";
+import { CronJobService } from "@services/CronJobService";
 
 async function InitializeQueueJobs() {
-  // Initialize mention notification worker (no recurring jobs needed)
-  console.log("Mention notification worker initialized");
-
+  // Initialize Cron Jobs
+  CronJobService.initialize();
   // Emit active users to the socket - reduced frequency since we now use event-driven updates
   await activeUsersQueue.add(
     "activeUsersQueue",
@@ -51,7 +50,7 @@ async function InitializeQueueJobs() {
     {},
     {
       repeat: {
-        every: Number(60 * 60 * 24), // Every 24 hours
+        every: 1000 * 60 * 60 * 24, // 24 hours
       },
       jobId: "deleteUserJob",
     },

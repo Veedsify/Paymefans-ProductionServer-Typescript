@@ -4,7 +4,7 @@ import type {
   ReadNotificationResponse,
 } from "../types/notifications";
 
-export interface CreateNotificationData {
+interface CreateNotificationData {
   user_id: string;
   message: string;
   action?:
@@ -19,7 +19,7 @@ export interface CreateNotificationData {
   url?: string | null;
 }
 
-export interface NotificationResult {
+interface NotificationResult {
   id: number;
   notification_id: string;
   user_id: number;

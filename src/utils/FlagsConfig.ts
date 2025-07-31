@@ -191,7 +191,7 @@ const Roles = {
 
 // RBAC utility functions
 export class RBAC {
-  static hasPermission(userRoles: string[], permission:string): boolean {
+  static hasPermission(userRoles: string[], permission: string): boolean {
     return userRoles.some((role) => {
       const roleConfig = Object.values(Roles).find((r) => r.name === role);
       // @ts-ignore
@@ -200,7 +200,7 @@ export class RBAC {
   }
 
   static hasAnyPermission(userRoles: string[], permissions: string[]): boolean {
-    return permissions.some((permission:string) =>
+    return permissions.some((permission: string) =>
       this.hasPermission(userRoles, permission),
     );
   }
@@ -226,4 +226,4 @@ export class RBAC {
   }
 }
 
-export { Permissions, Roles };
+export { Permissions };

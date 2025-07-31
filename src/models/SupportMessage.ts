@@ -1,6 +1,6 @@
 import mongoose, { Schema, Document } from 'mongoose';
 
-export interface ISupportMessage extends Document {
+interface ISupportMessage extends Document {
     sessionId: string;
     sender: 'user' | 'agent';
     senderId: string;

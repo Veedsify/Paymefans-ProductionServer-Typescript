@@ -3,7 +3,7 @@ import { redis } from "@libs/RedisStore";
 import _ from "lodash";
 import { Prisma } from "@prisma/client";
 import OpenStreetMapService from "./OpenStreetMapService";
-import { Permissions, RBAC } from "@utils/FlagsConfig";
+import { Permissions } from "@utils/FlagsConfig";
 
 export default class HookupService {
   // Get HookUp Models based on location

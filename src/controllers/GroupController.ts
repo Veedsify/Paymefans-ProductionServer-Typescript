@@ -51,6 +51,8 @@ export default class GroupController {
   static async getUserGroups(req: Request, res: Response): Promise<any> {
     try {
       const user = req.user as AuthUser;
+      console.log("getUserGroups - User:", user?.id, user?.username);
+
       const params: GroupSearchParams = {
         page: req.query.page ? parseInt(req.query.page as string) : undefined,
         limit: req.query.limit
@@ -60,13 +62,36 @@ export default class GroupController {
         groupType: req.query.groupType as any,
       };
 
+      console.log("getUserGroups - Params:", params);
+
       const result = await GroupService.getUserGroups(user, params);
+      console.log("getUserGroups - Service Result:", {
+        success: result.success,
+        error: result.error,
+        groupsCount: result.data?.groups?.length || 0,
+        total: result.data?.pagination?.total || 0,
+      });
 
       if (result.error) {
         return res.status(400).json(result);
       }
 
-      return res.status(200).json(result);
+      // Transform response to match frontend expectations
+      const transformedResult = {
+        success: result.success,
+        data: {
+          userGroups: result.data?.groups || [],
+          userGroupsCount: result.data?.pagination?.total || 0,
+        },
+      };
+
+      console.log("getUserGroups - Transformed Result:", {
+        success: transformedResult.success,
+        userGroupsCount: transformedResult.data.userGroupsCount,
+        userGroupsLength: transformedResult.data.userGroups.length,
+      });
+
+      return res.status(200).json(transformedResult);
     } catch (error) {
       console.error("Error in getUserGroups:", error);
       res.status(500).json({
@@ -770,7 +795,6 @@ export default class GroupController {
   // Upload attachment for group messages
   static async uploadAttachment(req: Request, res: Response): Promise<any> {
     try {
-      const user = req.user as AuthUser;
       const files = req.files as Express.Multer.File[];
 
       if (!files || files.length === 0) {
@@ -781,13 +805,22 @@ export default class GroupController {
         });
       }
 
+      console.log("uploadAttachment - Files received:", files.length);
+
       // Process each file and return upload URLs
       const uploadResults = [];
 
       for (const file of files) {
-        // Here you would typically upload to your storage service (S3, Cloudflare, etc.)
-        // For now, we'll simulate the upload and return a URL
-        const fileUrl = `/uploads/group-attachments/${Date.now()}-${file.originalname}`;
+        console.log("uploadAttachment - Processing file:", {
+          originalname: file.originalname,
+          mimetype: file.mimetype,
+          size: file.size,
+          path: file.path,
+        });
+
+        // Create file URL based on the actual file path
+        // The file should be saved in the public directory by multer
+        const fileUrl = `/uploads/group-attachments/${file.filename}`;
 
         uploadResults.push({
           fileName: file.originalname,
@@ -796,6 +829,8 @@ export default class GroupController {
           fileSize: file.size,
         });
       }
+
+      console.log("uploadAttachment - Upload results:", uploadResults);
 
       return res.status(200).json({
         success: true,

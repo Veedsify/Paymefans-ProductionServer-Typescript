@@ -1,6 +1,6 @@
 import mongoose, { Schema, Document } from 'mongoose';
 
-export interface ISupportReview extends Document {
+interface ISupportReview extends Document {
     sessionId: string;
     userId: string;
     rating: number;

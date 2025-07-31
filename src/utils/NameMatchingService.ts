@@ -3,7 +3,7 @@
  * Provides fuzzy name matching between user signup names and extracted ID names
  */
 
-export interface NameMatchResult {
+interface NameMatchResult {
     isMatch: boolean;
     confidence: number;
     details: {

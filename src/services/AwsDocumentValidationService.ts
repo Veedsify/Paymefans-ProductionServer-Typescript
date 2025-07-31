@@ -489,5 +489,4 @@ export const extractNamesFromDocument = (detectedTexts: string[], country: strin
             name.length < 30
         );
 };
-
-export type { IDValidationResult, DocumentQualityResult };
+;

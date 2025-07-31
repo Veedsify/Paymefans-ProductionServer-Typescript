@@ -24,7 +24,6 @@ import rates from "./users/rate/rate";
 import configs from "@routes/users/configs/configs";
 import search from "@routes/users/search/search";
 import groups from "@routes/users/groups/groups";
-import support from "@routes/users/support/support";
 import analytics from "@routes/users/analytics/analytics";
 import hookup from "@routes/users/hookup/hookup";
 import report from "@routes/users/report/report";
@@ -85,8 +84,6 @@ api.use("/configs", configs);
 api.use("/search", search);
 // Groups
 api.use("/groups", groups);
-// Support
-api.use("/support", support);
 // Analytics
 api.use("/analytics", analytics);
 // Hookup

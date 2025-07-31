@@ -1,5 +1,4 @@
 import { Wishlist } from "../utils/mongoSchema";
-import type { Request } from "express";
 
 export interface WishlistItem {
   userId: number;
@@ -8,7 +7,7 @@ export interface WishlistItem {
   dateAdded?: Date;
 }
 
-export interface WishlistResponse {
+interface WishlistResponse {
   error: boolean;
   message: string;
   data?: any;
@@ -18,7 +17,7 @@ export default class WishlistService {
   static async addToWishlist(
     userId: number,
     productId: string,
-    product: any
+    product: any,
   ): Promise<WishlistResponse> {
     try {
       // Check if item already exists in wishlist
@@ -27,7 +26,7 @@ export default class WishlistService {
       if (existingItem) {
         return {
           error: true,
-          message: "Product already in wishlist"
+          message: "Product already in wishlist",
         };
       }
 
@@ -36,7 +35,7 @@ export default class WishlistService {
         userId,
         productId,
         product,
-        dateAdded: new Date()
+        dateAdded: new Date(),
       });
 
       await wishlistItem.save();
@@ -44,20 +43,20 @@ export default class WishlistService {
       return {
         error: false,
         message: "Product added to wishlist successfully",
-        data: wishlistItem
+        data: wishlistItem,
       };
     } catch (error: any) {
       console.error("Error adding to wishlist:", error);
       return {
         error: true,
-        message: "Failed to add product to wishlist"
+        message: "Failed to add product to wishlist",
       };
     }
   }
 
   static async removeFromWishlist(
     userId: number,
-    productId: string
+    productId: string,
   ): Promise<WishlistResponse> {
     try {
       const result = await Wishlist.findOneAndDelete({ userId, productId });
@@ -65,44 +64,46 @@ export default class WishlistService {
       if (!result) {
         return {
           error: true,
-          message: "Product not found in wishlist"
+          message: "Product not found in wishlist",
         };
       }
 
       return {
         error: false,
-        message: "Product removed from wishlist successfully"
+        message: "Product removed from wishlist successfully",
       };
     } catch (error: any) {
       console.error("Error removing from wishlist:", error);
       return {
         error: true,
-        message: "Failed to remove product from wishlist"
+        message: "Failed to remove product from wishlist",
       };
     }
   }
 
   static async getUserWishlist(userId: number): Promise<WishlistResponse> {
     try {
-      const wishlistItems = await Wishlist.find({ userId }).sort({ dateAdded: -1 });
+      const wishlistItems = await Wishlist.find({ userId }).sort({
+        dateAdded: -1,
+      });
 
       return {
         error: false,
         message: "Wishlist retrieved successfully",
-        data: wishlistItems
+        data: wishlistItems,
       };
     } catch (error: any) {
       console.error("Error fetching wishlist:", error);
       return {
         error: true,
-        message: "Failed to fetch wishlist"
+        message: "Failed to fetch wishlist",
       };
     }
   }
 
   static async checkIfInWishlist(
     userId: number,
-    productId: string
+    productId: string,
   ): Promise<WishlistResponse> {
     try {
       const item = await Wishlist.findOne({ userId, productId });
@@ -110,13 +111,13 @@ export default class WishlistService {
       return {
         error: false,
         message: "Check completed",
-        data: { inWishlist: !!item }
+        data: { inWishlist: !!item },
       };
     } catch (error: any) {
       console.error("Error checking wishlist:", error);
       return {
         error: true,
-        message: "Failed to check wishlist status"
+        message: "Failed to check wishlist status",
       };
     }
   }
@@ -128,13 +129,13 @@ export default class WishlistService {
       return {
         error: false,
         message: "Wishlist count retrieved successfully",
-        data: { count }
+        data: { count },
       };
     } catch (error: any) {
       console.error("Error getting wishlist count:", error);
       return {
         error: true,
-        message: "Failed to get wishlist count"
+        message: "Failed to get wishlist count",
       };
     }
   }
@@ -145,13 +146,13 @@ export default class WishlistService {
 
       return {
         error: false,
-        message: "Wishlist cleared successfully"
+        message: "Wishlist cleared successfully",
       };
     } catch (error: any) {
       console.error("Error clearing wishlist:", error);
       return {
         error: true,
-        message: "Failed to clear wishlist"
+        message: "Failed to clear wishlist",
       };
     }
   }

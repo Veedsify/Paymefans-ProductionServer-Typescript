@@ -63,8 +63,6 @@ IoInstance.init(server).then(async (instance) => {
   await ModelsRedisPubSub(instance);
   // Hookup Redis PubSub
   await HookupRedisPubSub(instance);
-  // Initialize Cron Jobs
-  CronJobService.initialize();
 });
 
 // Connect to MongoDB

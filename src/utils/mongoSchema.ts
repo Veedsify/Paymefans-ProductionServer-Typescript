@@ -74,6 +74,24 @@ const CommentLikeSchema = new mongoose.Schema({
   },
 });
 
+const CommentViewSchema = new mongoose.Schema({
+  commentId: {
+    type: String,
+    required: true,
+  },
+  userId: {
+    type: Number,
+    required: true,
+  },
+  viewedAt: {
+    type: Date,
+    default: Date.now,
+  },
+});
+
+// Create compound index for userId and commentId to ensure uniqueness
+CommentViewSchema.index({ userId: 1, commentId: 1 }, { unique: true });
+
 const wishlistSchema = new mongoose.Schema({
   userId: {
     type: Number,
@@ -98,6 +116,7 @@ wishlistSchema.index({ userId: 1, productId: 1 }, { unique: true });
 
 const Comments = mongo.model("Comments", commentSchema);
 const CommentLikes = mongo.model("CommentLikes", CommentLikeSchema);
+const CommentViews = mongo.model("CommentViews", CommentViewSchema);
 const Wishlist = mongo.model("Wishlist", wishlistSchema);
 
-export { Comments, CommentLikes, Wishlist };
+export { Comments, CommentLikes, CommentViews, Wishlist };

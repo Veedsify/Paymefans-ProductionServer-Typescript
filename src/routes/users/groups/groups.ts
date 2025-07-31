@@ -2,6 +2,7 @@ import express from "express";
 import Auth from "@middleware/Auth";
 import GroupController from "@controllers/GroupController";
 import { CreateUpload } from "@middleware/FileUploadConfig";
+import UploadController from "@controllers/UploadController";
 
 const groups = express.Router();
 
@@ -77,6 +78,12 @@ groups.post(
   groupAttachments.array("attachments", 10),
   Auth,
   GroupController.uploadAttachment,
+);
+
+groups.post(
+  "/:groupId/media-upload-url",
+  Auth,
+  UploadController.CreateMediaUploadSignedUrl,
 );
 
 export default groups;
