@@ -18,6 +18,8 @@ import EmailService from "./EmailService";
 import EmitActiveUsers from "@jobs/EmitActiveUsers";
 import TriggerModels from "@jobs/Models";
 import TriggerHookups from "@jobs/Hookup";
+import ModelService from "./ModelService";
+import HookupService from "./HookupService";
 
 // --- Support Chat Handlers ---
 // import SupportChatSession from "../models/SupportChatSession";
@@ -251,9 +253,6 @@ export default class SocketService {
         typeof messageResult === "object" &&
         !("success" in messageResult)
       ) {
-        // This is a successful message object
-        console.log("✅ Message saved successfully, emitting to receiver");
-
         // Emit message without rawFiles (they're only for sender UI)
         const messageForReceiver = {
           ...data,
@@ -484,5 +483,49 @@ export default class SocketService {
   static async HandleModelHookupPooling(username: string): Promise<any> {
     TriggerModels();
     TriggerHookups(username);
+  }
+
+  // Send immediate models and hookups to a specific socket
+  static async SendImmediateModelsAndHookups(
+    socket: Socket,
+    username: string,
+  ): Promise<void> {
+    try {
+      console.log("Sending immediate data to", username);
+
+      // Get models data directly
+      const models = await ModelService.GetModels({ limit: 3 });
+
+      // Send models immediately to this socket
+      socket.emit("models-update", { models: models.models });
+
+      // Get user data for location-based hookups
+      const user = await query.user.findFirst({
+        where: { username },
+        select: {
+          id: true,
+          UserLocation: true,
+        },
+      });
+
+      if (user) {
+        const longitude = user.UserLocation?.longitude ?? 0;
+        const latitude = user.UserLocation?.latitude ?? 0;
+
+        const hookups = await HookupService.GetNearbyHookups(
+          user,
+          { latitude, longitude },
+          6,
+        );
+
+        // Send hookups immediately to this socket
+        socket.emit("hookup-update", { hookups: hookups.hookups });
+      }
+    } catch (error) {
+      console.error("❌ Error sending immediate data to", username, ":", error);
+      // Send empty data as fallback
+      socket.emit("models-update", { models: [] });
+      socket.emit("hookup-update", { hookups: [] });
+    }
   }
 }

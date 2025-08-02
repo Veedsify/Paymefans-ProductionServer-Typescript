@@ -8,12 +8,10 @@ import type {
   GroupMemberParams,
   GroupMessagesParams,
   InviteToGroupRequest,
-  JoinGroupRequest,
   UpdateMemberRoleRequest,
   GroupServiceResponse,
   GroupListResponse,
   GroupMembersResponse,
-  GroupMessagesResponse,
   GroupJoinRequestsResponse,
   GroupInvitationsResponse,
   UserGroupStats,
@@ -159,7 +157,16 @@ export default class GroupService {
         query.groups.findMany({
           where: whereClause,
           include: {
-            admin: true,
+            admin: {
+              select: {
+                user_id: true,
+                username: true,
+                profile_image: true,
+                is_verified: true,
+                role: true,
+                profile_banner: true,
+              },
+            },
             members: {
               where: {
                 userId: user.id,
@@ -172,7 +179,7 @@ export default class GroupService {
             messages: {
               take: 1,
               orderBy: {
-                createdAt: "desc",
+                created_at: "desc",
               },
               include: {
                 sender: {
@@ -196,25 +203,13 @@ export default class GroupService {
           skip,
           take: limit,
           orderBy: {
-            updatedAt: "desc",
+            updated_at: "desc",
           },
         }),
         query.groups.count({
           where: whereClause,
         }),
       ]);
-
-      console.log("GroupService.getUserGroups - Raw groups fetched:", {
-        userId: user.id,
-        username: user.username,
-        groupsCount: groups.length,
-        total,
-        searchQuery,
-        groupType,
-        page,
-        limit,
-      });
-
       // Transform groups data to match frontend expectations
       const transformedGroups = groups.map((group: any) => {
         const userMember = group.members.find(
@@ -223,7 +218,7 @@ export default class GroupService {
         const lastMessage = group.messages[0];
 
         return {
-          id: group.id.toString(),
+          id: group.id,
           name: group.name,
           description: group.description,
           groupIcon: group.groupIcon,
@@ -248,24 +243,12 @@ export default class GroupService {
           lastMessage: lastMessage
             ? {
                 content: lastMessage.content,
-                senderId: lastMessage.senderId.toString(),
+                senderId: lastMessage.senderId,
                 senderUsername: lastMessage.sender.username,
-                timestamp: lastMessage.createdAt.toISOString(),
+                timestamp: lastMessage.created_at,
               }
             : undefined,
         };
-      });
-
-      console.log("GroupService.getUserGroups - Transformed groups:", {
-        transformedCount: transformedGroups.length,
-        sampleGroup: transformedGroups[0]
-          ? {
-              id: transformedGroups[0].id,
-              name: transformedGroups[0].name,
-              membersCount: transformedGroups[0].membersCount,
-              userRole: transformedGroups[0].userRole,
-            }
-          : null,
       });
 
       const pages = Math.ceil(total / limit);
@@ -389,7 +372,7 @@ export default class GroupService {
           groupType: data.groupType,
           maxMembers: data.maxMembers,
           groupIcon: data.groupIcon,
-          updatedAt: new Date(),
+          updated_at: new Date(),
         },
         include: {
           admin: true,
@@ -455,7 +438,7 @@ export default class GroupService {
           allowFileSharing: data.allowFileSharing,
           moderateMessages: data.moderateMessages,
           autoApproveJoinReqs: data.autoApproveJoinReqs,
-          updatedAt: new Date(),
+          updated_at: new Date(),
         },
         create: {
           groupId,
@@ -573,10 +556,15 @@ export default class GroupService {
     user: AuthUser,
     groupId: number,
     params: GroupMessagesParams = {},
-  ): Promise<GroupServiceResponse<GroupMessagesResponse>> {
+  ): Promise<GroupServiceResponse<any>> {
     try {
-      const { page = 1, limit = 50, cursor } = params;
-      const skip = (page - 1) * limit;
+      const { page = 1, limit = 100, cursor } = params;
+      console.log("GroupService.getGroupMessages called with:", {
+        groupId,
+        page,
+        limit,
+        cursor,
+      });
 
       // Check if user is a member
       const membership = await query.groupMember.findFirst({
@@ -600,49 +588,71 @@ export default class GroupService {
 
       if (cursor) {
         whereClause.id = { lt: cursor };
+        console.log("Using cursor pagination with whereClause:", whereClause);
+      } else {
+        console.log("No cursor provided, fetching latest messages");
       }
 
-      const [messages, total] = await Promise.all([
-        query.groupMessage.findMany({
-          where: whereClause,
-          include: {
-            sender: true,
-            attachments: true,
-            replyTo: true,
-            tags: {
-              include: {
-                user: true,
-              },
+      // Fetch one extra message to determine if there are more
+      const messages = await query.groupMessage.findMany({
+        where: whereClause,
+        include: {
+          sender: true,
+          attachments: true,
+          replyTo: true,
+          tags: {
+            include: {
+              user: true,
             },
           },
-          skip,
-          take: limit,
-          orderBy: {
-            createdAt: "desc",
-          },
-        }),
-        query.groupMessage.count({
-          where: { groupId },
-        }),
-      ]);
+        },
+        take: limit + 1,
+        orderBy: {
+          created_at: "desc",
+        },
+      });
+
+      // Check if there are more messages
+      const hasMore = messages.length > limit;
+      const actualMessages = hasMore ? messages.slice(0, limit) : messages;
+
+      // Get next cursor (ID of the last message)
+      const nextCursor =
+        actualMessages.length > 0
+          ? actualMessages[actualMessages.length - 1].id
+          : null;
+
+      console.log("Pagination result:", {
+        totalFetched: messages.length,
+        limitPlusOne: limit + 1,
+        hasMore,
+        actualMessagesCount: actualMessages.length,
+        nextCursor,
+        firstMessageId: actualMessages[0]?.id,
+        lastMessageId: actualMessages[actualMessages.length - 1]?.id,
+      });
+
+      // Get total count for pagination info
+      const total = await query.groupMessage.count({
+        where: { groupId },
+      });
 
       const pages = Math.ceil(total / limit);
 
       return {
         success: true,
         data: {
-          messages: messages as GroupMessageWithDetails[],
+          messages: actualMessages as GroupMessageWithDetails[],
+          nextCursor,
+          hasMore,
           pagination: {
             page,
             limit,
             total,
             pages,
-            hasNext: page < pages,
-            hasPrev: page > 1,
-            cursor:
-              messages.length > 0
-                ? messages[messages.length - 1].id
-                : undefined,
+            hasNext: hasMore,
+            hasPrev: cursor ? true : false,
+            cursor: nextCursor,
           },
         },
       };
@@ -660,7 +670,6 @@ export default class GroupService {
   static async joinGroup(
     user: AuthUser,
     groupId: number,
-    data: JoinGroupRequest,
   ): Promise<GroupServiceResponse<any>> {
     try {
       const group = await query.groups.findFirst({
@@ -699,68 +708,59 @@ export default class GroupService {
         };
       }
 
-      // Check if group is full
-      if (group._count.members >= group.maxMembers) {
-        return {
-          success: false,
-          error: true,
-          message: "Group is full",
-        };
-      }
+      await query.groupMember.create({
+        data: {
+          userId: user.id,
+          groupId: groupId,
+          role: GroupMemberRole.MEMBER,
+          joinedAt: new Date(),
+        },
+      });
 
-      // Handle different group types
-      if (group.groupType === GroupType.PUBLIC) {
-        // For public groups, join directly
-        await query.groupMember.create({
-          data: {
-            userId: user.id,
-            groupId: groupId,
-            role: GroupMemberRole.MEMBER,
-            joinedAt: new Date(),
-          },
-        });
+      return {
+        success: true,
+        message: "Joined group successfully",
+      };
+      // // Handle different group types
+      // if (group.groupType === GroupType.PUBLIC) {
+      //   // For public groups, join directly
+      // } else if (group.groupType === GroupType.PRIVATE) {
+      //   // For private groups, create join request
+      //   const existingRequest = await query.groupJoinRequest.findFirst({
+      //     where: {
+      //       userId: user.id,
+      //       groupId: groupId,
+      //     },
+      //   });
 
-        return {
-          success: true,
-          message: "Joined group successfully",
-        };
-      } else if (group.groupType === GroupType.PRIVATE) {
-        // For private groups, create join request
-        const existingRequest = await query.groupJoinRequest.findFirst({
-          where: {
-            userId: user.id,
-            groupId: groupId,
-          },
-        });
+      //   if (existingRequest) {
+      //     return {
+      //       success: false,
+      //       error: true,
+      //       message: "Join request already sent",
+      //     };
+      //   }
 
-        if (existingRequest) {
-          return {
-            success: false,
-            error: true,
-            message: "Join request already sent",
-          };
-        }
+      //   await query.groupJoinRequest.create({
+      //     data: {
+      //       userId: user.id,
+      //       groupId: groupId,
+      //       message: data.message,
+      //       status: JoinRequestStatus.PENDING,
+      //     },
+      //   });
 
-        await query.groupJoinRequest.create({
-          data: {
-            userId: user.id,
-            groupId: groupId,
-            message: data.message,
-            status: JoinRequestStatus.PENDING,
-          },
-        });
-
-        return {
-          success: true,
-          message: "Join request sent successfully",
-        };
-      } else {
-        return {
-          success: false,
-          error: true,
-          message: "Cannot join secret groups directly",
-        };
-      }
+      //   return {
+      //     success: true,
+      //     message: "Join request sent successfully",
+      //   };
+      // } else {
+      //   return {
+      //     success: false,
+      //     error: true,
+      //     message: "Cannot join secret groups directly",
+      //   };
+      // }
     } catch (error) {
       console.error("Error joining group:", error);
       return {
@@ -1013,7 +1013,7 @@ export default class GroupService {
           where: { id: invitationId },
           data: {
             status: InvitationStatus.ACCEPTED,
-            updatedAt: new Date(),
+            updated_at: new Date(),
           },
         }),
         query.groupMember.create({
@@ -1066,7 +1066,7 @@ export default class GroupService {
         where: { id: invitationId },
         data: {
           status: InvitationStatus.DECLINED,
-          updatedAt: new Date(),
+          updated_at: new Date(),
         },
       });
 
@@ -1237,7 +1237,7 @@ export default class GroupService {
         where: { id: memberId },
         data: {
           role: data.role,
-          updatedAt: new Date(),
+          updated_at: new Date(),
         },
       });
 
@@ -1424,7 +1424,7 @@ export default class GroupService {
           where: { id: requestId },
           data: {
             status: JoinRequestStatus.APPROVED,
-            updatedAt: new Date(),
+            updated_at: new Date(),
           },
         }),
         query.groupMember.create({
@@ -1492,7 +1492,7 @@ export default class GroupService {
         where: { id: requestId },
         data: {
           status: JoinRequestStatus.REJECTED,
-          updatedAt: new Date(),
+          updated_at: new Date(),
         },
       });
 
@@ -1549,7 +1549,7 @@ export default class GroupService {
           skip,
           take: limit,
           orderBy: {
-            createdAt: "desc",
+            created_at: "desc",
           },
         }),
         query.groupJoinRequest.count({
@@ -1587,115 +1587,59 @@ export default class GroupService {
   }
 
   // Search groups
-  static async searchGroups(
-    user: AuthUser,
-    params: GroupSearchParams,
-  ): Promise<GroupServiceResponse<GroupListResponse>> {
+  static async MainGroup(): Promise<GroupServiceResponse<GroupListResponse>> {
     try {
-      const { query: searchQuery, page = 1, limit = 20, groupType } = params;
-      const skip = (page - 1) * limit;
-
-      // if (!searchQuery) {
-      //   return {
-      //     success: false,
-      //     error: true,
-      //     message: "Search query is required",
-      //   };
-      // }
-
-      let whereClause: any = {
-        AND: [
-          {
-            OR: [
-              {
-                name: {
-                  contains: searchQuery,
-                  mode: "insensitive",
-                },
-              },
-              {
-                description: {
-                  contains: searchQuery,
-                  mode: "insensitive",
-                },
-              },
-            ],
-          },
-          {
-            OR: [
-              {
-                groupType: GroupType.PUBLIC,
-              },
-              {
-                members: {
-                  some: {
-                    userId: user.id,
-                  },
-                },
-              },
-            ],
-          },
-        ],
-      };
-
-      if (groupType) {
-        whereClause.AND.push({ groupType });
-      }
-
-      const [groups, total] = await Promise.all([
-        query.groups.findMany({
-          where: whereClause,
-          include: {
-            admin: true,
-            members: {
-              take: 5,
-              include: {
-                user: true,
-              },
-            },
-            settings: true,
-            _count: {
-              select: {
-                members: true,
-                messages: true,
-                joinRequests: true,
-              },
+      const group = await query.groups.findFirst({
+        include: {
+          admin: {
+            select: {
+              id: true,
+              email: true,
+              name: true,
+              fullname: true,
+              user_id: true,
+              username: true,
+              profile_image: true,
+              profile_banner: true,
             },
           },
-          skip,
-          take: limit,
-          orderBy: {
-            updatedAt: "desc",
+          members: {
+            take: 5,
+            include: {
+              user: true,
+            },
           },
-        }),
-        query.groups.count({
-          where: whereClause,
-        }),
-      ]);
-
-      const pages = Math.ceil(total / limit);
-
-      return {
-        success: true,
-        data: {
-          groups: groups as GroupWithDetails[],
-          pagination: {
-            page,
-            limit,
-            total,
-            pages,
-            hasNext: page < pages,
-            hasPrev: page > 1,
+          settings: true,
+          _count: {
+            select: {
+              members: true,
+              messages: true,
+              joinRequests: true,
+            },
           },
         },
-      };
-    } catch (error) {
-      console.error("Error searching groups:", error);
+        take: 1,
+        orderBy: {
+          updated_at: "desc",
+        },
+      });
+
+      if (group) {
+        return {
+          success: true,
+          data: { groups: group as GroupWithDetails },
+          error: false,
+          message: "Groups Retrived Successfully",
+        };
+      }
+
       return {
         success: false,
-        error: true,
-        message: "Failed to search groups",
+        error: false,
+        message: "No Groups Found",
       };
+    } catch (error: any) {
+      throw new Error(error.message);
     }
   }
 
@@ -1816,7 +1760,7 @@ export default class GroupService {
           skip,
           take: limit,
           orderBy: {
-            createdAt: "desc",
+            created_at: "desc",
           },
         }),
         query.groupInvitation.count({

@@ -10,9 +10,9 @@ const groups = express.Router();
 const groupAttachments = CreateUpload("group-attachments");
 
 // Group management routes
-groups.post("/create", Auth, GroupController.createGroup);
+groups.post("/create", Auth, GroupController.CreateGroup);
 groups.get("/my-groups", Auth, GroupController.getUserGroups);
-groups.get("/search", Auth, GroupController.searchGroups);
+groups.get("/main-group", Auth, GroupController.MainGroup);
 groups.get("/stats", Auth, GroupController.getUserGroupStats);
 
 // Individual group routes

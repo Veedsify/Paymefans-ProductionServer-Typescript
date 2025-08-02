@@ -1025,57 +1025,26 @@ model FAQAnswers {
   FAQ        FAQ      @relation(fields: [faq_id], references: [id], onDelete: Cascade)
 }
 
-model GroupMessage {
-  id               Int                @id @default(autoincrement())
-  content          String?
-  senderId         Int
-  createdAt        DateTime           @default(now())
-  editedAt         DateTime?
-  groupId          Int
-  isEdited         Boolean            @default(false)
-  messageType      String             @default("text")
-  replyToId        Int?
-  updatedAt        DateTime           @updatedAt
-  attachments      GroupAttachment[]
-  group            Groups             @relation(fields: [groupId], references: [id], onDelete: Cascade)
-  replyTo          GroupMessage?      @relation("MessageReplies", fields: [replyToId], references: [id])
-  replies          GroupMessage[]     @relation("MessageReplies")
-  sender           User               @relation(fields: [senderId], references: [id])
-  tags             Tag[]
-  GroupMessageRead GroupMessageRead[]
-}
-
 model Tag {
-  id        Int          @id @default(autoincrement())
-  userId    Int
-  messageId Int
-  createdAt DateTime     @default(now())
-  message   GroupMessage @relation(fields: [messageId], references: [id])
-  user      User         @relation(fields: [userId], references: [id])
-}
-
-model GroupAttachment {
-  id        Int          @id @default(autoincrement())
-  url       String
-  type      String
-  messageId Int
-  createdAt DateTime     @default(now())
-  fileName  String?
-  fileSize  Int?
-  message   GroupMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  id         Int          @id @default(autoincrement())
+  userId     Int
+  messageId  Int
+  created_at DateTime     @default(now())
+  message    GroupMessage @relation(fields: [messageId], references: [id])
+  user       User         @relation(fields: [userId], references: [id])
 }
 
 model Groups {
   id                  Int                       @id @default(autoincrement())
   adminId             Int
-  createdAt           DateTime                  @default(now())
+  created_at          DateTime                  @default(now())
   description         String?
   groupIcon           String?
   groupType           GroupType                 @default(PUBLIC)
   isActive            Boolean                   @default(true)
   maxMembers          Int                       @default(100)
   name                String
-  updatedAt           DateTime                  @updatedAt
+  updated_at          DateTime                  @updatedAt
   blockedParticipants BlockedGroupParticipant[]
   members             GroupMember[]
   messages            GroupMessage[]
@@ -1088,31 +1057,62 @@ model Groups {
   @@index([groupType])
 }
 
+model GroupMessage {
+  id               Int                @id @default(autoincrement())
+  content          String?
+  senderId         Int
+  created_at       DateTime           @default(now())
+  editedAt         DateTime?
+  groupId          Int
+  isEdited         Boolean            @default(false)
+  messageType      String             @default("text")
+  replyToId        Int?
+  updated_at       DateTime           @updatedAt
+  attachments      GroupAttachment[]
+  group            Groups             @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  replyTo          GroupMessage?      @relation("MessageReplies", fields: [replyToId], references: [id])
+  replies          GroupMessage[]     @relation("MessageReplies")
+  sender           User               @relation(fields: [senderId], references: [id])
+  tags             Tag[]
+  GroupMessageRead GroupMessageRead[]
+}
+
+model GroupAttachment {
+  id         Int          @id @default(autoincrement())
+  url        String
+  type       String
+  messageId  Int
+  created_at DateTime     @default(now())
+  fileName   String?
+  fileSize   Int?
+  message    GroupMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+}
+
 model GroupSettings {
   id                  Int       @id @default(autoincrement())
   allowFileSharing    Boolean   @default(true)
   allowMediaSharing   Boolean   @default(true)
   allowMemberInvites  Boolean   @default(true)
   autoApproveJoinReqs Boolean   @default(true)
-  createdAt           DateTime  @default(now())
+  created_at          DateTime  @default(now())
   groupId             Int       @unique
   moderateMessages    Boolean   @default(false)
   mutedUntil          DateTime?
-  updatedAt           DateTime  @updatedAt
+  updated_at          DateTime  @updatedAt
   group               Groups    @relation(fields: [groupId], references: [id], onDelete: Cascade)
 }
 
 model BlockedGroupParticipant {
-  id        Int      @id @default(autoincrement())
-  blockedBy Int
-  createdAt DateTime @default(now())
-  groupId   Int
-  reason    String?
-  updatedAt DateTime @updatedAt
-  userId    Int
-  blocker   User     @relation("BlockedByUser", fields: [blockedBy], references: [id])
-  group     Groups   @relation(fields: [groupId], references: [id], onDelete: Cascade)
-  user      User     @relation("BlockedUser", fields: [userId], references: [id], onDelete: Cascade)
+  id         Int      @id @default(autoincrement())
+  blockedBy  Int
+  created_at DateTime @default(now())
+  groupId    Int
+  reason     String?
+  updated_at DateTime @updatedAt
+  userId     Int
+  blocker    User     @relation("BlockedByUser", fields: [blockedBy], references: [id])
+  group      Groups   @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  user       User     @relation("BlockedUser", fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, groupId])
   @@index([groupId])
@@ -1128,8 +1128,8 @@ model GroupMember {
   isMuted     Boolean         @default(false)
   mutedBy     Int?
   mutedUntil  DateTime?
-  createdAt   DateTime        @default(now())
-  updatedAt   DateTime        @updatedAt
+  created_at  DateTime        @default(now())
+  updated_at  DateTime        @updatedAt
   group       Groups          @relation(fields: [groupId], references: [id], onDelete: Cascade)
   mutedByUser User?           @relation("MutedByUser", fields: [mutedBy], references: [id])
   user        User            @relation("GroupMembers", fields: [userId], references: [id], onDelete: Cascade)
@@ -1412,15 +1412,15 @@ model GroupMessageRead {
 }
 
 model GroupJoinRequest {
-  id        Int               @id @default(autoincrement())
-  groupId   Int
-  userId    Int
-  message   String?
-  status    JoinRequestStatus @default(PENDING)
-  createdAt DateTime          @default(now())
-  updatedAt DateTime          @updatedAt
-  group     Groups            @relation(fields: [groupId], references: [id], onDelete: Cascade)
-  user      User              @relation("GroupJoinRequests", fields: [userId], references: [id], onDelete: Cascade)
+  id         Int               @id @default(autoincrement())
+  groupId    Int
+  userId     Int
+  message    String?
+  status     JoinRequestStatus @default(PENDING)
+  created_at DateTime          @default(now())
+  updated_at DateTime          @updatedAt
+  group      Groups            @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  user       User              @relation("GroupJoinRequests", fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([groupId, userId])
   @@index([groupId])
@@ -1429,18 +1429,18 @@ model GroupJoinRequest {
 }
 
 model GroupInvitation {
-  id        Int              @id @default(autoincrement())
-  groupId   Int
-  inviterId Int
-  inviteeId Int
-  message   String?
-  status    InvitationStatus @default(PENDING)
-  expiresAt DateTime?
-  createdAt DateTime         @default(now())
-  updatedAt DateTime         @updatedAt
-  group     Groups           @relation(fields: [groupId], references: [id], onDelete: Cascade)
-  inviter   User             @relation("GroupInvitationsSent", fields: [inviterId], references: [id], onDelete: Cascade)
-  invitee   User             @relation("GroupInvitationsReceived", fields: [inviteeId], references: [id], onDelete: Cascade)
+  id         Int              @id @default(autoincrement())
+  groupId    Int
+  inviterId  Int
+  inviteeId  Int
+  message    String?
+  status     InvitationStatus @default(PENDING)
+  expiresAt  DateTime?
+  created_at DateTime         @default(now())
+  updated_at DateTime         @updatedAt
+  group      Groups           @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  inviter    User             @relation("GroupInvitationsSent", fields: [inviterId], references: [id], onDelete: Cascade)
+  invitee    User             @relation("GroupInvitationsReceived", fields: [inviteeId], references: [id], onDelete: Cascade)
 
   @@unique([groupId, inviteeId])
   @@index([groupId])

@@ -50,7 +50,7 @@ export default class ModelService {
           };
 
           // Save to redis
-          await redis.set(`models`, JSON.stringify(options), "EX", 60); // 10 minutes
+          await redis.set(`models`, JSON.stringify(options), "EX", 10); // 10 seconds
           return options;
         });
       }
@@ -74,7 +74,6 @@ export default class ModelService {
     user: AuthUser;
   }): Promise<ModelsSearchResponse> {
     const { page, limit, q } = searchQuery;
-    console.log(q, limit, page);
     // Parse limit to an integer or default to 5 if not provided
     const parsedLimit = limit ? parseInt(limit, 10) : 6;
     const validLimit =

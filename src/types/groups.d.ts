@@ -11,7 +11,7 @@ import {
   GroupType,
   GroupMemberRole,
   JoinRequestStatus,
-  InvitationStatus
+  InvitationStatus,
 } from "@prisma/client";
 
 export interface GroupWithDetails extends Groups {
@@ -138,15 +138,7 @@ export interface GroupServiceResponse<T = any> {
 }
 
 export interface GroupListResponse {
-  groups: GroupWithDetails[];
-  pagination: {
-    page: number;
-    limit: number;
-    total: number;
-    pages: number;
-    hasNext: boolean;
-    hasPrev: boolean;
-  };
+  groups: GroupWithDetails;
 }
 
 export interface GroupMembersResponse {
@@ -163,6 +155,8 @@ export interface GroupMembersResponse {
 
 export interface GroupMessagesResponse {
   messages: GroupMessageWithDetails[];
+  nextCursor?: number | null;
+  hasMore: boolean;
   pagination: {
     page: number;
     limit: number;

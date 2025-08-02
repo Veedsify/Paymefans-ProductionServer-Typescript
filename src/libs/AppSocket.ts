@@ -7,9 +7,13 @@ import GroupChatHandler from "./socket-handlers/GroupChatHandler";
 
 async function AppSocket(io: any) {
   io.on("connection", (socket: any) => {
-    let userRoom = "";
     const username = socket.handshake.query.username as string;
+    if (!username || username === null || typeof username !== "string") {
+      console.error("No username provided in socket connection");
+      return;
+    }
 
+    let userRoom = "";
     let user: SocketUser = {
       socketId: socket.id,
       userId: "",
@@ -23,11 +27,6 @@ async function AppSocket(io: any) {
       await redis.set(`user:${user.userId}:room`, data);
     };
 
-    if (!username) {
-      console.error("No username provided in socket connection");
-      return;
-    }
-
     console.log(
       "🔌 Socket connected:",
       username,
@@ -39,6 +38,9 @@ async function AppSocket(io: any) {
 
     // Initialize user object and immediately emit active users
     SocketService.HandleUserActive(username, socket);
+
+    // Send immediate models and hookups data to this specific socket
+    SocketService.SendImmediateModelsAndHookups(socket, username);
 
     socket.on("join", (data: string) =>
       SocketService.HandleJoinRoom(AddToUserRoom, socket, data),
@@ -78,8 +80,12 @@ async function AppSocket(io: any) {
     socket.on("user-connected", (data: any) => {
       user = {
         ...user,
-        userId: data.userId,
+        userId: data.userId.toString(),
       };
+
+      // Send fresh models and hookups data to the newly connected user
+      SocketService.SendImmediateModelsAndHookups(socket, username);
+
       return SocketService.HandleUserConnected(socket, user, data);
     });
     socket.on("new-message", (data: any) => {
@@ -103,16 +109,19 @@ async function AppSocket(io: any) {
     );
 
     // Model & Hookup Pooling
-    socket.on("pool-models-and-hookup", () =>
-      SocketService.HandleModelHookupPooling(username),
-    );
+    socket.on("pool-models-and-hookup", () => {
+      SocketService.HandleModelHookupPooling(username);
+    });
 
     // Group chat event handlers
     socket.on("group-user-connected", (data: any) => {
       user = {
         ...user,
-        userId: data.userId,
+        userId: data.userId.toString(),
       };
+
+      // Send fresh models and hookups data to the newly connected group user
+      SocketService.SendImmediateModelsAndHookups(socket, username);
     });
 
     socket.on(
@@ -130,13 +139,18 @@ async function AppSocket(io: any) {
     );
 
     socket.on("send-group-message", (data: any) => {
-      GroupChatHandler.handleGroupMessage(socket, user, data);
+      if (!user.userId) {
+        console.error("User ID not set for group message");
+        socket.emit("group-error", { message: "User not properly connected" });
+        return;
+      }
+      GroupChatHandler.handleGroupMessage(socket, user, data, io);
     });
 
     socket.on(
       "group-typing",
       (data: { groupId: string; isTyping: boolean }) => {
-        GroupChatHandler.handleGroupTyping(socket, user, data);
+        GroupChatHandler.handleGroupTyping(socket, user, data, io);
       },
     );
 
@@ -155,7 +169,7 @@ async function AppSocket(io: any) {
       GroupChatHandler.handleRestoreGroupRooms(socket, data.userId);
     });
 
-    socket.on("get-group-active-members", async (data: { groupId: string }) => {
+    socket.on("group-active-members", async (data: { groupId: string }) => {
       const activeMembers = await GroupChatHandler.getActiveGroupMembers(
         data.groupId,
       );

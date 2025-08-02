@@ -10,13 +10,12 @@ import type {
   GroupMemberParams,
   GroupMessagesParams,
   InviteToGroupRequest,
-  JoinGroupRequest,
   UpdateMemberRoleRequest,
 } from "../types/groups";
 
 export default class GroupController {
   // Create a new group
-  static async createGroup(req: Request, res: Response): Promise<any> {
+  static async CreateGroup(req: Request, res: Response): Promise<any> {
     try {
       const user = req.user as AuthUser;
       const data: CreateGroupRequest = req.body;
@@ -51,8 +50,6 @@ export default class GroupController {
   static async getUserGroups(req: Request, res: Response): Promise<any> {
     try {
       const user = req.user as AuthUser;
-      console.log("getUserGroups - User:", user?.id, user?.username);
-
       const params: GroupSearchParams = {
         page: req.query.page ? parseInt(req.query.page as string) : undefined,
         limit: req.query.limit
@@ -61,17 +58,7 @@ export default class GroupController {
         query: req.query.query as string,
         groupType: req.query.groupType as any,
       };
-
-      console.log("getUserGroups - Params:", params);
-
       const result = await GroupService.getUserGroups(user, params);
-      console.log("getUserGroups - Service Result:", {
-        success: result.success,
-        error: result.error,
-        groupsCount: result.data?.groups?.length || 0,
-        total: result.data?.pagination?.total || 0,
-      });
-
       if (result.error) {
         return res.status(400).json(result);
       }
@@ -84,13 +71,6 @@ export default class GroupController {
           userGroupsCount: result.data?.pagination?.total || 0,
         },
       };
-
-      console.log("getUserGroups - Transformed Result:", {
-        success: transformedResult.success,
-        userGroupsCount: transformedResult.data.userGroupsCount,
-        userGroupsLength: transformedResult.data.userGroups.length,
-      });
-
       return res.status(200).json(transformedResult);
     } catch (error) {
       console.error("Error in getUserGroups:", error);
@@ -296,7 +276,7 @@ export default class GroupController {
     try {
       const user = req.user as AuthUser;
       const groupId = parseInt(req.params.groupId);
-      const data: JoinGroupRequest = req.body;
+      // const data: JoinGroupRequest = req.body;
 
       if (isNaN(groupId)) {
         return res.status(400).json({
@@ -306,7 +286,7 @@ export default class GroupController {
         });
       }
 
-      const result = await GroupService.joinGroup(user, groupId, data);
+      const result = await GroupService.joinGroup(user, groupId);
 
       if (result.error) {
         return res.status(400).json(result);
@@ -676,20 +656,9 @@ export default class GroupController {
   }
 
   // Search groups
-  static async searchGroups(req: Request, res: Response): Promise<any> {
+  static async MainGroup(_: Request, res: Response): Promise<any> {
     try {
-      const user = req.user as AuthUser;
-      const params: GroupSearchParams = {
-        query: req.query.query as string,
-        groupType: req.query.groupType as any,
-        page: req.query.page ? parseInt(req.query.page as string) : undefined,
-        limit: req.query.limit
-          ? parseInt(req.query.limit as string)
-          : undefined,
-      };
-
-      const result = await GroupService.searchGroups(user, params);
-
+      const result = await GroupService.MainGroup();
       if (result.error) {
         return res.status(400).json(result);
       }

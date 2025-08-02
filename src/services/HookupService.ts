@@ -11,7 +11,11 @@ export default class HookupService {
     user: { id: number },
     userLocation?: { latitude: number; longitude: number },
     limit: number = 6,
-  ) {
+  ): Promise<{
+    hookups: any[];
+    error: boolean;
+    message: string;
+  }> {
     try {
       // If we have user location data, use it for proximity-based search
       if (userLocation) {

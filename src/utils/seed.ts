@@ -27,7 +27,7 @@ async function main() {
       profile_image: SERVER_ORIGINAL_URL + "/site/avatar.png",
       user_id: "paymefans",
       username: "@paymefans",
-      flags: JSON.stringify([
+      flags: [
         "view_profile",
         "edit_profile",
         "change_password",
@@ -92,7 +92,7 @@ async function main() {
         "send_free_messages",
         "view_paid_posts",
         "view_paid_media",
-      ]),
+      ],
       UserWallet: {
         create: {
           wallet_id: uniqueUserId,

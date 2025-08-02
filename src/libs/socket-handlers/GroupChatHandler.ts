@@ -229,6 +229,7 @@ export default class GroupChatHandler {
     socket: any,
     user: SocketUser,
     data: GroupChatData,
+    io: any,
   ) {
     try {
       const {
@@ -256,12 +257,6 @@ export default class GroupChatHandler {
         });
         return;
       }
-
-      console.log("handleGroupMessage - Resolved IDs:", {
-        groupIdInt,
-        userIdInt,
-        originalUserId: user.userId,
-      });
 
       // Verify user is a member of the group
       const membership = await query.groupMember.findFirst({
@@ -329,11 +324,6 @@ export default class GroupChatHandler {
 
       // Handle attachments if any
       if (attachments && attachments.length > 0) {
-        console.log(
-          "handleGroupMessage - Processing attachments:",
-          attachments.length,
-        );
-
         const attachmentData = attachments.map((attachment: any) => ({
           messageId: message.id,
           url: attachment.fileUrl,
@@ -345,11 +335,6 @@ export default class GroupChatHandler {
         await query.groupAttachment.createMany({
           data: attachmentData,
         });
-
-        console.log(
-          "handleGroupMessage - Attachments saved:",
-          attachmentData.length,
-        );
       }
 
       // Fetch attachments from database to include in response
@@ -364,11 +349,16 @@ export default class GroupChatHandler {
       const roomName = `group:${groupId}`;
       const messageData = {
         id: message.id,
-        groupId: message.groupId.toString(),
+        groupId: message.groupId,
         content: message.content,
         messageType: message.messageType,
-        senderId: message.senderId.toString(),
-        sender: (message as any).sender,
+        senderId: message.senderId,
+        sender: {
+          user_id: (message as any).sender.user_id,
+          username: (message as any).sender.username,
+          profile_image: (message as any).sender.profile_image,
+          is_verified: (message as any).sender.is_verified,
+        },
         replyTo: (message as any).replyTo,
         attachments: messageAttachments.map((att) => ({
           id: att.id,
@@ -377,12 +367,19 @@ export default class GroupChatHandler {
           fileType: att.type,
           fileSize: att.fileSize,
         })),
-        createdAt: message.createdAt,
+        created_at: message.created_at,
         timestamp: new Date().toISOString(),
       };
 
-      // Emit to all members in the group room
-      socket.to(roomName).emit("new-group-message", messageData);
+      // Emit to all members in the group room (including sender)
+      io.to(roomName).emit("new-group-message", messageData);
+
+      console.log("Message broadcasted to room:", {
+        roomName,
+        messageId: message.id,
+        sender: user.username,
+        groupId: groupId,
+      });
 
       // Store last message info in Redis for quick access
       await redis.hset(
@@ -393,7 +390,7 @@ export default class GroupChatHandler {
           content: message.content,
           senderId: message.senderId.toString(),
           senderUsername: (message as any).sender.username,
-          timestamp: message.createdAt,
+          timestamp: message.created_at,
         }),
       );
 
@@ -413,6 +410,7 @@ export default class GroupChatHandler {
     socket: any,
     user: SocketUser,
     data: GroupTypingData,
+    io: any,
   ) {
     try {
       const { groupId, isTyping } = data;
@@ -435,7 +433,7 @@ export default class GroupChatHandler {
         return;
       }
 
-      // Emit typing status to other group members
+      // Emit typing status to other group members (exclude sender)
       socket.to(roomName).emit("group-typing", {
         groupId,
         userId: userIdInt.toString(),
@@ -455,7 +453,7 @@ export default class GroupChatHandler {
           if (stillTyping) {
             await redis.del(typingKey);
             // Emit typing stopped
-            socket.to(roomName).emit("group-typing", {
+            io.to(roomName).emit("group-typing", {
               groupId,
               userId: userIdInt.toString(),
               username: user.username,
