@@ -20,6 +20,7 @@ import getSingleName from "@utils/GetSingleName";
 import { UserTransactionQueue } from "@jobs/UserTransactionJob";
 import { Permissions, RBAC } from "@utils/FlagsConfig";
 import AutomatedMessageTriggerService from "./AutomatedMessageTriggerService";
+import { SPECIAL_USERNAMES } from "@utils/SpecialUsernames";
 
 class ProfileService {
   // Get Profile
@@ -603,9 +604,9 @@ class ProfileService {
       );
       const followingRelations = otherUserIds.length
         ? await query.follow.findMany({
-            where: { follower_id: user.id, user_id: { in: otherUserIds } },
-            select: { user_id: true },
-          })
+          where: { follower_id: user.id, user_id: { in: otherUserIds } },
+          select: { user_id: true },
+        })
         : [];
 
       const followingSet = new Set(followingRelations.map((f) => f.user_id));
@@ -642,8 +643,9 @@ class ProfileService {
     try {
       const action = inputAction.toLowerCase() as "follow" | "unfollow";
       const pastTense = action === "follow" ? "followed" : "unfollowed";
-      if (authUser.id === userId)
+      if (authUser.id === userId) {
         return { message: `You cannot ${action} yourself`, status: false };
+      }
 
       const user = await query.user.findFirst({ where: { id: userId } });
       if (!user) return { message: "User not found", status: false };
@@ -694,11 +696,18 @@ class ProfileService {
         });
       } else {
         // "unfollow"
+        if (user.admin || user.role?.toLowerCase() === "admin" || SPECIAL_USERNAMES.includes(user.username)) {
+          return {
+            message: "You cannot unfollow this user",
+            status: false,
+          };
+        }
         const unfollowResult = await query.follow.deleteMany({
           where: { user_id: userId, follower_id: authUser.id },
         });
-        if (!unfollowResult.count)
+        if (!unfollowResult.count) {
           return { message: "You are not following this user", status: false };
+        }
         await query.$transaction([
           query.user.update({
             where: { id: userId },
