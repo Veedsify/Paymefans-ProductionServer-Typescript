@@ -196,10 +196,22 @@ export default class GroupChatHandler {
     socket: any,
     user: SocketUser,
     data: GroupJoinData,
+    io?: any,
   ) {
     try {
       const { groupId, userId } = data;
       const roomName = `group:${groupId}`;
+
+      // Get user info before removing from Redis
+      const userDataStr = await redis.hget(`group-members:${groupId}`, userId);
+      let userData = null;
+      if (userDataStr) {
+        try {
+          userData = JSON.parse(userDataStr);
+        } catch (e) {
+          userData = { userId, username: user.username };
+        }
+      }
 
       // Leave the socket room
       socket.leave(roomName);
@@ -208,19 +220,35 @@ export default class GroupChatHandler {
       await redis.hdel(`group-rooms:${userId}`, groupId);
       await redis.hdel(`group-members:${groupId}`, userId);
 
+      // Use io if available, otherwise fallback to socket
+      const emitter = io || socket;
+
       // Notify other members that user left
-      socket.to(roomName).emit("group-member-left", {
+      emitter.to(roomName).emit("group-member-left", {
         groupId,
         user: {
-          id: userId,
-          username: user.username,
+          id: userData?.userId || userData?.originalUserId || userId,
+          username: userData?.username || user.username,
         },
         timestamp: new Date().toISOString(),
       });
 
-      console.log(`User ${user.username} left group room: ${roomName}`);
+      console.log(
+        `User ${user.username} (ID: ${userId}) left group room: ${roomName}`,
+      );
+
+      // Emit confirmation to the user who left
+      socket.emit("group-room-left", {
+        groupId,
+        roomName,
+        userId,
+        message: "Successfully left group room",
+      });
     } catch (error) {
       console.error("Error leaving group room:", error);
+      socket.emit("group-error", {
+        message: "Failed to leave group room",
+      });
     }
   }
 
@@ -571,12 +599,39 @@ export default class GroupChatHandler {
   }
 
   // Clean up group room data
-  static async cleanupGroupRoom(groupId: string, userId?: string) {
+  static async cleanupGroupRoom(groupId: string, userId?: string, io?: any) {
     try {
       if (userId) {
+        // Get user info before removing from Redis
+        const userDataStr = await redis.hget(
+          `group-members:${groupId}`,
+          userId,
+        );
+        let userData = null;
+        if (userDataStr) {
+          try {
+            userData = JSON.parse(userDataStr);
+          } catch (e) {
+            userData = { userId, username: "Unknown" };
+          }
+        }
+
         // Remove specific user from group room
         await redis.hdel(`group-rooms:${userId}`, groupId);
         await redis.hdel(`group-members:${groupId}`, userId);
+
+        // Emit member left event if io is available and we have user data
+        if (io && userData) {
+          const roomName = `group:${groupId}`;
+          io.to(roomName).emit("group-member-left", {
+            groupId,
+            user: {
+              id: userData.userId || userData.originalUserId || userId,
+              username: userData.username || "Unknown",
+            },
+            timestamp: new Date().toISOString(),
+          });
+        }
       } else {
         // Clean up entire group room
         await redis.del(`group-members:${groupId}`);
@@ -590,6 +645,55 @@ export default class GroupChatHandler {
       }
     } catch (error) {
       console.error("Error cleaning up group room:", error);
+    }
+  }
+
+  // Bulk cleanup method for handling multiple group departures efficiently
+  static async bulkCleanupUserFromGroups(
+    userId: string,
+    groupIds: string[],
+    io?: any,
+  ) {
+    const cleanupResults = {
+      successful: 0,
+      failed: 0,
+      errors: [] as string[],
+    };
+
+    for (const groupId of groupIds) {
+      try {
+        await this.cleanupGroupRoom(groupId, userId, io);
+        cleanupResults.successful++;
+        console.log(
+          `Successfully cleaned up user ${userId} from group ${groupId}`,
+        );
+      } catch (error) {
+        cleanupResults.failed++;
+        const errorMsg = `Failed to cleanup user ${userId} from group ${groupId}: ${error}`;
+        cleanupResults.errors.push(errorMsg);
+        console.error(errorMsg);
+      }
+    }
+
+    return cleanupResults;
+  }
+
+  // Check if user is still connected and active in any group
+  static async isUserActiveInGroups(userId: string): Promise<boolean> {
+    try {
+      const userGroupKeys = await redis.keys(`group-rooms:${userId}`);
+
+      for (const key of userGroupKeys) {
+        const groupRooms = await redis.hgetall(key);
+        if (Object.keys(groupRooms).length > 0) {
+          return true;
+        }
+      }
+
+      return false;
+    } catch (error) {
+      console.error("Error checking user activity in groups:", error);
+      return false;
     }
   }
 }

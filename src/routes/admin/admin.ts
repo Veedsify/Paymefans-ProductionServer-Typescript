@@ -3,10 +3,13 @@ import AdminPointsController from "@controllers/AdminPointsController";
 import AdminWithdrawalController from "@controllers/AdminWithdrawalController";
 import EmailController from "@controllers/EmailController";
 import { Router } from "express";
+import email from "./email";
 
 const admin = Router();
 
 // Notification routes
+admin.use("/email", email);
+
 admin.post(
   "/notifications/create",
   AdminNotificationController.CreateNotification,

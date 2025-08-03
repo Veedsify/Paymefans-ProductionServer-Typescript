@@ -559,12 +559,7 @@ export default class GroupService {
   ): Promise<GroupServiceResponse<any>> {
     try {
       const { page = 1, limit = 100, cursor } = params;
-      console.log("GroupService.getGroupMessages called with:", {
-        groupId,
-        page,
-        limit,
-        cursor,
-      });
+      
 
       // Check if user is a member
       const membership = await query.groupMember.findFirst({
@@ -588,9 +583,9 @@ export default class GroupService {
 
       if (cursor) {
         whereClause.id = { lt: cursor };
-        console.log("Using cursor pagination with whereClause:", whereClause);
+        
       } else {
-        console.log("No cursor provided, fetching latest messages");
+        
       }
 
       // Fetch one extra message to determine if there are more
@@ -622,15 +617,7 @@ export default class GroupService {
           ? actualMessages[actualMessages.length - 1].id
           : null;
 
-      console.log("Pagination result:", {
-        totalFetched: messages.length,
-        limitPlusOne: limit + 1,
-        hasMore,
-        actualMessagesCount: actualMessages.length,
-        nextCursor,
-        firstMessageId: actualMessages[0]?.id,
-        lastMessageId: actualMessages[actualMessages.length - 1]?.id,
-      });
+      
 
       // Get total count for pagination info
       const total = await query.groupMessage.count({
@@ -1091,8 +1078,7 @@ export default class GroupService {
     params: GroupMemberParams = {},
   ): Promise<GroupServiceResponse<GroupMembersResponse>> {
     try {
-      const { page = 1, limit = 20, role } = params;
-      const skip = (page - 1) * limit;
+      const { cursor, limit = 20, role } = params;
 
       // Check if user can view members
       const membership = await query.groupMember.findFirst({
@@ -1118,35 +1104,47 @@ export default class GroupService {
         whereClause.role = role;
       }
 
-      const [members, total] = await Promise.all([
-        query.groupMember.findMany({
-          where: whereClause,
-          include: {
-            user: true,
-            mutedByUser: true,
-          },
-          skip,
-          take: limit,
-          orderBy: [{ role: "asc" }, { joinedAt: "asc" }],
-        }),
-        query.groupMember.count({
-          where: whereClause,
-        }),
-      ]);
+      // Add cursor condition for pagination
+      if (cursor) {
+        whereClause.id = {
+          gt: cursor,
+        };
+      }
 
-      const pages = Math.ceil(total / limit);
+      const members = await query.groupMember.findMany({
+        where: whereClause,
+        include: {
+          user: true,
+          mutedByUser: true,
+        },
+        take: limit + 1, // Take one extra to check if there are more results
+        orderBy: [{ role: "asc" }, { joinedAt: "asc" }, { id: "asc" }],
+      });
+
+      const hasNextPage = members.length > limit;
+      const resultMembers = hasNextPage ? members.slice(0, limit) : members;
+      const nextCursor = hasNextPage
+        ? resultMembers[resultMembers.length - 1].id
+        : undefined;
+
+      // Get total count for UI display
+      const total = await query.groupMember.count({
+        where: {
+          groupId: groupId,
+          ...(role && { role }),
+        },
+      });
 
       return {
         success: true,
         data: {
-          members: members as GroupMemberWithUser[],
+          members: resultMembers as GroupMemberWithUser[],
           pagination: {
-            page,
+            cursor,
+            nextCursor,
+            hasNextPage,
             limit,
             total,
-            pages,
-            hasNext: page < pages,
-            hasPrev: page > 1,
           },
         },
       };

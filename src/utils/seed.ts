@@ -21,6 +21,7 @@ async function main() {
       password,
       admin: true,
       phone: "1234567890",
+      is_model: true,
       location: "Nigeria",
       role: "admin",
       is_verified: true,

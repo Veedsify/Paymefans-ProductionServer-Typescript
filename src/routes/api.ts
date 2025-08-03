@@ -30,6 +30,7 @@ import report from "@routes/users/report/report";
 import automatedMessages from "@routes/users/automated-messages/automated-messages";
 import block from "@routes/users/block/block";
 import wishlist from "@routes/wishlist";
+import support from "./users/support/support";
 const api = express.Router();
 
 // Authentication
@@ -96,4 +97,6 @@ api.use("/automated-messages", automatedMessages);
 api.use("/block", block);
 // Wishlist
 api.use("/wishlist", wishlist);
+// Support
+api.use("/support", support);
 export default api;

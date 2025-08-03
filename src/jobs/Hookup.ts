@@ -1,8 +1,9 @@
-import { redis } from "@libs/RedisStore";
 import HookupService from "@services/HookupService";
 import _ from "lodash";
 import query from "@utils/prisma";
 
+// This job is no longer needed since we're using HTTP API calls
+// Keeping it for backwards compatibility but removing Redis publishing
 async function TriggerHookups(
   username: string,
   userLocation?: { latitude: number; longitude: number },
@@ -41,8 +42,9 @@ async function TriggerHookups(
       6,
     );
 
-    // Publish to Redis for real-time updates
-    redis.publish("hookups", JSON.stringify(hookups));
+    // Hookups are now fetched directly via HTTP API
+    // This function can be safely removed or used for other purposes
+    console.log("TriggerHookups called - now using HTTP API instead");
 
     return hookups;
   } catch (error) {

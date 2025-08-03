@@ -6,8 +6,7 @@ import type {
   VerificationControllerResponse,
 } from "../types/user";
 import query from "@utils/prisma";
-import TriggerModels from "@jobs/Models";
-import TriggerHookups from "@jobs/Hookup";
+
 import LoginHistoryService from "./LoginHistory";
 
 export default class UserService {
@@ -104,9 +103,9 @@ export default class UserService {
           user: {
             select: {
               username: true,
-            }
-          }
-        }
+            },
+          },
+        },
       });
 
       if (!verify) {
@@ -132,8 +131,6 @@ export default class UserService {
       });
 
       const token = await Authenticate(user as AuthUser);
-      await TriggerModels();
-      await TriggerHookups(verify.user.username);
 
       // Save Login History
       try {

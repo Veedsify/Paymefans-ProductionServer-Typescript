@@ -1,9 +1,7 @@
-import TriggerModels from "@jobs/Models";
 import type { LoginUserProps, LoginUserResponse } from "../types/auth";
 import ComparePasswordHash from "@libs/ComparePassordHash";
 import { Authenticate } from "@libs/jwt";
 import query from "@utils/prisma";
-import TriggerHookups from "@jobs/Hookup";
 import LoginHistoryService from "@services/LoginHistory";
 import _ from "lodash";
 import EmailService from "./EmailService";
@@ -28,6 +26,7 @@ export default class LoginService {
           username: true,
           user_id: true,
           name: true,
+          role: true,
           flags: true,
           should_delete: true,
           password: true,
@@ -94,8 +93,6 @@ export default class LoginService {
         };
       } else {
         const token = await Authenticate(rest);
-        await TriggerModels();
-        await TriggerHookups(user.username);
 
         // Save Login History
         try {

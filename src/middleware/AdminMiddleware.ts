@@ -22,7 +22,7 @@ export default async function AdminMiddleware(req: Request, res: Response, next:
         }
         const decoded = jwt.verify(token, process.env.JWT_SECRET) as AuthUser
 
-        if (decoded.role !== "admin") {
+        if (decoded.role !== "admin" && decoded.role !== "support") {
             return res.status(403).json({ message: "Forbidden", status: false });
         }
 

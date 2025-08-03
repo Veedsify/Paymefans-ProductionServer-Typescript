@@ -96,7 +96,7 @@ export interface GroupSearchParams {
 }
 
 export interface GroupMemberParams {
-  page?: number;
+  cursor?: number;
   limit?: number;
   role?: GroupMemberRole;
 }
@@ -144,12 +144,11 @@ export interface GroupListResponse {
 export interface GroupMembersResponse {
   members: GroupMemberWithUser[];
   pagination: {
-    page: number;
+    cursor?: number;
+    nextCursor?: number;
+    hasNextPage: boolean;
     limit: number;
     total: number;
-    pages: number;
-    hasNext: boolean;
-    hasPrev: boolean;
   };
 }
 

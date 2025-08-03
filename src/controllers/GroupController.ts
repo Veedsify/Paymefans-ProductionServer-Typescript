@@ -446,7 +446,9 @@ export default class GroupController {
       const user = req.user as AuthUser;
       const groupId = parseInt(req.params.groupId);
       const params: GroupMemberParams = {
-        page: req.query.page ? parseInt(req.query.page as string) : undefined,
+        cursor: req.query.cursor
+          ? parseInt(req.query.cursor as string)
+          : undefined,
         limit: req.query.limit
           ? parseInt(req.query.limit as string)
           : undefined,

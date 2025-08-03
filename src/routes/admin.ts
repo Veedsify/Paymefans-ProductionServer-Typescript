@@ -1,6 +1,5 @@
 import AdminMiddleware from "@middleware/AdminMiddleware";
 import express from "express";
-import email from "./admin/email";
 import adminRoutes from "./admin/admin";
 
 const admin = express.Router();
@@ -14,7 +13,6 @@ admin.get("/health", async (_, res) => {
 
 
 admin.use(AdminMiddleware);
-admin.use("/email", email);
 admin.use("/", adminRoutes);
 
 export default admin;

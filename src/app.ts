@@ -9,9 +9,7 @@ import AppSocket from "@libs/AppSocket";
 import { RegisterCloudflareStreamWebhook } from "@libs/RegisterCloudflareStreamWebhook";
 import cors from "cors";
 import logger from "morgan";
-import ModelsRedisPubSub from "@libs/ModelsRedisPubSub";
 import IoInstance from "@libs/io";
-import HookupRedisPubSub from "@libs/HookupRedisPubSub";
 import type { Request, Response } from "express";
 import { connectDB } from "@utils/mongodb";
 import cookieParser from "cookie-parser";
@@ -31,14 +29,6 @@ app.use(cookieParser());
 
 // Cors Origins
 const origins = [
-  "http://localhost:5173",
-  "http://localhost:4173",
-  "http://192.168.18.126",
-  "http://192.168.18.126:3009",
-  "http://192.168.18.126:3000",
-  "http://192.168.0.115:3000",
-  "http://192.168.0.115:3009",
-  "http://23.20.241.255:3000",
   VERIFICATION_URL!,
   ADMIN_PANEL_URL!,
   APP_URL!,
@@ -59,10 +49,6 @@ IoInstance.init(server).then(async (instance) => {
   await InitializeQueueJobs();
   // Socket.IO instance
   await AppSocket(instance);
-  // Redis Model PubSub
-  await ModelsRedisPubSub(instance);
-  // Hookup Redis PubSub
-  await HookupRedisPubSub(instance);
 });
 
 // Connect to MongoDB
