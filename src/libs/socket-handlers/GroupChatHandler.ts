@@ -10,6 +10,13 @@ interface GroupChatData {
   attachments?: any[];
 }
 
+interface AttachmentData {
+  fileUrl: string;
+  fileName: string;
+  fileType: string;
+  fileSize: number;
+}
+
 interface GroupTypingData {
   groupId: string;
   isTyping: boolean;
@@ -49,21 +56,10 @@ export default class GroupChatHandler {
     data: GroupJoinData,
   ) {
     try {
-      console.log("handleJoinGroupRoom - Input data:", {
-        groupId: data?.groupId,
-        userId: data?.userId,
-        userFromSocket: user,
-        socketId: socket?.id,
-      });
-
       const { groupId, userId } = data;
 
       // Validate input data
       if (!groupId || !userId) {
-        console.error("handleJoinGroupRoom - Missing required data:", {
-          groupId,
-          userId,
-        });
         socket.emit("group-error", {
           message: "Group ID and User ID are required",
         });
@@ -73,10 +69,6 @@ export default class GroupChatHandler {
       // Parse and validate IDs
       const groupIdInt = parseInt(groupId);
       if (isNaN(groupIdInt)) {
-        console.error("handleJoinGroupRoom - Invalid group ID format:", {
-          groupId,
-          groupIdInt,
-        });
         socket.emit("group-error", {
           message: "Invalid group ID format",
         });
@@ -86,20 +78,11 @@ export default class GroupChatHandler {
       // Resolve user ID (handle both numeric and string formats)
       const userIdInt = await this.resolveUserId(userId);
       if (!userIdInt) {
-        console.error("handleJoinGroupRoom - Could not resolve user ID:", {
-          userId,
-        });
         socket.emit("group-error", {
           message: "Invalid user ID or user not found",
         });
         return;
       }
-
-      console.log("handleJoinGroupRoom - Checking membership:", {
-        groupIdInt,
-        userIdInt,
-        originalUserId: userId,
-      });
 
       // Verify user is a member of the group
       const membership = await query.groupMember.findFirst({
@@ -109,23 +92,7 @@ export default class GroupChatHandler {
         },
       });
 
-      console.log("handleJoinGroupRoom - Membership result:", {
-        found: !!membership,
-        membership: membership
-          ? {
-              id: membership.id,
-              role: membership.role,
-              joinedAt: membership.joinedAt,
-            }
-          : null,
-      });
-
       if (!membership) {
-        console.error("handleJoinGroupRoom - User not a member:", {
-          groupIdInt,
-          userIdInt,
-          originalUserId: userId,
-        });
         socket.emit("group-error", {
           message: "You are not a member of this group",
         });
@@ -135,11 +102,6 @@ export default class GroupChatHandler {
       // Join the socket room
       const roomName = `group:${groupId}`;
       socket.join(roomName);
-
-      console.log("handleJoinGroupRoom - Joined socket room:", {
-        roomName,
-        socketId: socket.id,
-      });
 
       // Store user's group room mapping in Redis (use original userId for consistency)
       await redis.hset(`group-rooms:${userId}`, groupId, roomName);
@@ -154,12 +116,6 @@ export default class GroupChatHandler {
         }),
       );
 
-      console.log("handleJoinGroupRoom - Stored in Redis:", {
-        userGroupKey: `group-rooms:${userId}`,
-        memberKey: `group-members:${groupId}`,
-        resolvedUserId: userIdInt,
-      });
-
       // Notify other members that user joined
       socket.to(roomName).emit("group-member-joined", {
         groupId,
@@ -170,10 +126,6 @@ export default class GroupChatHandler {
         },
         timestamp: new Date().toISOString(),
       });
-
-      console.log(
-        `User ${user.username} (ID: ${userIdInt}) successfully joined group room: ${roomName}`,
-      );
 
       // Emit success confirmation to the user
       socket.emit("group-room-joined", {
@@ -350,28 +302,55 @@ export default class GroupChatHandler {
         },
       });
 
-      // Handle attachments if any
+      // Handle attachments if any (files already uploaded to S3 via API)
+      // Only allow image attachments in group chats
+      const messageAttachments = [];
       if (attachments && attachments.length > 0) {
-        const attachmentData = attachments.map((attachment: any) => ({
-          messageId: message.id,
-          url: attachment.fileUrl,
-          type: attachment.fileType,
-          fileName: attachment.fileName,
-          fileSize: attachment.fileSize,
-        }));
+        // Check if any non-image attachments are being sent
+        const nonImageAttachments = attachments.filter(
+          (attachment: AttachmentData) =>
+            !attachment.fileType || !attachment.fileType.startsWith("image/"),
+        );
 
-        await query.groupAttachment.createMany({
-          data: attachmentData,
-        });
+        if (nonImageAttachments.length > 0) {
+          socket.emit("group-error", {
+            message: "Only image files are allowed in group chats",
+          });
+          return;
+        }
+
+        // Filter to only include image attachments
+        const imageAttachments = attachments.filter(
+          (attachment: AttachmentData) =>
+            attachment.fileType && attachment.fileType.startsWith("image/"),
+        );
+
+        for (const attachment of imageAttachments) {
+          try {
+            // Create attachment record in database using pre-uploaded S3 URL
+            const createdAttachment = await query.groupAttachment.create({
+              data: {
+                messageId: message.id,
+                url: attachment.fileUrl,
+                type: "image",
+                fileName: attachment.fileName,
+                fileSize: attachment.fileSize,
+              },
+            });
+
+            messageAttachments.push({
+              id: createdAttachment.id,
+              fileName: createdAttachment.fileName,
+              fileUrl: createdAttachment.url,
+              fileType: attachment.fileType,
+              fileSize: createdAttachment.fileSize,
+            });
+          } catch (error) {
+            console.error("Error saving attachment to database:", error);
+            // Continue with other attachments even if one fails
+          }
+        }
       }
-
-      // Fetch attachments from database to include in response
-      const messageAttachments =
-        attachments && attachments.length > 0
-          ? await query.groupAttachment.findMany({
-              where: { messageId: message.id },
-            })
-          : [];
 
       // Emit message to all group members
       const roomName = `group:${groupId}`;
@@ -388,26 +367,13 @@ export default class GroupChatHandler {
           is_verified: (message as any).sender.is_verified,
         },
         replyTo: (message as any).replyTo,
-        attachments: messageAttachments.map((att) => ({
-          id: att.id,
-          fileName: att.fileName,
-          fileUrl: att.url,
-          fileType: att.type,
-          fileSize: att.fileSize,
-        })),
+        attachments: messageAttachments,
         created_at: message.created_at,
         timestamp: new Date().toISOString(),
       };
 
       // Emit to all members in the group room (including sender)
       io.to(roomName).emit("new-group-message", messageData);
-
-      console.log("Message broadcasted to room:", {
-        roomName,
-        messageId: message.id,
-        sender: user.username,
-        groupId: groupId,
-      });
 
       // Store last message info in Redis for quick access
       await redis.hset(
@@ -420,10 +386,6 @@ export default class GroupChatHandler {
           senderUsername: (message as any).sender.username,
           timestamp: message.created_at,
         }),
-      );
-
-      console.log(
-        `Message sent to group ${groupId} by user ${user.username} (ID: ${userIdInt})`,
       );
     } catch (error) {
       console.error("Error sending group message:", error);
@@ -443,13 +405,6 @@ export default class GroupChatHandler {
     try {
       const { groupId, isTyping } = data;
       const roomName = `group:${groupId}`;
-
-      console.log("handleGroupTyping - Input:", {
-        groupId,
-        userId: user.userId,
-        username: user.username,
-        isTyping,
-      });
 
       // Resolve user ID
       const userIdInt = await this.resolveUserId(user.userId);
@@ -496,10 +451,6 @@ export default class GroupChatHandler {
       } else {
         await redis.del(typingKey);
       }
-
-      console.log(
-        `User ${user.username} typing status in group ${groupId}: ${isTyping}`,
-      );
     } catch (error) {
       console.error("Error handling group typing:", error);
     }
@@ -549,11 +500,6 @@ export default class GroupChatHandler {
         return;
       }
 
-      console.log("handleRestoreGroupRooms - Resolved user ID:", {
-        originalUserId: userId,
-        resolvedUserId: userIdInt,
-      });
-
       // Get user's active group memberships
       const memberships = await query.groupMember.findMany({
         where: {
@@ -572,10 +518,6 @@ export default class GroupChatHandler {
         // Update Redis mapping
         await redis.hset(`group-rooms:${userId}`, membership.groupId, roomName);
       }
-
-      console.log(
-        `Restored ${memberships.length} group rooms for user ${userId} (ID: ${userIdInt})`,
-      );
     } catch (error) {
       console.error("Error restoring group rooms:", error);
     }
@@ -664,9 +606,6 @@ export default class GroupChatHandler {
       try {
         await this.cleanupGroupRoom(groupId, userId, io);
         cleanupResults.successful++;
-        console.log(
-          `Successfully cleaned up user ${userId} from group ${groupId}`,
-        );
       } catch (error) {
         cleanupResults.failed++;
         const errorMsg = `Failed to cleanup user ${userId} from group ${groupId}: ${error}`;

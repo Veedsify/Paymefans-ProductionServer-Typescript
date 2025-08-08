@@ -36,6 +36,7 @@ export type GetMyMediaResponse = {
   message: string;
   data: (UserMedia & {
     isSubscribed: boolean;
+    hasPaid: boolean;
     post: { watermark_enabled: boolean };
   })[];
   total: number;
@@ -76,6 +77,81 @@ export type GetOtherMediaResponse = {
     locked: boolean;
     accessible_to: string;
     isSubscribed: boolean;
+    post: {
+      user: {
+        id: number;
+      };
+    };
+  }[];
+  hasMore: boolean;
+};
+
+/**
+ * Props for fetching private media (for current user)
+ */
+export type GetPrivateMediaProps = {
+  userId: number;
+  page: string;
+  limit: string;
+};
+
+/**
+ * Response type for fetching private media
+ */
+export type GetPrivateMediaResponse = {
+  status: boolean;
+  message: string;
+  data: {
+    id: number;
+    media_id: string;
+    post_id: number;
+    poster: string;
+    duration: string | null;
+    media_state: MediaState;
+    url: string;
+    blur: string;
+    media_type: string;
+    locked: boolean;
+    accessible_to: string;
+    isSubscribed: boolean;
+    hasPaid: boolean;
+    post: {
+      watermark_enabled: boolean;
+    };
+  }[];
+  total: number;
+};
+
+/**
+ * Props for fetching another user's private media
+ */
+export type GetOtherPrivateMediaProps = {
+  userId: string;
+  page: string;
+  limit: string;
+  authUserId: number;
+};
+
+/**
+ * Response type for fetching another user's private media
+ */
+export type GetOtherPrivateMediaResponse = {
+  status: boolean;
+  message: string;
+  data: {
+    id: number;
+    media_id: string;
+    post_id: number;
+    poster: string;
+    duration: string | null;
+    media_state: MediaState;
+    url: string;
+    blur: string;
+    media_type: string;
+    locked: boolean;
+    accessible_to: string;
+    isSubscribed: boolean;
+    hasPaid: boolean;
     post: {
       user: {
         id: number;

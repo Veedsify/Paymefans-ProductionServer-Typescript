@@ -9,6 +9,7 @@ import type {
   RegisterServiceProp,
   RegisterServiceResponse,
 } from "../types/auth";
+import { scheduleWelcomeMessage } from "../jobs/WelcomeMessageJob";
 import { countries } from "@libs/countries";
 import LoginService from "./LoginService";
 import { RBAC } from "@utils/FlagsConfig";
@@ -318,7 +319,6 @@ export default class RegisterService {
     welcomeAccountId: string,
   ) {
     const conversationId = `CONV${GenerateUniqueId()}`;
-    const messageId = `MSG${GenerateUniqueId()}`;
     await query.conversations.create({
       data: {
         conversation_id: conversationId,
@@ -330,19 +330,11 @@ export default class RegisterService {
         },
       },
     });
-    await query.messages.create({
-      data: {
-        message_id: messageId,
-        sender_id: welcomeAccountId,
-        conversationsId: conversationId,
-        message: `Welcome to PayMeFans, ${data.username}! <br>We are excited to have you here.<br>If you have any questions or need help, feel free to reach out to us.`,
-        seen: false,
-        receiver_id: data.user_id,
-        attachment: [],
-      },
-      select: {
-        message_id: true,
-      },
+    // Schedule welcome message from admin panel configuration
+    await scheduleWelcomeMessage({
+      userId: data.id,
+      userEmail: data.email,
+      username: data.username,
     });
   }
 

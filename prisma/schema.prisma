@@ -153,6 +153,7 @@ model Messages {
   seen            Boolean         @default(false)
   message         String
   attachment      Json?
+  isSystemMessage Boolean         @default(false)
   created_at      DateTime        @default(now())
   updated_at      DateTime        @updatedAt
   conversationsId String?
@@ -1035,14 +1036,14 @@ model Tag {
 }
 
 model Groups {
-  id                  Int                       @id @default(autoincrement())
-  adminId             Int
-  created_at          DateTime                  @default(now())
-  description         String?
-  groupIcon           String?
-  groupType           GroupType                 @default(PUBLIC)
-  isActive            Boolean                   @default(true)
-  maxMembers          Int                       @default(100)
+  id          Int       @id @default(autoincrement())
+  adminId     Int
+  created_at  DateTime  @default(now())
+  description String?
+  groupIcon   String?
+  groupType   GroupType @default(PUBLIC)
+  isActive    Boolean   @default(true)
+
   name                String
   updated_at          DateTime                  @updatedAt
   blockedParticipants BlockedGroupParticipant[]
@@ -1067,6 +1068,7 @@ model GroupMessage {
   isEdited         Boolean            @default(false)
   messageType      String             @default("text")
   replyToId        Int?
+  deliveryStatus   String             @default("sent") // "sent", "delivered", "read"
   updated_at       DateTime           @updatedAt
   attachments      GroupAttachment[]
   group            Groups             @relation(fields: [groupId], references: [id], onDelete: Cascade)
@@ -1128,6 +1130,7 @@ model GroupMember {
   isMuted     Boolean         @default(false)
   mutedBy     Int?
   mutedUntil  DateTime?
+  isBlocked   Boolean         @default(false)
   created_at  DateTime        @default(now())
   updated_at  DateTime        @updatedAt
   group       Groups          @relation(fields: [groupId], references: [id], onDelete: Cascade)
@@ -1322,6 +1325,10 @@ model Configurations {
   point_purchase_error_message          String   @default("Failed to purchase points") @map("point_purchase_error_message")
   point_purchasing_message              String   @default("Purchasing points...") @map("point_purchasing_message")
   point_purchase_minimum_message        String   @default("Minimum purchase amount not met") @map("point_purchase_minimum_message")
+  welcome_message_title                 String?  @map("welcome_message_title")
+  welcome_message_content               String?  @map("welcome_message_content")
+  welcome_message_enabled               Boolean  @default(true) @map("welcome_message_enabled")
+  welcome_message_delay                 String   @default("300") @map("welcome_message_delay")
   created_at                            DateTime @default(now()) @map("created_at")
   updated_at                            DateTime @updatedAt @map("updated_at")
   platform_deposit_fee                  Float    @default(0.10) @map("platform_deposit_fee")

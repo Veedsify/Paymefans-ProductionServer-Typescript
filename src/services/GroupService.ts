@@ -28,6 +28,7 @@ import {
   JoinRequestStatus,
   InvitationStatus,
 } from "@prisma/client";
+import { UploadImageToS3 } from "@libs/UploadImageToS3";
 
 export default class GroupService {
   // Create a new group
@@ -50,7 +51,6 @@ export default class GroupService {
           name: data.name,
           description: data.description || null,
           groupType: data.groupType,
-          maxMembers: data.maxMembers || 100,
           groupIcon: data.groupIcon || null,
           adminId: user.id,
           isActive: true,
@@ -61,8 +61,6 @@ export default class GroupService {
                   allowMediaSharing: data.settings.allowMediaSharing ?? true,
                   allowFileSharing: data.settings.allowFileSharing ?? true,
                   moderateMessages: data.settings.moderateMessages ?? false,
-                  autoApproveJoinReqs:
-                    data.settings.autoApproveJoinReqs ?? true,
                 },
               }
             : undefined,
@@ -370,7 +368,6 @@ export default class GroupService {
           name: data.name,
           description: data.description,
           groupType: data.groupType,
-          maxMembers: data.maxMembers,
           groupIcon: data.groupIcon,
           updated_at: new Date(),
         },
@@ -508,6 +505,7 @@ export default class GroupService {
           groupId: groupId,
           messageType: data.messageType || "text",
           replyToId: data.replyToId,
+          deliveryStatus: "sent",
         },
         include: {
           sender: true,
@@ -521,24 +519,84 @@ export default class GroupService {
         },
       });
 
-      // Handle attachments if provided
+      // Mark as delivered for all group members except sender
+      const groupMembers = await query.groupMember.findMany({
+        where: {
+          groupId: groupId,
+          userId: { not: user.id },
+        },
+        select: { userId: true },
+      });
+
+      // Create delivery records for all members
+      const deliveryRecords = groupMembers.map((member) => ({
+        messageId: message.id,
+        userId: member.userId.toString(),
+      }));
+
+      if (deliveryRecords.length > 0) {
+        await query.groupMessageRead.createMany({
+          data: deliveryRecords,
+          skipDuplicates: true,
+        });
+
+        // Update message status to delivered
+        await query.groupMessage.update({
+          where: { id: message.id },
+          data: { deliveryStatus: "delivered" },
+        });
+      }
+
+      // Handle image attachments if provided
       if (data.attachments && data.attachments.length > 0) {
         for (const file of data.attachments) {
-          await query.groupAttachment.create({
-            data: {
-              url: `/uploads/${file.filename}`, // You'll need to implement proper file upload
-              type: file.mimetype.split("/")[0],
-              fileName: file.originalname,
-              fileSize: file.size,
-              messageId: message.id,
-            },
-          });
+          // Only allow images for group attachments
+          if (!file.mimetype.startsWith("image/")) {
+            continue; // Skip non-image files
+          }
+
+          try {
+            // Upload image to S3
+            const imageUrl = await UploadImageToS3({
+              file: file,
+              folder: "group-attachments",
+              format: "webp",
+              quality: 85,
+              resize: {
+                width: 1200,
+                height: null,
+                fit: "inside",
+              },
+              contentType: "image/webp",
+              deleteLocal: true,
+            });
+
+            await query.groupAttachment.create({
+              data: {
+                url: imageUrl,
+                type: "image",
+                fileName: file.originalname,
+                fileSize: file.size,
+                messageId: message.id,
+              },
+            });
+          } catch (error) {
+            console.error("Error uploading group attachment:", error);
+            // Continue with other attachments even if one fails
+          }
         }
       }
 
+      // Include delivery status in response
+      const messageWithStatus = {
+        ...message,
+        deliveryStatus: deliveryRecords.length > 0 ? "delivered" : "sent",
+        deliveredToCount: deliveryRecords.length,
+      };
+
       return {
         success: true,
-        data: message as GroupMessageWithDetails,
+        data: messageWithStatus as GroupMessageWithDetails,
         message: "Message sent successfully",
       };
     } catch (error) {
@@ -559,7 +617,6 @@ export default class GroupService {
   ): Promise<GroupServiceResponse<any>> {
     try {
       const { page = 1, limit = 100, cursor } = params;
-      
 
       // Check if user is a member
       const membership = await query.groupMember.findFirst({
@@ -583,9 +640,7 @@ export default class GroupService {
 
       if (cursor) {
         whereClause.id = { lt: cursor };
-        
       } else {
-        
       }
 
       // Fetch one extra message to determine if there are more
@@ -617,8 +672,6 @@ export default class GroupService {
           ? actualMessages[actualMessages.length - 1].id
           : null;
 
-      
-
       // Get total count for pagination info
       const total = await query.groupMessage.count({
         where: { groupId },
@@ -629,7 +682,21 @@ export default class GroupService {
       return {
         success: true,
         data: {
-          messages: actualMessages as GroupMessageWithDetails[],
+          messages: actualMessages.map((message) => ({
+            ...message,
+            attachments: message.attachments.map((attachment) => ({
+              id: attachment.id,
+              created_at: attachment.created_at,
+              type: attachment.type,
+              url: attachment.url,
+              fileSize: attachment.fileSize,
+              fileName: attachment.fileName,
+              messageId: attachment.messageId,
+              // Add client-expected fields for compatibility
+              fileUrl: attachment.url,
+              fileType: attachment.type,
+            })),
+          })) as any[],
           nextCursor,
           hasMore,
           pagination: {
@@ -969,14 +1036,7 @@ export default class GroupService {
         };
       }
 
-      // Check if group is full
-      if (invitation.group._count.members >= invitation.group.maxMembers) {
-        return {
-          success: false,
-          error: true,
-          message: "Group is full",
-        };
-      }
+      // No max members restriction anymore
 
       // Check if already a member
       const existingMembership = await query.groupMember.findFirst({
@@ -1391,14 +1451,7 @@ export default class GroupService {
         };
       }
 
-      // Check if group is full
-      if (joinRequest.group._count.members >= joinRequest.group.maxMembers) {
-        return {
-          success: false,
-          error: true,
-          message: "Group is full",
-        };
-      }
+      // No max members restriction anymore
 
       // Check if user is already a member
       const existingMembership = await query.groupMember.findFirst({

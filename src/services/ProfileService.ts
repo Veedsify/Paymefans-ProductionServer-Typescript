@@ -36,13 +36,7 @@ class ProfileService {
           user: undefined,
           profileImpressions: 0,
         };
-
-      const cacheKey = `user_profile_${username}`;
-      const cached = await redis.get(cacheKey);
-      if (cached) return JSON.parse(cached);
-
       const user_name = username.replace(/%40/g, "@");
-
       const user = await query.user.findFirst({
         where: { username: user_name },
         select: {
@@ -155,7 +149,6 @@ class ProfileService {
           followsYou: !!theyFollowMe,
         },
       };
-      await redis.set(cacheKey, JSON.stringify(response), "EX", 20);
       return response;
     } catch (error: any) {
       throw new Error(error.message);
@@ -604,9 +597,9 @@ class ProfileService {
       );
       const followingRelations = otherUserIds.length
         ? await query.follow.findMany({
-          where: { follower_id: user.id, user_id: { in: otherUserIds } },
-          select: { user_id: true },
-        })
+            where: { follower_id: user.id, user_id: { in: otherUserIds } },
+            select: { user_id: true },
+          })
         : [];
 
       const followingSet = new Set(followingRelations.map((f) => f.user_id));
@@ -696,7 +689,11 @@ class ProfileService {
         });
       } else {
         // "unfollow"
-        if (user.admin || user.role?.toLowerCase() === "admin" || SPECIAL_USERNAMES.includes(user.username)) {
+        if (
+          user.admin ||
+          user.role?.toLowerCase() === "admin" ||
+          SPECIAL_USERNAMES.includes(user.username)
+        ) {
           return {
             message: "You cannot unfollow this user",
             status: false,
@@ -871,10 +868,32 @@ class ProfileService {
   // Delete User Accounts and Media
   static async DeleteAccount(
     userId: number,
+    password: string,
   ): Promise<{ message: string; error: boolean }> {
     try {
       if (!userId || isNaN(userId)) {
         return { message: "Invalid user ID", error: true };
+      }
+
+      // Get user to validate password
+      const user = await query.user.findUnique({
+        where: { id: userId },
+        select: { password: true },
+      });
+
+      if (!user) {
+        return { message: "User not found", error: true };
+      }
+
+      // Validate password
+      const bcrypt = require("bcryptjs");
+      const isPasswordValid = await bcrypt.compare(password, user.password);
+
+      if (!isPasswordValid) {
+        return {
+          message: "Invalid password. Account deletion cancelled.",
+          error: true,
+        };
       }
 
       await query.user.update({

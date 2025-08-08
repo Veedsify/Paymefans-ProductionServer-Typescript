@@ -17,6 +17,7 @@ type Role = "fan" | "model" | "admin";
 
 export type RegisteredUser = {
   id: number;
+  email: string;
   user_id: string;
   username: string;
   fullname: string;

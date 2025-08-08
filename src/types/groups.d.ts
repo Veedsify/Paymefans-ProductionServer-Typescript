@@ -54,14 +54,13 @@ export interface CreateGroupRequest {
   name: string;
   description?: string;
   groupType: GroupType;
-  maxMembers?: number;
   groupIcon?: string;
   settings?: {
     allowMemberInvites?: boolean;
     allowMediaSharing?: boolean;
     allowFileSharing?: boolean;
     moderateMessages?: boolean;
-    autoApproveJoinReqs?: boolean;
+    autoApproveMembers?: boolean;
   };
 }
 
@@ -69,7 +68,6 @@ export interface UpdateGroupRequest {
   name?: string;
   description?: string;
   groupType?: GroupType;
-  maxMembers?: number;
   groupIcon?: string;
 }
 

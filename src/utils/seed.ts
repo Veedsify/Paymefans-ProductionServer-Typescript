@@ -321,6 +321,12 @@ async function main() {
       point_purchase_error_message: "Failed to purchase points.",
       point_purchasing_message: "Purchasing points...",
       point_purchase_minimum_message: "Minimum point purchase not met.",
+      // Welcome Message Settings
+      welcome_message_title: "Welcome to PayMeFans!",
+      welcome_message_content:
+        "Hi {username}! Welcome to PayMeFans! 🎉\n\nWe're excited to have you join our community. Here's how to get started:\n\n1. Complete your profile to attract more followers\n2. Explore and follow interesting creators\n3. Start sharing your content and connect with fans\n\nIf you need any help, feel free to reach out to our support team.\n\nEnjoy your journey on PayMeFans!\n\nBest regards,\nThe PayMeFans Team",
+      welcome_message_enabled: true,
+      welcome_message_delay: "300",
     },
     create: {
       id: 1, // use 1 or whatever your default id is
@@ -399,6 +405,12 @@ async function main() {
       point_purchase_error_message: "Failed to purchase points.",
       point_purchasing_message: "Purchasing points...",
       point_purchase_minimum_message: "Minimum point purchase not met.",
+      // Welcome Message Settings
+      welcome_message_title: "Welcome to PayMeFans!",
+      welcome_message_content:
+        "Hi {username}! Welcome to PayMeFans! 🎉\n\nWe're excited to have you join our community. Here's how to get started:\n\n1. Complete your profile to attract more followers\n2. Explore and follow interesting creators\n3. Start sharing your content and connect with fans\n\nIf you need any help, feel free to reach out to our support team.\n\nEnjoy your journey on PayMeFans!\n\nBest regards,\nThe PayMeFans Team",
+      welcome_message_enabled: true,
+      welcome_message_delay: "300",
     },
   });
 }

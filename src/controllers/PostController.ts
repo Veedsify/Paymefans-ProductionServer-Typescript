@@ -124,6 +124,44 @@ export default class PostController {
         .json({ status: false, message: "Internal Server Error!" });
     }
   }
+  // Get Private Media
+  static async GetPrivateMedia(req: Request, res: Response): Promise<any> {
+    try {
+      const Media = await PostService.GetPrivateMedia({
+        userId: req.user?.id!,
+        page: req.query.page as string,
+        limit: req.query.limit as string,
+      });
+      return res.status(200).json({
+        status: true,
+        message: "Private Media Retrieved Successfully",
+        data: Media.data,
+        total: Media.total,
+      });
+    } catch (err: any) {
+      console.error(err.message);
+      res
+        .status(500)
+        .json({ status: false, message: "Internal Server Error!" });
+    }
+  }
+  //Get Other Private Media
+  static async GetOtherPrivateMedia(req: Request, res: Response): Promise<any> {
+    try {
+      const Media = await PostService.GetOtherPrivateMedia({
+        userId: req.params.userId as string,
+        page: req.query.page as string,
+        limit: req.query.limit as string,
+        authUserId: req.user?.id!,
+      });
+      return res.status(200).json(Media);
+    } catch (err: any) {
+      console.error(err.message);
+      res
+        .status(500)
+        .json({ status: false, message: "Internal Server Error!" });
+    }
+  }
   // Get User Post By User ID
   static async GetUserPostByID(req: Request, res: Response): Promise<any> {
     try {

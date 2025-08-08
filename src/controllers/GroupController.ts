@@ -12,6 +12,7 @@ import type {
   InviteToGroupRequest,
   UpdateMemberRoleRequest,
 } from "../types/groups";
+import { UploadImageToS3 } from "../libs/UploadImageToS3";
 
 export default class GroupController {
   // Create a new group
@@ -778,7 +779,7 @@ export default class GroupController {
 
       console.log("uploadAttachment - Files received:", files.length);
 
-      // Process each file and return upload URLs
+      // Process each file and upload to S3
       const uploadResults = [];
 
       for (const file of files) {
@@ -789,16 +790,52 @@ export default class GroupController {
           path: file.path,
         });
 
-        // Create file URL based on the actual file path
-        // The file should be saved in the public directory by multer
-        const fileUrl = `/uploads/group-attachments/${file.filename}`;
+        try {
+          let fileUrl: string;
 
-        uploadResults.push({
-          fileName: file.originalname,
-          fileUrl: fileUrl,
-          fileType: file.mimetype,
-          fileSize: file.size,
-        });
+          // Check if it's an image to upload to S3 with optimization
+          if (file.mimetype.startsWith("image/")) {
+            fileUrl = await UploadImageToS3({
+              file: file,
+              folder: "group-attachments",
+              format: "webp",
+              quality: 85,
+              resize: {
+                width: 1200,
+                height: null,
+                fit: "inside",
+              },
+              contentType: "image/webp",
+              deleteLocal: true,
+            });
+          } else {
+            // For non-images, upload to S3 as-is
+            fileUrl = await UploadImageToS3({
+              file: file,
+              folder: "group-attachments",
+              contentType: file.mimetype,
+              deleteLocal: true,
+            });
+          }
+
+          uploadResults.push({
+            fileName: file.originalname,
+            fileUrl: fileUrl,
+            fileType: file.mimetype,
+            fileSize: file.size,
+            tempPath: file.path, // Include temp path for socket handler
+          });
+        } catch (uploadError) {
+          console.error("Error uploading file:", uploadError);
+          // Continue with other files even if one fails
+          uploadResults.push({
+            fileName: file.originalname,
+            fileUrl: null,
+            fileType: file.mimetype,
+            fileSize: file.size,
+            error: "Upload failed",
+          });
+        }
       }
 
       console.log("uploadAttachment - Upload results:", uploadResults);
@@ -808,7 +845,7 @@ export default class GroupController {
         error: false,
         message: "Files uploaded successfully",
         data: {
-          attachments: uploadResults,
+          attachments: uploadResults.filter((result) => !result.error),
         },
       });
     } catch (error) {

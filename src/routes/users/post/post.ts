@@ -9,6 +9,7 @@ post.get("/personal/posts", Auth, PostController.GetMyPosts);
 post.get("/personal/private-post", Auth, PostController.MyPrivatePosts);
 post.get("/personal/reposts", Auth, PostController.GetMyReposts);
 post.get("/personal/media", Auth, PostController.GetMedia);
+post.get("/personal/private-media", Auth, PostController.GetPrivateMedia);
 
 // Other User Posts
 post.get(
@@ -18,6 +19,11 @@ post.get(
 );
 post.get("/other/reposts/:userId", Auth, PostController.GetReposts);
 post.get("/other/media/:userId", Auth, PostController.GetOtherMedia);
+post.get(
+  "/other/private-media/:userId",
+  Auth,
+  PostController.GetOtherPrivateMedia,
+);
 post.get("/user/:userId", Auth, PostController.GetUserPostByID);
 post.get("/single/:postId", Auth, PostController.GetSinglePost);
 post.get("/edit/:postId", Auth, PostController.EditPost);

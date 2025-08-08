@@ -13,6 +13,10 @@ import type {
   GetMyPostResponse,
   GetOtherMediaProps,
   GetOtherMediaResponse,
+  GetPrivateMediaProps,
+  GetPrivateMediaResponse,
+  GetOtherPrivateMediaProps,
+  GetOtherPrivateMediaResponse,
   GetPostCommentsProps,
   GetPostCommentsResponse,
   GetSinglePostResponse,
@@ -78,11 +82,24 @@ export default class PostService {
           };
         }
       }
-      if ((!content || content.trim().length === 0) && !visibility) {
+      // Allow posts without content if media is present, but visibility is always required
+      if (!visibility) {
         return {
           status: false,
           error: true,
-          message: "Content and visibility are required",
+          message: "Visibility is required",
+        };
+      }
+
+      // Check if both content and media are missing
+      if (
+        (!content || content.trim().length === 0) &&
+        (!media || media.length === 0)
+      ) {
+        return {
+          status: false,
+          error: true,
+          message: "Either content or media is required",
         };
       }
 
@@ -679,7 +696,11 @@ export default class PostService {
         })
       ).map((p) => p.id);
 
-      const [mediaCount, media] = await Promise.all([
+      const [authUser, mediaCount, media] = await Promise.all([
+        query.user.findUnique({
+          where: { id: userId },
+          select: { flags: true },
+        }),
         query.userMedia.count({ where: { post_id: { in: postIds } } }),
         query.userMedia.findMany({
           where: { post_id: { in: postIds } },
@@ -695,10 +716,18 @@ export default class PostService {
           orderBy: { created_at: "desc" },
         }),
       ]);
+
+      // Check if user has view_paid_media flag
+      const hasViewPaidMediaFlag =
+        (Array.isArray(authUser?.flags) &&
+          authUser.flags.includes("view_paid_media")) ||
+        false;
+
       // isSubscribed: true can be done without map over async
       const mediaChecked = media.map((mediaFile) => ({
         ...mediaFile,
         isSubscribed: true,
+        hasPaid: hasViewPaidMediaFlag || mediaFile.accessible_to !== "price",
       }));
       return {
         status: true,
@@ -734,7 +763,11 @@ export default class PostService {
         })
       ).map((p) => p.id);
 
-      const [isSubscribed, media, payedPosts] = await Promise.all([
+      const [authUser, isSubscribed, media, payedPosts] = await Promise.all([
+        query.user.findUnique({
+          where: { id: Number(authUserId) },
+          select: { flags: true },
+        }),
         query.subscribers.findFirst({
           where: {
             subscriber_id: Number(authUserId),
@@ -782,19 +815,217 @@ export default class PostService {
         media.pop();
       }
 
+      // Check if user has view_paid_media flag
+      const hasViewPaidMediaFlag =
+        (Array.isArray(authUser?.flags) &&
+          authUser.flags.includes("view_paid_media")) ||
+        false;
+
       const purchasedPostsSet = new Set(payedPosts.map((l) => l.post_id));
       const resolvedMedia = media.map((mediaFile) => ({
         ...mediaFile,
         hasPaid:
+          hasViewPaidMediaFlag ||
           purchasedPostsSet.has(mediaFile.post_id) ||
           mediaFile.accessible_to !== "price",
         isSubscribed:
-          mediaFile.post.user.id === Number(authUserId) || !!isSubscribed,
+          hasViewPaidMediaFlag ||
+          mediaFile.post.user.id === Number(authUserId) ||
+          !!isSubscribed,
       }));
 
       return {
         status: true,
         message: "Media retrieved successfully",
+        data: resolvedMedia,
+        hasMore,
+      };
+    } catch (error: any) {
+      console.log(error);
+      throw new Error(error.message);
+    }
+  }
+
+  // Get My Private Media
+  static async GetPrivateMedia({
+    userId,
+    page,
+    limit,
+  }: GetPrivateMediaProps): Promise<GetPrivateMediaResponse> {
+    try {
+      const parsedLimit = limit ? parseInt(limit, 10) : 6;
+      const validLimit =
+        Number.isNaN(parsedLimit) || parsedLimit <= 0 ? 5 : parsedLimit;
+      const parsedPage = page ? parseInt(page, 10) : 1;
+      const validPage =
+        Number.isNaN(parsedPage) || parsedPage <= 0 ? 1 : parsedPage;
+
+      // get post ids by user, then fetch all that media in one go
+      // Only get posts that are NOT public (private, subscribers, price)
+      const postIds = (
+        await query.post.findMany({
+          where: {
+            user_id: userId,
+            NOT: { post_audience: "public" },
+          },
+          select: { id: true },
+        })
+      ).map((p) => p.id);
+
+      const [authUser, mediaCount, media] = await Promise.all([
+        query.user.findUnique({
+          where: { id: userId },
+          select: { flags: true },
+        }),
+        query.userMedia.count({
+          where: {
+            post_id: { in: postIds },
+            NOT: { accessible_to: "public" },
+          },
+        }),
+        query.userMedia.findMany({
+          where: {
+            post_id: { in: postIds },
+            NOT: { accessible_to: "public" },
+          },
+          include: {
+            post: {
+              select: {
+                watermark_enabled: true,
+              },
+            },
+          },
+          skip: (validPage - 1) * validLimit,
+          take: validLimit,
+          orderBy: { created_at: "desc" },
+        }),
+      ]);
+
+      // Check if user has view_paid_media flag
+      const hasViewPaidMediaFlag =
+        (Array.isArray(authUser?.flags) &&
+          authUser.flags.includes("view_paid_media")) ||
+        false;
+
+      // isSubscribed: true can be done without map over async
+      const mediaChecked = media.map((mediaFile) => ({
+        ...mediaFile,
+        isSubscribed: true,
+        hasPaid: hasViewPaidMediaFlag || mediaFile.accessible_to !== "price",
+      }));
+
+      return {
+        status: true,
+        message: "Private Media retrieved successfully",
+        data: mediaChecked,
+        total: mediaCount,
+      };
+    } catch (error: any) {
+      console.log(error);
+      throw new Error(error.message);
+    }
+  }
+
+  // Get Other Private Media
+  static async GetOtherPrivateMedia({
+    userId,
+    page,
+    limit,
+    authUserId,
+  }: GetOtherPrivateMediaProps): Promise<GetOtherPrivateMediaResponse> {
+    try {
+      const parsedLimit = limit ? parseInt(limit, 10) : 6;
+      const validLimit =
+        Number.isNaN(parsedLimit) || parsedLimit <= 0 ? 5 : parsedLimit;
+      const parsedPage = page ? parseInt(page, 10) : 1;
+      const validPage =
+        Number.isNaN(parsedPage) || parsedPage <= 0 ? 1 : parsedPage;
+
+      // Only get posts that are NOT public (private, subscribers, price)
+      const postIds = (
+        await query.post.findMany({
+          where: {
+            user_id: Number(userId),
+            NOT: { post_audience: "public" },
+          },
+          select: { id: true },
+        })
+      ).map((p) => p.id);
+
+      const [authUser, isSubscribed, media, payedPosts] = await Promise.all([
+        query.user.findUnique({
+          where: { id: Number(authUserId) },
+          select: { flags: true },
+        }),
+        query.subscribers.findFirst({
+          where: {
+            subscriber_id: Number(authUserId),
+            status: "active",
+            user_id: Number(userId),
+          },
+        }),
+        query.userMedia.findMany({
+          where: {
+            NOT: { accessible_to: "public" },
+            media_state: "completed",
+            post_id: { in: postIds },
+          },
+          select: {
+            id: true,
+            media_id: true,
+            post_id: true,
+            poster: true,
+            duration: true,
+            media_state: true,
+            url: true,
+            blur: true,
+            media_type: true,
+            locked: true,
+            accessible_to: true,
+            post: {
+              select: {
+                id: true,
+                user: { select: { id: true } },
+              },
+            },
+          },
+          skip: (validPage - 1) * validLimit,
+          take: validLimit + 1,
+          orderBy: { created_at: "desc" },
+        }),
+        query.purchasedPosts.findMany({
+          where: { post_id: { in: postIds }, user_id: Number(authUserId) },
+        }),
+      ]);
+
+      let hasMore = false;
+      if (media.length > validLimit) {
+        hasMore = true;
+        media.pop();
+      }
+
+      // Check if user has view_paid_media flag
+      const hasViewPaidMediaFlag =
+        (Array.isArray(authUser?.flags) &&
+          authUser.flags.includes("view_paid_media")) ||
+        false;
+
+      const purchasedPostsSet = new Set(payedPosts.map((l) => l.post_id));
+      const resolvedMedia = media.map((mediaFile) => ({
+        ...mediaFile,
+        hasPaid:
+          hasViewPaidMediaFlag ||
+          purchasedPostsSet.has(mediaFile.post_id) ||
+          mediaFile.accessible_to !== "price",
+        isSubscribed:
+          hasViewPaidMediaFlag ||
+          mediaFile.post.user.id === Number(authUserId) ||
+          !!isSubscribed,
+      }));
+
+      return {
+        status: true,
+        message: "Private Media retrieved successfully",
         data: resolvedMedia,
         hasMore,
       };
@@ -1340,6 +1571,20 @@ export default class PostService {
           status: false,
           error: true,
           message: "Price is required for price posts",
+        };
+      }
+
+      // Check if both content and media are missing for updates
+      const hasExistingMedia =
+        existingPost.UserMedia && existingPost.UserMedia.length > 0;
+      const hasNewMedia = media && media.length > 0;
+      const hasContent = content && content.trim().length > 0;
+
+      if (!hasContent && !hasExistingMedia && !hasNewMedia) {
+        return {
+          status: false,
+          error: true,
+          message: "Either content or media is required",
         };
       }
 
