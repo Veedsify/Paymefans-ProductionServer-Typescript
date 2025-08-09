@@ -114,6 +114,37 @@ export default class GroupController {
     }
   }
 
+  // Check if current user is blocked from group
+  static async checkUserBlocked(req: Request, res: Response): Promise<any> {
+    try {
+      const user = req.user as AuthUser;
+      const groupId = parseInt(req.params.groupId);
+
+      if (isNaN(groupId)) {
+        return res.status(400).json({
+          success: false,
+          error: true,
+          message: "Invalid group ID",
+        });
+      }
+
+      const result = await GroupService.checkUserBlocked(user, groupId);
+
+      if (result.error) {
+        return res.status(400).json(result);
+      }
+
+      return res.status(200).json(result);
+    } catch (error) {
+      console.error("Error in checkUserBlocked:", error);
+      res.status(500).json({
+        success: false,
+        error: true,
+        message: `Internal Server Error: ${error}`,
+      });
+    }
+  }
+
   // Update group
   static async updateGroup(req: Request, res: Response): Promise<any> {
     try {

@@ -20,7 +20,7 @@ import _ from "lodash";
 import type { Messages } from "@prisma/client";
 import { UploadImageToS3 } from "@libs/UploadImageToS3";
 import tusUploader from "@libs/tus";
-import {Permissions, RBAC} from "@utils/FlagsConfig";
+import { Permissions, RBAC } from "@utils/FlagsConfig";
 
 export default class ConversationService {
   // Conversation Receiver
@@ -83,10 +83,10 @@ export default class ConversationService {
 
       const receiverWithFlags = {
         ...receiver,
-        isProfileHidden: RBAC.checkUserFlag(receiver?.flags, Permissions.PROFILE_HIDDEN)
+        is_profile_hidden: RBAC.checkUserFlag(receiver?.flags, Permissions.PROFILE_HIDDEN)
       }
 
-      return { receiver:receiverWithFlags, error: false };
+      return { receiver: receiverWithFlags, error: false };
     } catch (error) {
       console.error("Error fetching conversation receiver:", error);
       throw new Error("Failed to fetch conversation receiver");
@@ -346,6 +346,7 @@ export default class ConversationService {
           name: true,
           username: true,
           profile_image: true,
+          flags: true, // Include flags for profile visibility
         },
       });
 
@@ -368,12 +369,20 @@ export default class ConversationService {
               : p.user_1
             : null;
           const receiver = receiverId ? receiverMap.get(receiverId) : null;
+          const checkisProfileHidden = RBAC.checkUserFlag(
+            receiver?.flags,
+            Permissions.PROFILE_HIDDEN,
+          );
           return receiver
             ? {
-                receiver,
-                conversation_id: convo.conversation_id,
-                lastMessage,
-              }
+              receiver: {
+                ...receiver,
+                flags: undefined,
+                is_profile_hidden: checkisProfileHidden,
+              },
+              conversation_id: convo.conversation_id,
+              lastMessage,
+            }
             : null;
         })
         .filter(Boolean);
@@ -585,10 +594,10 @@ export default class ConversationService {
       );
       return participant
         ? [
-            participant.user_1 === userId
-              ? participant.user_2
-              : participant.user_1,
-          ]
+          participant.user_1 === userId
+            ? participant.user_2
+            : participant.user_1,
+        ]
         : [];
     });
     // Batch fetch user data

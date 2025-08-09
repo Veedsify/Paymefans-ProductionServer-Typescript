@@ -21,6 +21,9 @@ groups.put("/:groupId", Auth, GroupController.updateGroup);
 groups.delete("/:groupId", Auth, GroupController.deleteGroup);
 groups.put("/:groupId/settings", Auth, GroupController.updateGroupSettings);
 
+// Check if current user is blocked from group
+groups.get("/:groupId/is-blocked", Auth, GroupController.checkUserBlocked);
+
 // Group membership routes
 groups.post("/:groupId/join", Auth, GroupController.joinGroup);
 groups.post("/:groupId/leave", Auth, GroupController.leaveGroup);

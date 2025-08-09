@@ -31,6 +31,7 @@ export interface Conversations {
     name: string;
     username: string;
     profile_image: string | null;
+    is_profile_hidden: boolean;
   };
   conversation_id: string;
   lastMessage: Messages;

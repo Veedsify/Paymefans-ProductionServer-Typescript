@@ -56,13 +56,13 @@ export default class GroupService {
           isActive: true,
           settings: data.settings
             ? {
-                create: {
-                  allowMemberInvites: data.settings.allowMemberInvites ?? true,
-                  allowMediaSharing: data.settings.allowMediaSharing ?? true,
-                  allowFileSharing: data.settings.allowFileSharing ?? true,
-                  moderateMessages: data.settings.moderateMessages ?? false,
-                },
-              }
+              create: {
+                allowMemberInvites: data.settings.allowMemberInvites ?? true,
+                allowMediaSharing: data.settings.allowMediaSharing ?? true,
+                allowFileSharing: data.settings.allowFileSharing ?? true,
+                moderateMessages: data.settings.moderateMessages ?? false,
+              },
+            }
             : undefined,
         },
         include: {
@@ -240,11 +240,11 @@ export default class GroupService {
           isActive: group.isActive,
           lastMessage: lastMessage
             ? {
-                content: lastMessage.content,
-                senderId: lastMessage.senderId,
-                senderUsername: lastMessage.sender.username,
-                timestamp: lastMessage.created_at,
-              }
+              content: lastMessage.content,
+              senderId: lastMessage.senderId,
+              senderUsername: lastMessage.sender.username,
+              timestamp: lastMessage.created_at,
+            }
             : undefined,
         };
       });
@@ -281,6 +281,22 @@ export default class GroupService {
     groupId: number,
   ): Promise<GroupServiceResponse<GroupWithDetails>> {
     try {
+      // First check if user is blocked from this group by checking GroupMember.isBlocked
+      const membership = await query.groupMember.findFirst({
+        where: {
+          userId: user.id,
+          groupId: groupId,
+        },
+      });
+
+      if (membership && membership.isBlocked) {
+        return {
+          success: false,
+          error: true,
+          message: "You have been blocked from this group",
+        };
+      }
+
       const group = await query.groups.findFirst({
         where: {
           id: groupId,
@@ -335,6 +351,36 @@ export default class GroupService {
         success: false,
         error: true,
         message: "Failed to fetch group",
+      };
+    }
+  }
+
+  // Check if user is blocked from group
+  static async checkUserBlocked(
+    user: AuthUser,
+    groupId: number,
+  ): Promise<GroupServiceResponse<{ isBlocked: boolean }>> {
+    try {
+      // Check if user is blocked by checking GroupMember.isBlocked field
+      const membership = await query.groupMember.findFirst({
+        where: {
+          userId: user.id,
+          groupId: groupId,
+        },
+      });
+
+      return {
+        success: true,
+        data: {
+          isBlocked: membership ? membership.isBlocked : false,
+        },
+      };
+    } catch (error) {
+      console.error("Error checking user blocked status:", error);
+      return {
+        success: false,
+        error: true,
+        message: "Failed to check blocked status",
       };
     }
   }
@@ -469,7 +515,7 @@ export default class GroupService {
     data: SendGroupMessageRequest,
   ): Promise<GroupServiceResponse<GroupMessageWithDetails>> {
     try {
-      // Check if user is a member
+      // Check if user is a member and get their membership status
       const membership = await query.groupMember.findFirst({
         where: {
           userId: user.id,
@@ -485,17 +531,26 @@ export default class GroupService {
         };
       }
 
-      // Check if user is muted
-      if (
-        membership.isMuted &&
-        membership.mutedUntil &&
-        membership.mutedUntil > new Date()
-      ) {
+      // Check if user is blocked from this group
+      if (membership.isBlocked) {
         return {
           success: false,
           error: true,
-          message: "You are muted in this group",
+          message: "You have been blocked from this group",
         };
+      }
+
+      // Check if user is muted (fixed logic)
+      if (membership.isMuted) {
+        // If mutedUntil is null, it's a permanent mute
+        // If mutedUntil exists, check if it's still in the future
+        if (!membership.mutedUntil || membership.mutedUntil > new Date()) {
+          return {
+            success: false,
+            error: true,
+            message: "You are muted in this group",
+          };
+        }
       }
 
       const message = await query.groupMessage.create({
