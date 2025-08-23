@@ -6,15 +6,18 @@ import axios, { AxiosResponse } from "axios";
 import { Buffer } from "buffer";
 import sharp from "sharp";
 import { PaystackService } from "./PaystackService";
+import { GenerateStreamToken } from "@libs/GenerateSignedUrls";
 // Retry intervals in milliseconds: 2 minutes, 4 minutes, 10 minutes, 30 minutes.
 const RETRY_DELAYS = [120000, 240000, 600000, 1800000];
+const CLOUDFLARE_CUSTOMER_SUBDOMAIN = process.env.CLOUDFLARE_CUSTOMER_SUBDOMAIN;
 const MAX_RETRIES = 4;
 export class WebhookService {
   // Handle Cloudflare processed media
   static async HandleCloudflareProcessedMedia(response: any): Promise<void> {
     try {
-      console.log("Processing media:", response);
-      const { uid, duration, readyToStream, thumbnail } = response;
+      const { uid, duration, readyToStream } = response;
+      const token = await GenerateStreamToken(uid)
+      const thumbnail = `${CLOUDFLARE_CUSTOMER_SUBDOMAIN}${token}/thumbnails/thumbnail.jpg`
       const mediaRecord = await query.userMedia.findUnique({
         where: { media_id: String(uid) },
         select: { post_id: true },
@@ -50,12 +53,18 @@ export class WebhookService {
         }
       }
       // Example usage
-      const fileKey = `thumbnails/blured/${postRecord.user_id}/${uid}`;
+      const bluredFileKey = `thumbnails/blured/${postRecord.user_id}/${uid}`;
+      const fileKey = `thumbnails/public/${postRecord.user_id}/${uid}`;
+
+      const ImageBlurBuffer = await sharp(await fetchImageFile(thumbnail))
+        .resize(800)
+        .blur(30)
+        .webp({ quality: 80 })
+        .toBuffer();
 
       const ImageBuffer = await sharp(await fetchImageFile(thumbnail))
         .resize(640)
-        .blur(30)
-        .webp({ quality: 80 })
+        .webp({ quality: 100 })
         .toBuffer();
 
       // Upload the thumbnail to S3.
@@ -66,14 +75,25 @@ export class WebhookService {
         ContentType: "image/jpeg",
       });
 
-      await s3.send(command);
+      const command2 = new PutObjectCommand({
+        Bucket: process.env.S3_BUCKET_NAME!,
+        Key: bluredFileKey,
+        Body: ImageBlurBuffer,
+        ContentType: "image/jpeg",
+      });
 
-      const bluredUrl = `${process.env.AWS_CLOUDFRONT_URL}/${fileKey}`;
+
+      await s3.send(command);
+      await s3.send(command2);
+
+      const bluredUrl = `${process.env.AWS_CLOUDFRONT_URL}/${bluredFileKey}`;
+      const publicUrl = `${process.env.AWS_CLOUDFRONT_URL}/${fileKey}`;
+
       // Update the media record with the thumbnail URL.
       await query.userMedia.update({
         where: { media_id: uid },
         data: {
-          poster: thumbnail,
+          poster: publicUrl,
           blur: bluredUrl,
         },
       });

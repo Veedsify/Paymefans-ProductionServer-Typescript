@@ -122,7 +122,6 @@ export default class HookupService {
           hookups: modelsWithDistance,
         };
       } else {
-        console.log("Here");
         // Fallback to IP-based or random selection if no precise location
         return await this.GetRandomHookups(user, limit);
       }

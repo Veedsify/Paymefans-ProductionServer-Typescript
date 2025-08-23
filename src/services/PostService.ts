@@ -46,6 +46,8 @@ import ParseContentToHtml from "@utils/ParseHtmlContent";
 import { Permissions, RBAC } from "@utils/FlagsConfig";
 import { MentionService } from "./MentionService";
 import { MentionNotificationQueue } from "@jobs/MentionNotificationJob";
+import GenerateCloudflareSignedUrl from "@libs/GenerateSignedUrls";
+import WatermarkService from "./WatermarkService";
 
 export default class PostService {
   // Create Post
@@ -69,7 +71,6 @@ export default class PostService {
         removedMedia,
         mentions,
         price,
-        isWaterMarkEnabled,
       } = data;
 
       if (removedMedia) {
@@ -166,6 +167,7 @@ export default class PostService {
       }
 
       const formattedContent = ParseContentToHtml(content, mentions || []);
+      const isWaterMarkEnabled = WatermarkService.isUserWatermarkEnabled(user.id)
 
       const post = await query.post.create({
         data: {
@@ -308,13 +310,23 @@ export default class PostService {
       const postLikesSet = new Set(likes.map((l) => l.post_id));
       const postRepostSet = new Set(reposts.map((r) => r.post_id));
 
-      const resolvedPosts = posts.map((post) => ({
-        ...post,
-        isSubscribed: true,
-        wasReposted: postRepostSet.has(post.id),
-        hasPaid: true,
-        likedByme: postLikesSet.has(post.id),
-      }));
+      const resolvedPosts = await Promise.all(
+        posts.map(async (post) => ({
+          ...post,
+          UserMedia: post.watermark_enabled ? await Promise.all(
+            (post.UserMedia || []).map(async (media) => ({
+              ...media,
+              url: await GenerateCloudflareSignedUrl(media.media_id, media.media_type, media.url),
+              poster: media.media_type === "image" ? await GenerateCloudflareSignedUrl(media.media_id, media.media_type, media.url) : media.poster,
+              blur: await GenerateCloudflareSignedUrl(media.media_id, media.media_type, media.blur),
+            })),
+          ) : post.UserMedia,
+          isSubscribed: true,
+          wasReposted: postRepostSet.has(post.id),
+          hasPaid: true,
+          likedByme: postLikesSet.has(post.id),
+        })),
+      );
 
       return {
         status: true,
@@ -421,13 +433,21 @@ export default class PostService {
       const postLikesSet = new Set(likes.map((l) => l.post_id));
       const postRepostSet = new Set(reposts.map((r) => r.post_id));
 
-      const resolvedPosts = posts.map((post) => ({
+      const resolvedPosts = await Promise.all(posts.map(async (post) => ({
         ...post,
+        UserMedia: post.watermark_enabled ? await Promise.all(
+          (post.UserMedia || []).map(async (media) => ({
+            ...media,
+            url: await GenerateCloudflareSignedUrl(media.media_id, media.media_type, media.url),
+            poster: media.media_type === "image" ? await GenerateCloudflareSignedUrl(media.media_id, media.media_type, media.url) : media.poster,
+            blur: await GenerateCloudflareSignedUrl(media.media_id, media.media_type, media.blur),
+          })),
+        ) : post.UserMedia,
         likedByme: postLikesSet.has(post.id),
         wasReposted: postRepostSet.has(post.id),
         isSubscribed: true,
         hasPaid: true,
-      }));
+      })));
 
       return {
         status: true,
@@ -539,13 +559,21 @@ export default class PostService {
       const postRepostSet = new Set(repostsDb.map((r) => r.post_id));
       const purchasedPostsSet = new Set(purchasedPosts.map((r) => r.post_id));
 
-      const resolvedPosts = reposts.map((post) => ({
+      const resolvedPosts = await Promise.all(reposts.map(async (post) => ({
         ...post,
+        UserMedia: post.watermark_enabled ? await Promise.all(
+          (post.UserMedia || []).map(async (media) => ({
+            ...media,
+            url: await GenerateCloudflareSignedUrl(media.media_id, media.media_type, media.url),
+            poster: media.media_type === "image" ? await GenerateCloudflareSignedUrl(media.media_id, media.media_type, media.url) : media.poster,
+            blur: await GenerateCloudflareSignedUrl(media.media_id, media.media_type, media.blur),
+          })),
+        ) : post.UserMedia,
         likedByme: postLikesSet.has(post.id),
         wasReposted: postRepostSet.has(post.id),
         hasPaid: purchasedPostsSet.has(post.id),
         isSubscribed: true,
-      }));
+      })));
 
       return {
         status: true,
@@ -653,14 +681,22 @@ export default class PostService {
       const postRepostSet = new Set(repostsDb.map((r) => r.post_id));
       const purchasedPostsSet = new Set(payedPosts.map((l) => l.post_id));
 
-      const resolvedPosts = reposts.map((post) => ({
+      const resolvedPosts = await Promise.all(reposts.map(async (post) => ({
         ...post,
+        UserMedia: post.watermark_enabled ? await Promise.all(
+          (post.UserMedia || []).map(async (media) => ({
+            ...media,
+            url: await GenerateCloudflareSignedUrl(media.media_id, media.media_type, media.url),
+            poster: media.media_type === "image" ? await GenerateCloudflareSignedUrl(media.media_id, media.media_type, media.url) : media.poster,
+            blur: await GenerateCloudflareSignedUrl(media.media_id, media.media_type, media.blur),
+          })),
+        ) : post.UserMedia,
         likedByme: postLikesSet.has(post.id),
         wasReposted: postRepostSet.has(post.id),
         hasPaid:
           purchasedPostsSet.has(post.id) || post.post_audience !== "price",
         isSubscribed: true,
-      }));
+      })));
 
       return {
         status: true,
@@ -724,11 +760,14 @@ export default class PostService {
         false;
 
       // isSubscribed: true can be done without map over async
-      const mediaChecked = media.map((mediaFile) => ({
+      const mediaChecked = await Promise.all(media.map(async (mediaFile) => ({
         ...mediaFile,
+        url: mediaFile.post.watermark_enabled ? await GenerateCloudflareSignedUrl(mediaFile.media_id, mediaFile.media_type, mediaFile.url) : mediaFile.url,
+        poster: mediaFile.post.watermark_enabled ? (mediaFile.media_type === "image" ? await GenerateCloudflareSignedUrl(mediaFile.media_id, mediaFile.media_type, mediaFile.url) : mediaFile.poster) : mediaFile.poster,
+        blur: mediaFile.post.watermark_enabled ? await GenerateCloudflareSignedUrl(mediaFile.media_id, mediaFile.media_type, mediaFile.blur) : mediaFile.blur,
         isSubscribed: true,
         hasPaid: hasViewPaidMediaFlag || mediaFile.accessible_to !== "price",
-      }));
+      })));
       return {
         status: true,
         message: "Media retrieved successfully",
@@ -796,6 +835,7 @@ export default class PostService {
             post: {
               select: {
                 id: true,
+                watermark_enabled: true,
                 user: { select: { id: true } },
               },
             },
@@ -822,8 +862,11 @@ export default class PostService {
         false;
 
       const purchasedPostsSet = new Set(payedPosts.map((l) => l.post_id));
-      const resolvedMedia = media.map((mediaFile) => ({
+      const resolvedMedia = await Promise.all(media.map(async (mediaFile) => ({
         ...mediaFile,
+        url: mediaFile.post.watermark_enabled ? await GenerateCloudflareSignedUrl(mediaFile.media_id, mediaFile.media_type, mediaFile.url) : mediaFile.url,
+        poster: mediaFile.post.watermark_enabled ? (mediaFile.media_type === "image" ? await GenerateCloudflareSignedUrl(mediaFile.media_id, mediaFile.media_type, mediaFile.url) : mediaFile.poster) : mediaFile.poster,
+        blur: mediaFile.post.watermark_enabled ? await GenerateCloudflareSignedUrl(mediaFile.media_id, mediaFile.media_type, mediaFile.blur) : mediaFile.blur,
         hasPaid:
           hasViewPaidMediaFlag ||
           purchasedPostsSet.has(mediaFile.post_id) ||
@@ -832,7 +875,7 @@ export default class PostService {
           hasViewPaidMediaFlag ||
           mediaFile.post.user.id === Number(authUserId) ||
           !!isSubscribed,
-      }));
+      })));
 
       return {
         status: true,
@@ -908,11 +951,14 @@ export default class PostService {
         false;
 
       // isSubscribed: true can be done without map over async
-      const mediaChecked = media.map((mediaFile) => ({
+      const mediaChecked = await Promise.all(media.map(async (mediaFile) => ({
         ...mediaFile,
+        url: mediaFile.post.watermark_enabled ? await GenerateCloudflareSignedUrl(mediaFile.media_id, mediaFile.media_type, mediaFile.url) : mediaFile.url,
+        poster: mediaFile.post.watermark_enabled ? (mediaFile.media_type === "image" ? await GenerateCloudflareSignedUrl(mediaFile.media_id, mediaFile.media_type, mediaFile.url) : mediaFile.poster) : mediaFile.poster,
+        blur: mediaFile.post.watermark_enabled ? await GenerateCloudflareSignedUrl(mediaFile.media_id, mediaFile.media_type, mediaFile.blur) : mediaFile.blur,
         isSubscribed: true,
         hasPaid: hasViewPaidMediaFlag || mediaFile.accessible_to !== "price",
-      }));
+      })));
 
       return {
         status: true,
@@ -985,6 +1031,7 @@ export default class PostService {
             post: {
               select: {
                 id: true,
+                watermark_enabled: true,
                 user: { select: { id: true } },
               },
             },
@@ -1011,8 +1058,11 @@ export default class PostService {
         false;
 
       const purchasedPostsSet = new Set(payedPosts.map((l) => l.post_id));
-      const resolvedMedia = media.map((mediaFile) => ({
+      const resolvedMedia = await Promise.all(media.map(async (mediaFile) => ({
         ...mediaFile,
+        url: mediaFile.post.watermark_enabled ? await GenerateCloudflareSignedUrl(mediaFile.media_id, mediaFile.media_type, mediaFile.url) : mediaFile.url,
+        poster: mediaFile.post.watermark_enabled ? (mediaFile.media_type === "image" ? await GenerateCloudflareSignedUrl(mediaFile.media_id, mediaFile.media_type, mediaFile.url) : mediaFile.poster) : mediaFile.poster,
+        blur: mediaFile.post.watermark_enabled ? await GenerateCloudflareSignedUrl(mediaFile.media_id, mediaFile.media_type, mediaFile.blur) : mediaFile.blur,
         hasPaid:
           hasViewPaidMediaFlag ||
           purchasedPostsSet.has(mediaFile.post_id) ||
@@ -1021,7 +1071,7 @@ export default class PostService {
           hasViewPaidMediaFlag ||
           mediaFile.post.user.id === Number(authUserId) ||
           !!isSubscribed,
-      }));
+      })));
 
       return {
         status: true,
@@ -1160,8 +1210,16 @@ export default class PostService {
         Permissions.VIEW_PAID_POSTS,
       );
 
-      const resolvedPosts = posts.map((post) => ({
+      const resolvedPosts = await Promise.all(posts.map(async (post) => ({
         ...post,
+        UserMedia: post.watermark_enabled ? await Promise.all(
+          (post.UserMedia || []).map(async (media) => ({
+            ...media,
+            url: await GenerateCloudflareSignedUrl(media.media_id, media.media_type, media.url),
+            poster: media.media_type === "image" ? await GenerateCloudflareSignedUrl(media.media_id, media.media_type, media.url) : media.poster,
+            blur: await GenerateCloudflareSignedUrl(media.media_id, media.media_type, media.blur),
+          })),
+        ) : post.UserMedia,
         likedByme: postLikesSet.has(post.id),
         hasPaid:
           purchasedPostsSet.has(post.id) ||
@@ -1169,7 +1227,7 @@ export default class PostService {
           post.post_audience !== "price",
         wasReposted: postRepostSet.has(post.id),
         isSubscribed: checkIfUserCanViewPaidPosts || !!subs,
-      }));
+      })));
       return {
         error: false,
         status: true,
@@ -1294,14 +1352,22 @@ export default class PostService {
       const postLikesSet = new Set(likes.map((l) => l.post_id));
       const postRepostSet = new Set(reposts.map((r) => r.post_id));
       const purchasedPostsSet = new Set(payedPosts.map((l) => l.post_id));
-      const resolvedPosts = posts.map((post) => ({
+      const resolvedPosts = await Promise.all(posts.map(async (post) => ({
         ...post,
+        UserMedia: post.watermark_enabled ? await Promise.all(
+          (post.UserMedia || []).map(async (media) => ({
+            ...media,
+            url: await GenerateCloudflareSignedUrl(media.media_id, media.media_type, media.url),
+            poster: media.media_type === "image" ? await GenerateCloudflareSignedUrl(media.media_id, media.media_type, media.url) : media.poster,
+            blur: await GenerateCloudflareSignedUrl(media.media_id, media.media_type, media.blur),
+          })),
+        ) : post.UserMedia,
         likedByme: postLikesSet.has(post.id),
         wasReposted: postRepostSet.has(post.id),
         hasPaid:
           purchasedPostsSet.has(post.id) || post.post_audience !== "price",
         isSubscribed: !!subs || post.user.id === authUserId,
-      }));
+      })));
 
       return {
         error: false,
@@ -1411,12 +1477,25 @@ export default class PostService {
         Permissions.VIEW_PAID_POSTS,
       );
 
+      // Process UserMedia with conditional signed URLs
+      const processedPost = {
+        ...post,
+        UserMedia: post.watermark_enabled ? await Promise.all(
+          (post.UserMedia || []).map(async (media) => ({
+            ...media,
+            url: await GenerateCloudflareSignedUrl(media.media_id, media.media_type, media.url),
+            poster: media.media_type === "image" ? await GenerateCloudflareSignedUrl(media.media_id, media.media_type, media.url) : media.poster,
+            blur: await GenerateCloudflareSignedUrl(media.media_id, media.media_type, media.blur),
+          })),
+        ) : post.UserMedia,
+      };
+
       return {
         error: false,
         status: true,
         message: "Post retrieved successfully",
         data: {
-          ...post,
+          ...processedPost,
           likedByme: !!postLike,
           wasReposted: !!isReposted,
           hasPaid:

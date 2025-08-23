@@ -4,7 +4,10 @@ import type { SignOptions } from "jsonwebtoken";
 
 // Environment variables
 const JWT_SECRET = process.env.JWT_SECRET || "your-fallback-secret";
+const JWT_REFRESH_SECRET =
+  process.env.JWT_REFRESH_SECRET || "your-fallback-refresh-secret";
 const TOKEN_EXPIRATION = process.env.TOKEN_EXPIRATION || "1h";
+const REFRESH_TOKEN_EXPIRATION = process.env.REFRESH_TOKEN_EXPIRATION || "7d";
 
 async function Authenticate(data: {
   id: number;
@@ -18,11 +21,22 @@ async function Authenticate(data: {
   Settings: {
     two_factor_auth: boolean;
   } | null;
-}): Promise<any> {
+}): Promise<{ accessToken: string; refreshToken: string }> {
   const payload = { ...data };
-  return jwt.sign(payload, JWT_SECRET, {
+
+  const accessToken = jwt.sign(payload, JWT_SECRET, {
     expiresIn: TOKEN_EXPIRATION,
   } as SignOptions);
+
+  const refreshToken = jwt.sign(
+    { user_id: data.user_id, id: data.id },
+    JWT_REFRESH_SECRET,
+    {
+      expiresIn: REFRESH_TOKEN_EXPIRATION,
+    } as SignOptions,
+  );
+
+  return { accessToken, refreshToken };
 }
 
 export { Authenticate };

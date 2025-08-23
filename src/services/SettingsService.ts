@@ -281,4 +281,36 @@ export default class SettingsService {
       };
     }
   }
+
+
+  static async GetUserSettings(userId: number) { 
+    try {
+      const settings = await query.settings.findUnique({
+        where: { user_id: userId },
+        select: {
+          price_per_message: true,
+          enable_free_message: true,
+          subscription_price: true,
+          watermark_uid: true,
+        },
+      });
+
+      if (!settings) {
+        throw new Error("Settings not found");
+      }
+
+      return {
+        error: false,
+        message: "Settings retrieved successfully",
+        settings,
+      };
+    } catch (error: any) {
+      console.error("Error retrieving user settings:", error);
+      return {
+        error: true,
+        message: "Error retrieving user settings",
+        settings: null,
+      };
+    }
+  }
 }

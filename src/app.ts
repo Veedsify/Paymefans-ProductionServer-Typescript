@@ -21,18 +21,21 @@ const app = express();
 const server = http.createServer(app);
 const port = 3009;
 
-// HTTP request logging
-app.use(logger("dev"));
+/**
+ * HTTP request logging
+ * Use 'dev' format for non-production, 'combined' for production.
+ */
+if (process.env.NODE_ENV === "production") {
+  app.use(logger("combined"));
+} else {
+  app.use(logger("dev"));
+}
 
 // Cookie parser
 app.use(cookieParser());
 
 // Cors Origins
-const origins = [
-  VERIFICATION_URL!,
-  ADMIN_PANEL_URL!,
-  APP_URL!,
-].filter(Boolean);
+const origins = [VERIFICATION_URL!, ADMIN_PANEL_URL!, APP_URL!].filter(Boolean);
 
 // Cors
 app.use(

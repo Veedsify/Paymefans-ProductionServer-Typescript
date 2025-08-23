@@ -2,6 +2,7 @@ import type { Post } from "@prisma/client";
 import query from "@utils/prisma";
 import type { PostWithLike } from "../types/feed";
 import { Permissions, RBAC } from "@utils/FlagsConfig";
+import GenerateCloudflareSignedUrl from "@libs/GenerateSignedUrls";
 
 interface CursorInfo {
   timestamp: Date;
@@ -69,9 +70,6 @@ class FeedService {
     hasMore: boolean;
   }> {
     let cursorInfo: CursorInfo | null = null;
-    const user = await query.user.findFirst({
-      where: { id: authUserid },
-    });
 
     if (cursor) {
       try {
@@ -80,6 +78,10 @@ class FeedService {
         console.error("Invalid cursor:", error);
       }
     }
+
+    const user = await query.user.findFirst({
+      where: { id: authUserid },
+    });
 
     // Get list of users who have blocked the current user
     const blockedByUsers = await query.userBlock.findMany({
@@ -119,19 +121,15 @@ class FeedService {
     if (cursorInfo) {
       whereClause = {
         ...whereClause,
-        AND: [
-          whereClause,
+        OR: [
+          ...whereClause.OR,
           {
-            OR: [
-              {
-                created_at: { lt: cursorInfo.timestamp },
-              },
-              {
-                AND: [
-                  { created_at: cursorInfo.timestamp },
-                  { id: { lt: cursorInfo.id } },
-                ],
-              },
+            created_at: { lt: cursorInfo.timestamp },
+          },
+          {
+            AND: [
+              { created_at: cursorInfo.timestamp },
+              { id: { lt: cursorInfo.id } },
             ],
           },
         ],
@@ -140,7 +138,26 @@ class FeedService {
 
     const posts = await query.post.findMany({
       where: whereClause,
-      include: {
+      select: {
+        id: true,
+        content: true,
+        post_id: true,
+        post_audience: true,
+        media: true,
+        created_at: true,
+        updated_at: true,
+        post_status: true,
+        post_impressions: true,
+        post_likes: true,
+        post_comments: true,
+        watermark_enabled: true,
+        post_reposts: true,
+        was_repost: true,
+        repost_id: true,
+        repost_username: true,
+        user_id: true,
+        post_is_visible: true,
+        post_price: true,
         user: {
           select: {
             id: true,
@@ -157,7 +174,24 @@ class FeedService {
             total_followers: true,
           },
         },
-        UserMedia: true,
+        UserMedia: {
+          select: {
+            id: true,
+            media_id: true,
+            user_id: true,
+            post_id: true,
+            duration: true,
+            media_state: true,
+            poster: true,
+            url: true,
+            blur: true,
+            media_type: true,
+            locked: true,
+            accessible_to: true,
+            created_at: true,
+            updated_at: true,
+          },
+        },
       },
       take: FeedService.POSTS_PER_HOME_PAGE + 1,
       orderBy: { created_at: "desc" },
@@ -215,6 +249,14 @@ class FeedService {
 
       return {
         ...post,
+        UserMedia: post.watermark_enabled ? await Promise.all(
+          (post.UserMedia || []).map(async (media) => ({
+            ...media,
+            url: await GenerateCloudflareSignedUrl(media.media_id, media.media_type, media.url),
+            poster: media.media_type === "image" ? await GenerateCloudflareSignedUrl(media.media_id, media.media_type, media.url) : media.poster,
+            blur: await GenerateCloudflareSignedUrl(media.media_id, media.media_type, media.blur),
+          })),
+        ) : post.UserMedia,
         likedByme: postLike ? true : false,
         wasReposted: !!isReposted,
         hasPaid:
@@ -337,19 +379,15 @@ class FeedService {
     if (cursorInfo) {
       whereClause = {
         ...whereClause,
-        AND: [
-          whereClause,
+        OR: [
+          ...whereClause.OR,
           {
-            OR: [
-              {
-                created_at: { lt: cursorInfo.timestamp },
-              },
-              {
-                AND: [
-                  { created_at: cursorInfo.timestamp },
-                  { id: { lt: cursorInfo.id } },
-                ],
-              },
+            created_at: { lt: cursorInfo.timestamp },
+          },
+          {
+            AND: [
+              { created_at: cursorInfo.timestamp },
+              { id: { lt: cursorInfo.id } },
             ],
           },
         ],
@@ -358,7 +396,26 @@ class FeedService {
 
     const posts = await query.post.findMany({
       where: whereClause,
-      include: {
+      select: {
+        id: true,
+        content: true,
+        post_id: true,
+        post_audience: true,
+        media: true,
+        created_at: true,
+        updated_at: true,
+        post_status: true,
+        post_impressions: true,
+        post_likes: true,
+        post_comments: true,
+        watermark_enabled: true,
+        post_reposts: true,
+        was_repost: true,
+        repost_id: true,
+        repost_username: true,
+        user_id: true,
+        post_is_visible: true,
+        post_price: true,
         user: {
           select: {
             id: true,
@@ -374,7 +431,24 @@ class FeedService {
             total_followers: true,
           },
         },
-        UserMedia: true,
+        UserMedia: {
+          select: {
+            id: true,
+            media_id: true,
+            user_id: true,
+            post_id: true,
+            duration: true,
+            media_state: true,
+            poster: true,
+            url: true,
+            blur: true,
+            media_type: true,
+            locked: true,
+            accessible_to: true,
+            created_at: true,
+            updated_at: true,
+          },
+        },
         PostLike: true,
         UserRepost: true,
       },
@@ -387,19 +461,34 @@ class FeedService {
       ? posts.slice(0, FeedService.POSTS_PER_HOME_PAGE)
       : posts;
 
+    // Process UserMedia with conditional signed URLs
+    const processedPosts = await Promise.all(
+      postsToReturn.map(async (post) => ({
+        ...post,
+        UserMedia: post.watermark_enabled ? await Promise.all(
+          (post.UserMedia || []).map(async (media) => ({
+            ...media,
+            url: await GenerateCloudflareSignedUrl(media.media_id, media.media_type, media.url),
+            poster: media.media_type === "image" ? await GenerateCloudflareSignedUrl(media.media_id, media.media_type, media.url) : media.poster,
+            blur: await GenerateCloudflareSignedUrl(media.media_id, media.media_type, media.blur),
+          })),
+        ) : post.UserMedia,
+      }))
+    );
+
     let nextCursor: string | undefined;
-    if (hasMore && postsToReturn.length > 0) {
-      const lastPost = postsToReturn[postsToReturn.length - 1];
+    if (hasMore && processedPosts.length > 0) {
+      const lastPost = processedPosts[processedPosts.length - 1];
       const cursorData: CursorInfo = {
         timestamp: lastPost.created_at,
-        score: 0, // User posts don't have relevance scores
+        score: 0, // getUserPosts doesn't use scoring
         id: lastPost.id,
       };
       nextCursor = Buffer.from(JSON.stringify(cursorData)).toString("base64");
     }
 
     return {
-      posts: postsToReturn,
+      posts: processedPosts,
       nextCursor,
       hasMore,
     };

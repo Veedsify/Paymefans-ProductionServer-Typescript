@@ -85,6 +85,14 @@ export default class AuthController {
             maxAge: 3600,
           }),
         );
+        res.setHeader(
+          "Set-Cookie",
+          serialize("refresh_token", LoginAccount.refresh as string, {
+            httpOnly: true,
+            secure: false,
+            sameSite: "lax",
+          }),
+        );
       }
 
       res.status(200).json(LoginAccount);

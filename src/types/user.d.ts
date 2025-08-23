@@ -24,14 +24,11 @@ export type RegisteredUser = {
 };
 
 export type RetrieveUserResponse =
-  | {
-      user: AuthUser;
-      status: boolean;
-    }
-  | {
-      status: boolean;
-      message: string;
-    };
+  {
+    user?: Partial<AuthUser>;
+    status: boolean;
+    message: string;
+  };
 
 type UpdateTwoFactorAuthResponse = {
   success: boolean;

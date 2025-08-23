@@ -42,10 +42,9 @@ export default class UserService {
 
       // const subscriptions = getMySubscriptions.map((sub) => sub.user_id);
       const { password, ...rest } = user;
-      const purchasedPosts: number[] = [2];
       const result = {
         message: "User retrieved successfully",
-        user: { ...rest, following, purchasedPosts },
+        user: { ...rest, following },
         status: true,
       };
 
@@ -141,7 +140,7 @@ export default class UserService {
       }
 
       return {
-        token,
+        token: token.accessToken,
         error: false,
         message: "Login Successful",
         success: true,

@@ -33,6 +33,7 @@ export type LoginUserResponse = {
   error: boolean;
   message: string;
   token?: string | null;
+  refresh?: string;
   tfa?: boolean;
   user?: {
     id: number;

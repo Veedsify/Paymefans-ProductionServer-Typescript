@@ -7,14 +7,16 @@ export type UploadResponseResponse = {
 };
 export type UploadMedieDataProps =
   | {
-      type: "video" | "image";
-      fileType: string;
-      fileName: string;
-      maxDuration: number;
-      fileSize: number;
-    }
+    type: "video" | "image";
+    fileType: string;
+    fileName: string;
+    maxDuration: number;
+    fileSize: number;
+    shouldUseSignedUrls?: boolean;
+  }
   | {
-      explicitImageType: string;
-      type: "video" | "image";
-      fileType: string;
-    };
+    explicitImageType: string;
+    type: "video" | "image";
+    fileType: string;
+    shouldUseSignedUrls?: boolean;
+  };

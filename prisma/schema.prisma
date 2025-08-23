@@ -125,6 +125,7 @@ model User {
   GroupJoinRequests         GroupJoinRequest[]          @relation("GroupJoinRequests")
   GroupInvitationsSent      GroupInvitation[]           @relation("GroupInvitationsSent")
   GroupInvitationsReceived  GroupInvitation[]           @relation("GroupInvitationsReceived")
+  OldUsernames              OldUsername[]
 }
 
 model Participants {
@@ -166,6 +167,18 @@ model Messages {
 
   @@index([sender_id])
   @@index([receiver_id])
+}
+
+model OldUsername {
+  id           Int      @id @default(autoincrement())
+  user_id      Int
+  old_username String?
+  created_at   DateTime @default(now())
+  updated_at   DateTime @updatedAt
+  user         User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id])
+  @@index([old_username])
 }
 
 model Model {
@@ -549,6 +562,7 @@ model Settings {
   tiktok_url            String?
   telegram_url          String?
   youtube_url           String?
+  watermark_uid         String?
   created_at            DateTime @default(now())
   updated_at            DateTime @updatedAt
   user                  User     @relation(fields: [user_id], references: [id], onDelete: Cascade)

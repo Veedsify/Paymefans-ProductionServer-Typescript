@@ -8,7 +8,7 @@ post.post("/create", Auth, PostController.CreatePost);
 post.get("/personal/posts", Auth, PostController.GetMyPosts);
 post.get("/personal/private-post", Auth, PostController.MyPrivatePosts);
 post.get("/personal/reposts", Auth, PostController.GetMyReposts);
-post.get("/personal/media", Auth, PostController.GetMedia);
+post.get("/personal/media", Auth, PostController.GetMedia); 
 post.get("/personal/private-media", Auth, PostController.GetPrivateMedia);
 
 // Other User Posts

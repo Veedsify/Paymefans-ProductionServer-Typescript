@@ -92,7 +92,7 @@ export default class LoginService {
           user: rest,
         };
       } else {
-        const token = await Authenticate(rest);
+        const { accessToken, refreshToken } = await Authenticate(rest);
 
         // Save Login History
         try {
@@ -102,7 +102,13 @@ export default class LoginService {
           console.error("Error saving login history:", error);
         }
 
-        return { token, error: false, message: "Login Successful", user: rest };
+        return {
+          token: accessToken,
+          refresh: refreshToken,
+          error: false,
+          message: "Login Successful",
+          user: rest,
+        };
       }
     } catch (error) {
       return { error: true, message: "Internal server error" };
