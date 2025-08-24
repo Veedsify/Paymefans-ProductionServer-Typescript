@@ -71,7 +71,7 @@ app.use((req: Request, res: Response, next: NextFunction) => {
 
 // General rate limiting - applies to all requests
 const generalLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
+  windowMs: 5 * 60 * 1000, // 5 minutes
   max: 1000, // limit each IP to 1000 requests per windowMs
   message: {
     error: "Too many requests from this IP, please try again later.",
@@ -87,26 +87,34 @@ const generalLimiter = rateLimit({
 
 // API-specific rate limiting - more restrictive for API routes
 const apiLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 500, // limit each IP to 100 API requests per windowMs
+  windowMs: 10 * 60 * 1000, // 15 minutes
+  max: 1000, // limit each IP to 100 API requests per windowMs
   message: {
     error: "Too many API requests from this IP, please try again later.",
     retryAfter: "15 minutes"
   },
   standardHeaders: true,
   legacyHeaders: false,
+  skip: (req) => {
+    // Skip rate limiting for certain routes if needed
+    return req.ip === '127.0.0.1' || req.ip === '::1'; // Skip localhost in development
+  }
 });
 
 // Auth route rate limiting - very restrictive for login/register routes
 const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 50, // limit each IP to 5 auth attempts per windowMs
+  windowMs: 10 * 60 * 1000, // 15 minutes
+  max: 1000, // limit each IP to 5 auth attempts per windowMs
   message: {
     error: "Too many authentication attempts from this IP, please try again later.",
     retryAfter: "15 minutes"
   },
   standardHeaders: true,
   legacyHeaders: false,
+  skip: (req) => {
+    // Skip rate limiting for certain routes if needed
+    return req.ip === '127.0.0.1' || req.ip === '::1'; // Skip localhost in development
+  }
 });
 
 // Slow down middleware - progressively delays responses

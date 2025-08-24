@@ -5,7 +5,12 @@ import LoginService from "@services/LoginService";
 import PointService from "@services/PointService";
 import WalletService from "@services/WalletService";
 import UserService from "@services/UserService";
+import * as jwt from "jsonwebtoken";
 import { serialize } from "cookie";
+import { Authenticate } from "@libs/jwt";
+import { redis } from "@libs/RedisStore";
+import { durationInSeconds } from "@utils/helpers";
+const REFRESH_TOKEN_EXPIRATION = process.env.REFRESH_TOKEN_EXPIRATION || "7d";
 
 export default class AuthController {
   // Register Service
@@ -77,21 +82,19 @@ export default class AuthController {
       if (LoginAccount.token) {
         res.setHeader(
           "Set-Cookie",
-          serialize("token", LoginAccount.token as string, {
-            httpOnly: false,
-            secure: false,
+          [serialize("token", LoginAccount.token as string, {
+            httpOnly: process.env.NODE_ENV === "production",
+            secure: process.env.NODE_ENV === "production",
             sameSite: "lax",
             path: "/",
             maxAge: 3600,
           }),
-        );
-        res.setHeader(
-          "Set-Cookie",
           serialize("refresh_token", LoginAccount.refresh as string, {
-            httpOnly: true,
-            secure: false,
+            httpOnly: process.env.NODE_ENV === "production",
+            secure: process.env.NODE_ENV === "production",
             sameSite: "lax",
-          }),
+            path: "/",
+          })]
         );
       }
 
@@ -179,6 +182,88 @@ export default class AuthController {
 
       return res.status(200).json(user);
     } catch (error) {
+      return res
+        .status(500)
+        .json({ message: "Internal server error", status: false });
+    }
+  }
+
+  // Refresh Token
+  static async RefreshToken(req: Request, res: Response): Promise<any> {
+    try {
+      const client_refresh_token = req.cookies?.refresh_token;
+
+      if (!client_refresh_token) {
+        return res
+          .status(401)
+          .json({ message: "No token found", status: false });
+      }
+
+      const decoded = jwt.verify(
+        client_refresh_token,
+        process.env.JWT_REFRESH_SECRET as string) as {
+          user_id: string;
+          id: number;
+          email: string;
+        }
+
+      if (!decoded || (decoded && !decoded?.email)) {
+        return res
+          .status(401)
+          .json({ message: "Invalid request, please login again", status: false });
+      }
+
+      const user = await UserService.GetUserJwtPayload(decoded?.email)
+
+      if (!user) {
+        return res
+          .status(401)
+          .json({ message: "Invalid user, please login again", status: false });
+      }
+
+      const key = `refresh_token_${user.id}`;
+      const token = await redis.get(key);
+
+      if (!token || token !== client_refresh_token) {
+        return res
+          .status(401)
+          .json({ message: "Invalid token, please login again", status: false });
+      }
+
+      const { accessToken, refreshToken } = await Authenticate(user);
+
+      if (!accessToken || !refreshToken) {
+        return res
+          .status(401)
+          .json({ message: "Invalid token, please login again", status: false });
+      }
+
+      redis.set(key, refreshToken, "EX", durationInSeconds(REFRESH_TOKEN_EXPIRATION));
+      res.setHeader(
+        "Set-Cookie",
+        [
+          serialize("token", accessToken as string, {
+            httpOnly: process.env.NODE_ENV === "production",
+            secure: process.env.NODE_ENV === "production",
+            sameSite: "lax",
+            path: "/",
+          }),
+          serialize("refresh_token", refreshToken as string, {
+            httpOnly: process.env.NODE_ENV === "production",
+            secure: process.env.NODE_ENV === "production",
+            sameSite: "lax",
+            path: "/",
+          }),
+        ]
+      );
+
+      return res.status(200).json({
+        token: accessToken,
+        refresh: refreshToken,
+        message: "Token refreshed successfully",
+      });
+    } catch (error) {
+      console.log(error);
       return res
         .status(500)
         .json({ message: "Internal server error", status: false });

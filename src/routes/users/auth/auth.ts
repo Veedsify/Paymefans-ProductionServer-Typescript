@@ -1,6 +1,7 @@
 import express from "express"
 import AuthController from "@controllers/AuthController"
 import Auth from "@middleware/Auth"
+import LogOutController from "@controllers/LogoutController"
 const auth = express.Router()
 
 
@@ -15,5 +16,9 @@ auth.post("/wallet", Auth, AuthController.Wallet);
 auth.get("/retrieve", Auth, AuthController.Retrieve);
 auth.post("/two-factor-authentication", Auth, AuthController.TwoFactorAuth);
 auth.post("/verify/authentication", AuthController.VerifyTwoFactorAuth);
+auth.post("/logout", LogOutController.Logout)
+
+// Token refresh
+auth.post("/token/refresh", AuthController.RefreshToken);
 
 export default auth

@@ -71,8 +71,6 @@ api.use("/help", help);
 api.use("/webhooks", webhooks);
 // Withdraw
 api.use("/withdraw", withdraw);
-// Logout
-api.post("/logout", LogOutController.Logout);
 // Outer Pages
 api.use("/pages", pages);
 // Rates

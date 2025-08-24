@@ -5,6 +5,7 @@ import query from "@utils/prisma";
 import LoginHistoryService from "@services/LoginHistory";
 import _ from "lodash";
 import EmailService from "./EmailService";
+import UserService from "./UserService";
 
 export default class LoginService {
   // Login User
@@ -15,28 +16,8 @@ export default class LoginService {
       if (!email || !pass) {
         return { error: true, message: "Email and password are required" };
       }
-      const user = await query.user.findFirst({
-        where: {
-          email: email,
-        },
-        select: {
-          id: true,
-          active_status: true,
-          email: true,
-          username: true,
-          user_id: true,
-          name: true,
-          role: true,
-          flags: true,
-          should_delete: true,
-          password: true,
-          Settings: {
-            select: {
-              two_factor_auth: true,
-            },
-          },
-        },
-      });
+
+      const user = await UserService.GetUserJwtPayload(email);
 
       if (user && !user?.active_status) {
         return {
@@ -93,7 +74,6 @@ export default class LoginService {
         };
       } else {
         const { accessToken, refreshToken } = await Authenticate(rest);
-
         // Save Login History
         try {
           const ip = "192.168.0.1";

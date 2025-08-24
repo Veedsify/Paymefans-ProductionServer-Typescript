@@ -1,4 +1,5 @@
-import { Model, Settings, User, UserPoints, UserWallet } from "@prisma/client";
+import { Model, Settings, User, UserPoints, UserRole, UserWallet } from "@prisma/client";
+import { JsonArray, JsonValue } from "@prisma/client/runtime/library";
 
 export interface AuthUser extends Omit<User, "password"> {
   UserPoints: UserPoints | null;
@@ -43,3 +44,19 @@ type VerificationControllerResponse = {
   token?: string;
   user?: AuthUser;
 };
+
+export type UserJwtPayloadResponse = {
+  id: number;
+  active_status: boolean;
+  email: string;
+  username: string;
+  user_id: string;
+  name: string;
+  flags: JsonValue;
+  should_delete: boolean;
+  password: string;
+  role: UserRole;
+  Settings: {
+    two_factor_auth: boolean;
+  } | null;
+}
