@@ -1,5 +1,4 @@
 import express from "express";
-import auth from "@routes/users/auth/auth";
 import feed from "@routes/users/feed/feed";
 import profile from "@routes/users/profile/profile";
 import post from "@routes/users/post/post";
@@ -17,7 +16,6 @@ import verification from "@routes/users/verification/verification";
 import store from "@routes/users/store/store";
 import help from "@routes/users/help/help";
 import webhooks from "@routes/users/webhooks/webhooks";
-import LogOutController from "@controllers/LogoutController";
 import withdraw from "@routes/users/withdraw/withdraw";
 import pages from "./users/pages/pages";
 import rates from "./users/rate/rate";

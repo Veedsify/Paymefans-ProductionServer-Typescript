@@ -126,6 +126,11 @@ const speedLimiter = slowDown({
     const delayAfter = (req as any).slowDown.delayAfter;
     return (used - delayAfter) * 100; // add 100ms of delay per request after delayAfter
   },
+  legacyHeaders: false, // Disable the `X-SlowDown-*` headers
+  skip: (req) => {
+    // Skip speed limiting for certain routes if needed
+    return req.ip === '127.0.0.1' || req.ip === '::1'; // Skip localhost in development
+  },
   maxDelayMs: 2000, // maximum delay of 2 seconds
 });
 

@@ -20,11 +20,6 @@ class SaveMessageToDb {
         story_reply = null,
       } = data;
 
-      // Debug: Log story reply data
-      if (story_reply) {
-        console.log("📖 Story reply data received:", story_reply);
-      }
-
       const user = await query.user.findFirst({
         where: {
           user_id: sender_id,
@@ -121,12 +116,6 @@ class SaveMessageToDb {
       };
     } catch (error) {
       console.error("❌ Error in SaveMessage:", error);
-      const err = error as Error;
-      console.error("🔍 Error details:", {
-        name: err.name,
-        message: err.message,
-        stack: err.stack,
-      });
       return false;
     }
   }
@@ -176,7 +165,6 @@ class SaveMessageToDb {
       });
 
       if (!sender || !receiver) {
-        console.error("❌ Sender or receiver not found");
         return {
           success: false,
           message: "User not found",
@@ -188,7 +176,6 @@ class SaveMessageToDb {
 
       // If receiver hasn't set a price, allow the message to go through
       if (receiverPrice === 0) {
-        console.log("✅ Free message - no points required");
         return { success: true };
       }
 
@@ -256,7 +243,6 @@ class SaveMessageToDb {
       let senderWallet = sender?.UserWallet?.id;
 
       if (!senderWallet && sender?.id) {
-        console.log("📱 Creating wallet for sender...");
         try {
           const newSenderWallet = await query.userWallet.create({
             data: {
@@ -269,7 +255,6 @@ class SaveMessageToDb {
         } catch (error: any) {
           // If wallet already exists due to race condition, fetch it
           if (error.code === "P2002") {
-            console.log("📱 Wallet already exists for sender, fetching...");
             const existingWallet = await query.userWallet.findUnique({
               where: { user_id: sender.id },
               select: { id: true },
@@ -285,7 +270,6 @@ class SaveMessageToDb {
       let receiverWallet = receiver?.UserWallet?.id;
 
       if (!receiverWallet && receiver?.id) {
-        console.log("📱 Creating wallet for receiver...");
         try {
           const newReceiverWallet = await query.userWallet.create({
             data: {
@@ -339,23 +323,10 @@ class SaveMessageToDb {
             attempts: 3,
           }),
         ]);
-        console.log("✅ Transaction queue jobs added successfully");
-      } else if (receiverPrice > 0) {
-        console.warn("⚠️ Skipping transaction creation - missing wallet:", {
-          receiverPrice,
-          senderWallet: !!senderWallet,
-          receiverWallet: !!receiverWallet,
-        });
       }
+
       return { success: true };
-    } catch (error) {
-      console.error("❌ Error in RemovePointsFromUser:", error);
-      const err = error as Error;
-      console.error("🔍 Error details:", {
-        name: err.name,
-        message: err.message,
-        stack: err.stack,
-      });
+    } catch {
       return {
         success: false,
         message: "An error occurred while processing the transaction",
