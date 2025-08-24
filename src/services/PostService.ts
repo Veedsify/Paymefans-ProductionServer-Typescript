@@ -1693,10 +1693,6 @@ export default class PostService {
             post_audience:
               (visibility as PostAudience) || existingPost.post_audience,
             post_status: hasOnlyImages ? "approved" : "pending",
-            watermark_enabled:
-              isWaterMarkEnabled !== undefined
-                ? isWaterMarkEnabled
-                : existingPost.watermark_enabled,
             post_price:
               visibility === "price"
                 ? price

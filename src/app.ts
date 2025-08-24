@@ -21,6 +21,7 @@ import slowDown from "express-slow-down";
 import helmet from "helmet";
 import auth from "@routes/users/auth/auth";
 import Paths from "@utils/paths";
+import query from "@utils/prisma";
 const { ADMIN_PANEL_URL, VERIFICATION_URL, APP_URL } = process.env;
 
 const app = express();
@@ -178,6 +179,7 @@ IoInstance.init(server).then(async (instance) => {
 
 // Connect to MongoDB
 connectDB();
+query.$connect().then(() => console.log("DB ready"));
 
 // Register Cloudflare Webhook
 RegisterCloudflareStreamWebhook();

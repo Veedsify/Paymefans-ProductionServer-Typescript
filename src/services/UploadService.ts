@@ -37,15 +37,14 @@ export default class UploadService {
     try {
       if ("fileSize" in data && data.type === "video") {
         const { fileSize, maxDuration, fileType, fileName } = data;
-        const requiresSignedUrls = data.shouldUseSignedUrls && isWatermarkEnabled || false;
 
         const uplaodMetadata = {
           maxDurationSeconds: maxDuration,
           name: fileName,
           filetype: fileType,
           allowedorigins: btoa("*.paymefans.com,paymefans.com,localhost:3000"),
-          watermark: requiresSignedUrls && btoa(watermarkUid!),
-          ...(requiresSignedUrls && { requiresignedurls: btoa(requiresSignedUrls.toString()) })
+          watermark: isWatermarkEnabled && btoa(watermarkUid!),
+          requiresignedurls: btoa(true.toString())
         };
 
         const uploadMetadataString = Object.entries(uplaodMetadata)
@@ -93,10 +92,9 @@ export default class UploadService {
       }
 
       if ("explicitImageType" in data && data.type == "image") {
-        const requiresSignedUrls = data.shouldUseSignedUrls && isWatermarkEnabled || false;
         const directUpload = await client.images.v2.directUploads.create({
           account_id: CLOUDFLARE_ACCOUNT_ID!,
-          requireSignedURLs: requiresSignedUrls,
+          requireSignedURLs: true,
         });
 
 
