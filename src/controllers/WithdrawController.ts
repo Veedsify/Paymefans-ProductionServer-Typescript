@@ -47,12 +47,13 @@ export default class WithdrawController {
     // Withdraw Confirmation Controller
     static async ConfirmWithdraw(req: Request, res: Response): Promise<any> {
         try {
+            const requestbody = req.body
             const withdraw = await WithdrawService.ConfirmWithdraw({
                 user: req?.user as AuthUser,
-                amount: req.body.amount,
-                bankId: req.body.bankId,
-                action: req.body.action,
-                pin: String(req.body.pin),
+                amount: requestbody.amount,
+                bankId: requestbody.bankId,
+                action: requestbody.action,
+                pin: String(requestbody.pin),
             })
 
             if (withdraw.error) {

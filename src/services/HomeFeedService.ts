@@ -4,12 +4,6 @@ import type { PostWithLike } from "../types/feed";
 import { Permissions, RBAC } from "@utils/FlagsConfig";
 import GenerateCloudflareSignedUrl from "@libs/GenerateSignedUrls";
 
-interface CursorInfo {
-  timestamp: Date;
-  score: number;
-  id: number;
-}
-
 class FeedService {
   private static readonly POSTS_PER_HOME_PAGE =
     Number(process.env.POSTS_PER_HOME_PAGE) || 10;
@@ -69,11 +63,11 @@ class FeedService {
     nextCursor?: string;
     hasMore: boolean;
   }> {
-    let cursorInfo: CursorInfo | null = null;
+    let cursorInfo;
 
     if (cursor) {
       try {
-        cursorInfo = JSON.parse(Buffer.from(cursor, "base64").toString());
+        cursorInfo = Number(cursor);
       } catch (error) {
         console.error("Invalid cursor:", error);
       }
@@ -124,12 +118,8 @@ class FeedService {
         OR: [
           ...whereClause.OR,
           {
-            created_at: { lt: cursorInfo.timestamp },
-          },
-          {
             AND: [
-              { created_at: cursorInfo.timestamp },
-              { id: { lt: cursorInfo.id } },
+              { id: { lt: cursorInfo } },
             ],
           },
         ],
@@ -299,12 +289,7 @@ class FeedService {
     let nextCursor: string | undefined;
     if (hasMore && postsToReturn.length > 0) {
       const lastPost = postsToReturn[postsToReturn.length - 1];
-      const cursorData: CursorInfo = {
-        timestamp: lastPost.created_at,
-        score: lastPost.score,
-        id: lastPost.id,
-      };
-      nextCursor = Buffer.from(JSON.stringify(cursorData)).toString("base64");
+      nextCursor = lastPost.id.toString();
     }
 
     return {
@@ -319,11 +304,11 @@ class FeedService {
     targetUserId: number,
     cursor?: string,
   ): Promise<{ posts: PostWithLike; nextCursor?: string; hasMore: boolean }> {
-    let cursorInfo: CursorInfo | null = null;
+    let cursorInfo;
 
     if (cursor) {
       try {
-        cursorInfo = JSON.parse(Buffer.from(cursor, "base64").toString());
+        cursorInfo = Number(cursor);
       } catch (error) {
         console.error("Invalid cursor:", error);
       }
@@ -382,12 +367,8 @@ class FeedService {
         OR: [
           ...whereClause.OR,
           {
-            created_at: { lt: cursorInfo.timestamp },
-          },
-          {
             AND: [
-              { created_at: cursorInfo.timestamp },
-              { id: { lt: cursorInfo.id } },
+              { id: { lt: cursorInfo } },
             ],
           },
         ],
@@ -479,12 +460,7 @@ class FeedService {
     let nextCursor: string | undefined;
     if (hasMore && processedPosts.length > 0) {
       const lastPost = processedPosts[processedPosts.length - 1];
-      const cursorData: CursorInfo = {
-        timestamp: lastPost.created_at,
-        score: 0, // getUserPosts doesn't use scoring
-        id: lastPost.id,
-      };
-      nextCursor = Buffer.from(JSON.stringify(cursorData)).toString("base64");
+      nextCursor = lastPost.id.toString();
     }
 
     return {

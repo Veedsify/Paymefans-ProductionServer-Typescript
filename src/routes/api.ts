@@ -33,8 +33,6 @@ import wishlist from "@routes/wishlist";
 import support from "./users/support/support";
 const api = express.Router();
 
-// Authentication
-api.use("/auth", auth);
 // Feeds
 api.use("/feeds", feed);
 // Profile
