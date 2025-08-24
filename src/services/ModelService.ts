@@ -249,15 +249,35 @@ export default class ModelService {
         };
       }
 
+
+      const checkModelIsAlreadyUsingThatName = await query.model.findFirst({
+        where: {
+          firstname: String(firstname).toLowerCase(),
+          lastname: String(lastname).toLowerCase(),
+          dob: new Date(dob),
+        },
+      });
+
+      if (checkModelIsAlreadyUsingThatName) {
+        return {
+          error: true,
+          status: false,
+          errorTitle: "Sorry You Can't Signup As A Model",
+          message:
+            "This model already exists, please contact support if you believe this is an error",
+        };
+      }
+
+
       const referenceId = `MDL${GenerateUniqueId()}`;
 
       let signUpUserAsModel = await query.model.create({
         data: {
           user_id: user.id,
-          firstname,
-          lastname,
+          firstname: firstname.toLowerCase(),
+          lastname: lastname.toLowerCase(),
           dob: new Date(dob),
-          gender: String(gender).toLowerCase(),
+          gender: gender,
           country,
           hookup: available === "yes",
           verification_status: false,

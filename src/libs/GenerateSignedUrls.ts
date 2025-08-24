@@ -25,6 +25,13 @@ export const GenerateStreamToken = async (mediaId: string): Promise<string> => {
 const GenerateCloudflareSignedUrl = async (mediaId: string, type: string, urlString: string): Promise<string> => {
     switch (type) {
         case 'image':
+
+            const imageCacheKey = `cf:image:${mediaId}`;
+            const cachedImage = await redis.get(imageCacheKey);
+            if (cachedImage) return cachedImage;
+            if (!CLOUDFLARE_IMAGE_KEY) throw new Error('CLOUDFLARE_IMAGE_KEY is not set');
+            if (!urlString) throw new Error('URL is required for image signing');
+
             const url = new URL(urlString);
             // Calculate the expiration timestamp
             const expiry = Math.floor(Date.now() / 1000) + expiresIn;
@@ -45,6 +52,7 @@ const GenerateCloudflareSignedUrl = async (mediaId: string, type: string, urlStr
             const sig = bufferToHex(new Uint8Array(mac).buffer);
             // And attach it to the `url`
             url.searchParams.set('sig', sig);
+            await redis.setex(imageCacheKey, expiresIn, url.toString());
             return url.toString();
         case 'video':
             const cacheKey = `cf:video:${mediaId}`;

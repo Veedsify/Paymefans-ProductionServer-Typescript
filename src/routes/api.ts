@@ -31,14 +31,15 @@ import automatedMessages from "@routes/users/automated-messages/automated-messag
 import block from "@routes/users/block/block";
 import wishlist from "@routes/wishlist";
 import support from "./users/support/support";
+import Paths from "@utils/paths";
 const api = express.Router();
 
 // Feeds
-api.use("/feeds", feed);
+api.use(Paths.API.Feed.Base, feed);
 // Profile
-api.use("/profile", profile);
+api.use(Paths.API.Profile.Base, profile);
 // Post
-api.use("/post", post);
+api.use(Paths.API.Post.Base, post);
 //Points
 api.use("/points", points);
 // Story

@@ -1,0 +1,72 @@
+const Paths = {
+    ROOT: __dirname,
+    SRC: __dirname + '/..',
+    SERVER: __dirname + '/../server',
+    CLIENT: __dirname + '/../client',
+    BUILD: __dirname + '/../build',
+    CONFIG: __dirname + '/../config',
+    LOGS: __dirname + '/../logs',
+
+
+    // API Endpoints
+    API: {
+        Base: '/api',
+        Auth: {
+            Base: '/auth',
+            Signup: '/signup',
+            SignUpValidateRegistrationDetails: '/validate-registration-details',
+            SignUpUsername: '/username',
+            Login: '/login',
+            Points: '/points',
+            Wallet: '/wallet',
+            Retrieve: '/retrieve',
+            TwoFactorAuthentication: '/two-factor-authentication',
+            VerifyTwoFactorAuth: '/verify/authentication',
+            Logout: '/logout',
+            TokenRefresh: '/token/refresh',
+        },
+        Feed: {
+            Base: '/feeds',
+            Home: '/home',
+        },
+        Profile: {
+            Base: '/profile',
+            User: '/user',
+            BannerChange: '/banner/change',
+            Update: '/update',
+            Stats: '/stats/:userId/:type',
+            Action: '/action/:action/:userId',
+            TipModel: '/tip/model',
+            DeleteAccount: '/delete-account',
+        },
+        Post: {
+            Base: '/post',
+            Create: '/create',
+            PersonalPosts: '/personal/posts',
+            PersonalPrivatePosts: '/personal/private-post',
+            PersonalReposts: '/personal/reposts',
+            PersonalMedia: '/personal/media',
+            PersonalPrivateMedia: '/personal/private-media',
+            OtherPrivatePosts: '/other/private-posts/:userId',
+            OtherReposts: '/other/reposts/:userId',
+            OtherMedia: '/other/media/:userId',
+            OtherPrivateMedia: '/other/private-media/:userId',
+            UserPostsByID: '/user/:userId',
+            SinglePost: '/single/:postId',
+            EditPost: '/edit/:postId',
+            UpdatePost: '/update/:postId',
+            UpdatePostAudience: '/update/audience/:postId',
+            Repost: '/repost/:postId',
+            PostComments: '/:postId/comments',
+            CommentReplies: '/comments/:commentId/replies',
+            LikePost: '/like/:postId',
+            DeletePost: '/:postId',
+            MediaSignedUrl: '/media/signed-url',
+            GiftPoints: '/point/gift',
+            PayForPost: '/pay',
+            Mentions: '/mentions',
+        }
+    },
+}
+
+export default Paths

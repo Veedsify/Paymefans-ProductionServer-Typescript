@@ -20,6 +20,7 @@ import rateLimit from "express-rate-limit";
 import slowDown from "express-slow-down";
 import helmet from "helmet";
 import auth from "@routes/users/auth/auth";
+import Paths from "@utils/paths";
 const { ADMIN_PANEL_URL, VERIFICATION_URL, APP_URL } = process.env;
 
 const app = express();
@@ -182,8 +183,8 @@ app.use(express.urlencoded({ extended: false, limit: '10mb' })); // Limit reques
 app.use(express.json({ limit: '10mb' })); // Limit JSON payload size
 
 // Basic route with specific rate limiting for auth routes
-app.use("/api/auth", authLimiter, auth); // Apply strict auth limiting to auth routes
-app.use("/api", apiLimiter, api);
+app.use(Paths.API.Base + Paths.API.Auth.Base, authLimiter, auth); // Apply strict auth limiting to auth routes
+app.use(Paths.API.Base, apiLimiter, api);
 app.use("/admin", admin);
 //Bullmq For Emails,
 

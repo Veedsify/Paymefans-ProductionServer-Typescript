@@ -3,6 +3,7 @@ import { Permissions, RBAC } from "@utils/FlagsConfig";
 import query from "@utils/prisma";
 import { SearchPlatformResponse } from "types/search";
 import { AuthUser } from "types/user";
+import GenerateCloudflareSignedUrl from "@libs/GenerateSignedUrls";
 
 export default class SearchService {
   private static async searchInPosts(
@@ -31,9 +32,37 @@ export default class SearchService {
         OR: [
           { content: { contains: searchQuery, mode: "insensitive" } },
           { post_id: { contains: searchQuery, mode: "insensitive" } },
+          {
+            user: {
+              username:
+                { contains: searchQuery, mode: "insensitive" },
+              name: {
+                contains: searchQuery, mode: "insensitive"
+              }
+            },
+          }
         ],
       },
-      include: {
+      select: {
+        id: true,
+        content: true,
+        post_id: true,
+        post_audience: true,
+        media: true,
+        created_at: true,
+        updated_at: true,
+        post_status: true,
+        post_impressions: true,
+        post_likes: true,
+        post_comments: true,
+        watermark_enabled: true,
+        post_reposts: true,
+        was_repost: true,
+        repost_id: true,
+        repost_username: true,
+        user_id: true,
+        post_is_visible: true,
+        post_price: true,
         user: {
           select: {
             id: true,
@@ -44,7 +73,24 @@ export default class SearchService {
             profile_image: true,
           },
         },
-        UserMedia: true,
+        UserMedia: {
+          select: {
+            id: true,
+            media_id: true,
+            user_id: true,
+            post_id: true,
+            duration: true,
+            media_state: true,
+            poster: true,
+            url: true,
+            blur: true,
+            media_type: true,
+            locked: true,
+            accessible_to: true,
+            created_at: true,
+            updated_at: true,
+          },
+        },
       },
     });
 
@@ -76,6 +122,14 @@ export default class SearchService {
 
       return {
         ...post,
+        UserMedia: post.watermark_enabled ? await Promise.all(
+          (post.UserMedia || []).map(async (media) => ({
+            ...media,
+            url: await GenerateCloudflareSignedUrl(media.media_id, media.media_type, media.url),
+            poster: media.media_type === "image" ? await GenerateCloudflareSignedUrl(media.media_id, media.media_type, media.url) : media.poster,
+            blur: await GenerateCloudflareSignedUrl(media.media_id, media.media_type, media.blur),
+          })),
+        ) : post.UserMedia,
         likedByme: postLike ? true : false,
         wasReposted: !!isReposted,
         isSubscribed:
@@ -201,6 +255,7 @@ export default class SearchService {
             created_at: true,
             user_id: true,
             post_id: true,
+            watermark_enabled: true,
             user: {
               select: {
                 id: true,
@@ -225,9 +280,24 @@ export default class SearchService {
       return [];
     }
 
+    // Process media with conditional signed URLs
+    const processedResults = await Promise.all(
+      results.map(async (media) => {
+        if (media.post?.watermark_enabled) {
+          return {
+            ...media,
+            url: await GenerateCloudflareSignedUrl(media.media_id, media.media_type, media.url),
+            poster: media.media_type === "image" ? await GenerateCloudflareSignedUrl(media.media_id, media.media_type, media.url) : media.poster,
+            blur: await GenerateCloudflareSignedUrl(media.media_id, media.media_type, media.blur),
+          };
+        }
+        return media;
+      })
+    );
+
     // Cache the results
-    await redis.set(cacheKey, JSON.stringify(results), "EX", 30); // Cache for 30 seconds
-    return results;
+    await redis.set(cacheKey, JSON.stringify(processedResults), "EX", 30); // Cache for 30 seconds
+    return processedResults;
   }
 
   static async SearchPlatform(
