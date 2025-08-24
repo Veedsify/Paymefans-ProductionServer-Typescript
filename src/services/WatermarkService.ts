@@ -198,21 +198,7 @@ export default class WatermarkService {
           },
         )
         .toFile(pngFilePath);
-      await sharp(Buffer.from(svgString))
-        .png({
-          quality: 100,
-          compressionLevel: 0,
-          adaptiveFiltering: false,
-        })
-        .resize(
-          this.defaultWatermarkStyle.width,
-          this.defaultWatermarkStyle.height,
-          {
-            fit: "contain",
-            background: { r: 0, g: 0, b: 0, alpha: 0 }, // Transparent background
-          },
-        )
-        .toFile("watermark.png");
+
       return {
         filePath: pngFilePath,
         fileName: `watermark-${sanitizedUsername}-${Date.now()}.png`,
