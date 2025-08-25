@@ -63,7 +63,7 @@ class FeedService {
     nextCursor?: string;
     hasMore: boolean;
   }> {
-    let cursorInfo;
+    let cursorInfo: number | undefined;
 
     if (cursor) {
       try {
@@ -73,57 +73,29 @@ class FeedService {
       }
     }
 
-    const user = await query.user.findFirst({
-      where: { id: authUserid },
-    });
-
-    // Get list of users who have blocked the current user
     const blockedByUsers = await query.userBlock.findMany({
-      where: {
-        blocked_id: authUserid,
-      },
-      select: {
-        blocker_id: true,
-      },
+      where: { blocked_id: authUserid },
+      select: { blocker_id: true },
     });
 
-    const blockedByUserIds = blockedByUsers.map((block) => block.blocker_id);
+    const blockedByUserIds = blockedByUsers.map((b) => b.blocker_id);
 
-    let whereClause: any = {
+    const whereClause: any = {
       post_is_visible: true,
       post_status: "approved",
-      user: {
-        active_status: true,
-      },
-      // Exclude posts from users who have blocked the current user
-      user_id: {
-        notIn: blockedByUserIds,
-      },
+      user: { active_status: true },
+      user_id: { notIn: blockedByUserIds },
       OR: [
-        // Public post
         { post_audience: "public" },
         { post_audience: "followers" },
         { post_audience: "subscribers" },
         { post_audience: "price" },
-        {
-          user_id: authUserid,
-        },
+        { user_id: authUserid },
       ],
     };
 
-    // Add cursor conditions if cursor exists
     if (cursorInfo) {
-      whereClause = {
-        ...whereClause,
-        OR: [
-          ...whereClause.OR,
-          {
-            AND: [
-              { id: { lt: cursorInfo } },
-            ],
-          },
-        ],
-      };
+      whereClause.id = { lt: cursorInfo };
     }
 
     const posts = await query.post.findMany({
@@ -184,86 +156,93 @@ class FeedService {
         },
       },
       take: FeedService.POSTS_PER_HOME_PAGE + 1,
-      orderBy: { created_at: "desc" },
+      orderBy: { id: "desc" },
     });
 
-    const postsChecked = posts.map(async (post) => {
-      const [
-        isPaid,
-        postLike,
-        isReposted,
-        isSubscribed,
-        checkIfUserCanViewPaidPosts,
-      ] = await query.$transaction(async (tx) => {
-        const isPaid = await tx.purchasedPosts.findFirst({
-          where: {
-            post_id: post.id,
-            user_id: authUserid,
-          },
-        });
+    const postIds = posts.map((p) => p.id);
+    const userIds = [...new Set(posts.map((p) => p.user_id))];
 
-        const postLike = await tx.postLike.findFirst({
-          where: {
-            user_id: post.user.id,
-            post_id: post.id,
-          },
-        });
+    // Batch fetch related data
+    const [likes, reposts, subscriptions, paidPosts] = await Promise.all([
+      query.postLike.findMany({
+        where: { post_id: { in: postIds }, user_id: authUserid },
+      }),
+      query.userRepost.findMany({
+        where: { post_id: { in: postIds }, user_id: authUserid },
+      }),
+      query.subscribers.findMany({
+        where: { user_id: { in: userIds }, subscriber_id: authUserid },
+      }),
+      query.purchasedPosts.findMany({
+        where: { post_id: { in: postIds }, user_id: authUserid },
+      }),
+    ]);
 
-        const isSubscribed = await tx.subscribers.findFirst({
-          where: {
-            user_id: post.user.id,
-            subscriber_id: authUserid,
-          },
-        });
+    const likeMap = new Map(likes.map((l) => [l.post_id, l]));
+    const repostMap = new Map(reposts.map((r) => [r.post_id, r]));
+    const subscriptionMap = new Map(subscriptions.map((s) => [s.user_id, s]));
+    const paidMap = new Map(paidPosts.map((p) => [p.post_id, p]));
 
-        const isReposted = await tx.userRepost.findFirst({
-          where: {
-            user_id: authUserid,
-            post_id: post.id,
-          },
-        });
+    const user = await query.user.findUnique({ where: { id: authUserid } });
+    const hasViewPaidPermission = RBAC.checkUserFlag(
+      user?.flags,
+      Permissions.VIEW_PAID_POSTS,
+    );
 
-        const checkIfUserCanViewPaidPosts = RBAC.checkUserFlag(
-          user?.flags,
-          Permissions.VIEW_PAID_POSTS,
-        );
-
-        return [
-          isPaid,
-          postLike,
-          isReposted,
-          isSubscribed,
-          checkIfUserCanViewPaidPosts,
-        ];
-      });
-
-      return {
-        ...post,
-        UserMedia: post.watermark_enabled ? await Promise.all(
-          (post.UserMedia || []).map(async (media) => ({
-            ...media,
-            url: await GenerateCloudflareSignedUrl(media.media_id, media.media_type, media.url),
-            poster: media.media_type === "image" ? await GenerateCloudflareSignedUrl(media.media_id, media.media_type, media.url) : media.poster,
-            blur: await GenerateCloudflareSignedUrl(media.media_id, media.media_type, media.blur),
-          })),
-        ) : post.UserMedia,
-        likedByme: postLike ? true : false,
-        wasReposted: !!isReposted,
-        hasPaid:
-          !!isPaid ||
-          checkIfUserCanViewPaidPosts ||
-          post.post_audience !== "price",
-        isSubscribed:
+    const processedPosts = await Promise.all(
+      posts.map(async (post) => {
+        const isSubscribed =
           authUserid === post.user.id ||
-          checkIfUserCanViewPaidPosts ||
-          !!isSubscribed,
-      };
-    });
+          hasViewPaidPermission ||
+          !!subscriptionMap.get(post.user_id);
 
-    const resolvedPosts = await Promise.all(postsChecked);
+        const hasPaid =
+          !!paidMap.get(post.id) ||
+          hasViewPaidPermission ||
+          post.post_audience !== "price";
+
+        const likedByme = !!likeMap.get(post.id);
+        const wasReposted = !!repostMap.get(post.id);
+
+        const UserMedia = post.watermark_enabled
+          ? await Promise.all(
+            (post.UserMedia || []).map(async (media) => ({
+              ...media,
+              url: await GenerateCloudflareSignedUrl(
+                media.media_id,
+                media.media_type,
+                media.url,
+              ),
+              poster:
+                media.media_type === "image"
+                  ? await GenerateCloudflareSignedUrl(
+                    media.media_id,
+                    media.media_type,
+                    media.url,
+                  )
+                  : media.poster,
+              blur: await GenerateCloudflareSignedUrl(
+                media.media_id,
+                media.media_type,
+                media.blur,
+              ),
+            })),
+          )
+          : post.UserMedia;
+
+        return {
+          ...post,
+          UserMedia,
+          likedByme,
+          wasReposted,
+          hasPaid,
+          isSubscribed,
+        };
+      }),
+    );
 
     const scoredPosts = await Promise.all(
-      resolvedPosts.map(async (post) => {
+      processedPosts.map(async (post) => {
         const engagementScore = this.calculateEngagementScore(post);
         const recencyScore = this.calculateRecencyScore(post.created_at);
         const relevanceScore = await this.calculateRelevanceScore(
@@ -304,7 +283,7 @@ class FeedService {
     targetUserId: number,
     cursor?: string,
   ): Promise<{ posts: PostWithLike; nextCursor?: string; hasMore: boolean }> {
-    let cursorInfo;
+    let cursorInfo: number | undefined;
 
     if (cursor) {
       try {
@@ -340,7 +319,7 @@ class FeedService {
       }),
     ]);
 
-    let whereClause: any = {
+    const whereClause: any = {
       user_id: targetUserId,
       post_is_visible: true,
       OR: [
@@ -362,17 +341,7 @@ class FeedService {
 
     // Add cursor conditions if cursor exists
     if (cursorInfo) {
-      whereClause = {
-        ...whereClause,
-        OR: [
-          ...whereClause.OR,
-          {
-            AND: [
-              { id: { lt: cursorInfo } },
-            ],
-          },
-        ],
-      };
+      whereClause.id = { lt: cursorInfo };
     }
 
     const posts = await query.post.findMany({
@@ -433,7 +402,7 @@ class FeedService {
         PostLike: true,
         UserRepost: true,
       },
-      orderBy: { created_at: "desc" },
+      orderBy: { id: "desc" },
       take: FeedService.POSTS_PER_HOME_PAGE + 1,
     });
 
@@ -446,15 +415,32 @@ class FeedService {
     const processedPosts = await Promise.all(
       postsToReturn.map(async (post) => ({
         ...post,
-        UserMedia: post.watermark_enabled ? await Promise.all(
-          (post.UserMedia || []).map(async (media) => ({
-            ...media,
-            url: await GenerateCloudflareSignedUrl(media.media_id, media.media_type, media.url),
-            poster: media.media_type === "image" ? await GenerateCloudflareSignedUrl(media.media_id, media.media_type, media.url) : media.poster,
-            blur: await GenerateCloudflareSignedUrl(media.media_id, media.media_type, media.blur),
-          })),
-        ) : post.UserMedia,
-      }))
+        UserMedia: post.watermark_enabled
+          ? await Promise.all(
+            (post.UserMedia || []).map(async (media) => ({
+              ...media,
+              url: await GenerateCloudflareSignedUrl(
+                media.media_id,
+                media.media_type,
+                media.url,
+              ),
+              poster:
+                media.media_type === "image"
+                  ? await GenerateCloudflareSignedUrl(
+                    media.media_id,
+                    media.media_type,
+                    media.url,
+                  )
+                  : media.poster,
+              blur: await GenerateCloudflareSignedUrl(
+                media.media_id,
+                media.media_type,
+                media.blur,
+              ),
+            })),
+          )
+          : post.UserMedia,
+      })),
     );
 
     let nextCursor: string | undefined;

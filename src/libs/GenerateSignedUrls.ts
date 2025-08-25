@@ -26,7 +26,7 @@ const GenerateCloudflareSignedUrl = async (mediaId: string, type: string, urlStr
     switch (type) {
         case 'image':
 
-            const imageCacheKey = `cf:image:${mediaId}`;
+            const imageCacheKey = `cf:image:${mediaId}:${urlString}`;
             const cachedImage = await redis.get(imageCacheKey);
             if (cachedImage) return cachedImage;
             if (!CLOUDFLARE_IMAGE_KEY) throw new Error('CLOUDFLARE_IMAGE_KEY is not set');

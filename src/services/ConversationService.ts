@@ -83,8 +83,11 @@ export default class ConversationService {
 
       const receiverWithFlags = {
         ...receiver,
-        is_profile_hidden: RBAC.checkUserFlag(receiver?.flags, Permissions.PROFILE_HIDDEN)
-      }
+        is_profile_hidden: RBAC.checkUserFlag(
+          receiver?.flags,
+          Permissions.PROFILE_HIDDEN,
+        ),
+      };
 
       return { receiver: receiverWithFlags, error: false };
     } catch (error) {
@@ -375,14 +378,14 @@ export default class ConversationService {
           );
           return receiver
             ? {
-              receiver: {
-                ...receiver,
-                flags: undefined,
-                is_profile_hidden: checkisProfileHidden,
-              },
-              conversation_id: convo.conversation_id,
-              lastMessage,
-            }
+                receiver: {
+                  ...receiver,
+                  flags: undefined,
+                  is_profile_hidden: checkisProfileHidden,
+                },
+                conversation_id: convo.conversation_id,
+                lastMessage,
+              }
             : null;
         })
         .filter(Boolean);
@@ -594,10 +597,10 @@ export default class ConversationService {
       );
       return participant
         ? [
-          participant.user_1 === userId
-            ? participant.user_2
-            : participant.user_1,
-        ]
+            participant.user_1 === userId
+              ? participant.user_2
+              : participant.user_1,
+          ]
         : [];
     });
     // Batch fetch user data
