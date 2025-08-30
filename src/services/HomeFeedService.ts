@@ -2,7 +2,7 @@ import type { Post } from "@prisma/client";
 import query from "@utils/prisma";
 import type { PostWithLike } from "../types/feed";
 import { Permissions, RBAC } from "@utils/FlagsConfig";
-import GenerateCloudflareSignedUrl from "@libs/GenerateSignedUrls";
+import { GenerateBatchSignedUrls } from "@libs/GenerateSignedUrls";
 
 class FeedService {
   private static readonly POSTS_PER_HOME_PAGE =
@@ -205,28 +205,14 @@ class FeedService {
         const wasReposted = !!repostMap.get(post.id);
 
         const UserMedia = post.watermark_enabled
-          ? await Promise.all(
-            (post.UserMedia || []).map(async (media) => ({
-              ...media,
-              url: await GenerateCloudflareSignedUrl(
-                media.media_id,
-                media.media_type,
-                media.url,
-              ),
-              poster:
-                media.media_type === "image"
-                  ? await GenerateCloudflareSignedUrl(
-                    media.media_id,
-                    media.media_type,
-                    media.url,
-                  )
-                  : media.poster,
-              blur: await GenerateCloudflareSignedUrl(
-                media.media_id,
-                media.media_type,
-                media.blur,
-              ),
-            })),
+          ? await GenerateBatchSignedUrls(
+            (post.UserMedia || []).map(media => ({
+              media_id: media.media_id,
+              media_type: media.media_type,
+              url: media.url,
+              poster: media.poster,
+              blur: media.blur
+            }))
           )
           : post.UserMedia;
 
@@ -416,28 +402,14 @@ class FeedService {
       postsToReturn.map(async (post) => ({
         ...post,
         UserMedia: post.watermark_enabled
-          ? await Promise.all(
-            (post.UserMedia || []).map(async (media) => ({
-              ...media,
-              url: await GenerateCloudflareSignedUrl(
-                media.media_id,
-                media.media_type,
-                media.url,
-              ),
-              poster:
-                media.media_type === "image"
-                  ? await GenerateCloudflareSignedUrl(
-                    media.media_id,
-                    media.media_type,
-                    media.url,
-                  )
-                  : media.poster,
-              blur: await GenerateCloudflareSignedUrl(
-                media.media_id,
-                media.media_type,
-                media.blur,
-              ),
-            })),
+          ? await GenerateBatchSignedUrls(
+            (post.UserMedia || []).map(media => ({
+              media_id: media.media_id,
+              media_type: media.media_type,
+              url: media.url,
+              poster: media.poster,
+              blur: media.blur
+            }))
           )
           : post.UserMedia,
       })),

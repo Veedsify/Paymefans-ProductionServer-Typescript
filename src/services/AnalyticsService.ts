@@ -9,7 +9,10 @@ type TimeRangeKey =
   | "1month"
   | "3months"
   | "6months"
-  | "alltime";
+  | "alltime"
+  | "lifetime"
+  | "30days"
+  | "90days";
 
 interface AccountGrowthData {
   name: string;
@@ -141,6 +144,41 @@ class AnalyticsService {
       return (num / 1000).toFixed(1) + "K";
     }
     return num.toString();
+  }
+
+  // Get Profile Views Data
+  static async GetProfileViewsData(
+    userId: number,
+    days: number,
+  ): Promise<{ date: string; views: number }> {
+    const cacheKey = `profile-views:${userId}:${days}days`;
+    return this.getCachedOrExecute(cacheKey, this.CACHE_TTL.SHORT, async () => {
+      const startDate = new Date();
+      startDate.setDate(startDate.getDate() - days);
+      const endDate = new Date();
+      // Get profile views grouped by day
+      const viewsData = await query.profileView.groupBy({
+        by: ["created_at"],
+        where: {
+          profile_id: userId,
+          created_at: {
+            gte: startDate,
+            lte: endDate,
+          },
+        },
+        _count: {
+          id: true,
+        },
+        orderBy: {
+          created_at: "asc",
+        },
+      });
+
+      return {
+        date: new Date().toISOString().split("T")[0],
+        views: viewsData.reduce((sum, day) => sum + day._count.id, 0),
+      };
+    });
   }
 
   // Get Account Growth Data

@@ -378,14 +378,14 @@ export default class ConversationService {
           );
           return receiver
             ? {
-                receiver: {
-                  ...receiver,
-                  flags: undefined,
-                  is_profile_hidden: checkisProfileHidden,
-                },
-                conversation_id: convo.conversation_id,
-                lastMessage,
-              }
+              receiver: {
+                ...receiver,
+                flags: undefined,
+                is_profile_hidden: checkisProfileHidden,
+              },
+              conversation_id: convo.conversation_id,
+              lastMessage,
+            }
             : null;
         })
         .filter(Boolean);
@@ -460,7 +460,7 @@ export default class ConversationService {
                   throw new Error(video.message);
                 }
                 processedPath = {
-                  url: `${process.env.CLOUDFLARE_CUSTOMER_SUBDOMAIN}${video.mediaId}/manifest/video.m3u8`,
+                  url: `${process.env.CLOUDFLARE_CUSTOMER_DOMAIN}${video.mediaId}/manifest/video.m3u8`,
                   name: file.filename,
                   size: file.size,
                   type: file.mimetype,
@@ -597,10 +597,10 @@ export default class ConversationService {
       );
       return participant
         ? [
-            participant.user_1 === userId
-              ? participant.user_2
-              : participant.user_1,
-          ]
+          participant.user_1 === userId
+            ? participant.user_2
+            : participant.user_1,
+        ]
         : [];
     });
     // Batch fetch user data
@@ -791,6 +791,169 @@ export default class ConversationService {
     } catch (error) {
       console.error("GetUnreadCount error:", error);
       return { error: true };
+    }
+  }
+
+  // Toggle Free Messages for Conversation
+  // Enable or disable free messages for a specific conversation
+  static async ToggleFreeMessages({
+    userId,
+    conversationId,
+    enable,
+  }: {
+    userId: number;
+    conversationId: string;
+    enable: boolean;
+  }): Promise<{ enabled?: boolean; error: boolean; message?: string }> {
+    try {
+      // Check if the user is part of this conversation
+      const conversation = await query.conversations.findFirst({
+        where: {
+          conversation_id: conversationId,
+          participants: {
+            some: {
+              OR: [
+                { user_1: (await query.user.findUnique({ where: { id: userId } }))?.user_id },
+                { user_2: (await query.user.findUnique({ where: { id: userId } }))?.user_id },
+              ],
+            },
+          },
+        },
+      });
+
+      if (!conversation) {
+        return {
+          error: true,
+          message: "Conversation not found or you're not a participant",
+        };
+      }
+
+      // Upsert the free message setting for this conversation and user
+      const result = await query.conversationFreeMessage.upsert({
+        where: {
+          conversation_id_user_id: {
+            conversation_id: conversationId,
+            user_id: userId,
+          },
+        },
+        update: {
+          enabled: enable,
+        },
+        create: {
+          conversation_id: conversationId,
+          user_id: userId,
+          enabled: enable,
+        },
+      });
+
+      return {
+        error: false,
+        enabled: result.enabled,
+      };
+    } catch (error) {
+      console.error("ToggleFreeMessages error:", error);
+      return {
+        error: true,
+        message: "Failed to update free message setting",
+      };
+    }
+  }
+
+  // Get Free Message Status for Conversation
+  // Check if both users in a conversation have enabled free messages
+  static async GetFreeMessageStatus({
+    conversationId,
+    userId,
+  }: {
+    conversationId: string;
+    userId: number;
+  }): Promise<{
+    userEnabled?: boolean;
+    bothEnabled?: boolean;
+    error: boolean;
+    message?: string
+  }> {
+    try {
+      // Get the conversation participants
+      const conversation = await query.conversations.findFirst({
+        where: {
+          conversation_id: conversationId,
+        },
+        include: {
+          participants: true,
+        },
+      });
+
+      if (!conversation || !conversation.participants[0]) {
+        return {
+          error: true,
+          message: "Conversation not found",
+        };
+      }
+
+      const participant = conversation.participants[0];
+      const user1Id = participant.user_1;
+      const user2Id = participant.user_2;
+
+      // Get the current user's setting
+      const currentUser = await query.user.findUnique({
+        where: { id: userId },
+        select: { user_id: true },
+      });
+
+      if (!currentUser) {
+        return {
+          error: true,
+          message: "User not found",
+        };
+      }
+
+      // Get free message settings for both users
+      const freeMessageSettings = await query.conversationFreeMessage.findMany({
+        where: {
+          conversation_id: conversationId,
+          user: {
+            user_id: {
+              in: [user1Id, user2Id],
+            },
+          },
+        },
+        include: {
+          user: {
+            select: {
+              user_id: true,
+            },
+          },
+        },
+      });
+
+      // Check current user's setting
+      const userSetting = freeMessageSettings.find(
+        (setting: any) => setting.user.user_id === currentUser.user_id
+      );
+      const userEnabled = userSetting?.enabled || false;
+
+      // Check if both users have enabled free messages
+      const user1Setting = freeMessageSettings.find(
+        (setting: any) => setting.user.user_id === user1Id
+      );
+      const user2Setting = freeMessageSettings.find(
+        (setting: any) => setting.user.user_id === user2Id
+      );
+
+      const bothEnabled = (user1Setting?.enabled || false) && (user2Setting?.enabled || false);
+
+      return {
+        error: false,
+        userEnabled,
+        bothEnabled,
+      };
+    } catch (error) {
+      console.error("GetFreeMessageStatus error:", error);
+      return {
+        error: true,
+        message: "Failed to get free message status",
+      };
     }
   }
 }

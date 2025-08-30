@@ -141,4 +141,76 @@ export default class ConversationController {
             res.status(500).json({ message: `Internal Server Error ${error}` });
         }
     }
+
+    // Toggle Free Messages for both users in conversation
+    static async ToggleFreeMessages(req: Request, res: Response): Promise<void> {
+        try {
+            const { enable, conversationId } = req.body;
+            const user = req.user as AuthUser;
+
+            if (!conversationId) {
+                res.status(400).json({
+                    error: true,
+                    message: "Conversation ID is required",
+                });
+                return;
+            }
+
+            // Update user's free message setting for this conversation
+            const updatedSettings = await ConversationService.ToggleFreeMessages({
+                userId: user.id,
+                conversationId,
+                enable: Boolean(enable),
+            });
+
+            if (updatedSettings.error) {
+                res.status(400).json({ ...updatedSettings });
+                return;
+            }
+
+            res.status(200).json({
+                error: false,
+                message: "Free message setting updated successfully",
+                enabled: updatedSettings.enabled,
+            });
+        } catch (error) {
+            console.log(error);
+            res.status(500).json({ message: `Internal Server Error ${error}` });
+        }
+    }
+
+    // Get Free Message Status
+    static async GetFreeMessageStatus(req: Request, res: Response): Promise<void> {
+        try {
+            const user = req.user as AuthUser;
+            const { conversationId } = req.params;
+
+            if (!conversationId) {
+                res.status(400).json({
+                    error: true,
+                    message: "Conversation ID is required",
+                });
+                return;
+            }
+
+            const status = await ConversationService.GetFreeMessageStatus({
+                conversationId,
+                userId: user.id,
+            });
+
+            if (status.error) {
+                res.status(400).json({ ...status });
+                return;
+            }
+
+            res.status(200).json({
+                error: false,
+                userEnabled: status.userEnabled,
+                bothEnabled: status.bothEnabled,
+            });
+        } catch (error) {
+            console.log(error);
+            res.status(500).json({ message: `Internal Server Error ${error}` });
+        }
+    }
 }

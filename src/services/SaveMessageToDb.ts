@@ -8,91 +8,73 @@ import type { DatabaseOperationResult } from "types/socket";
 
 class SaveMessageToDb {
   static async SaveMessage(data: SaveMessageToDBProps) {
-    try {
-      // Get the data from the message
-      const {
-        message_id,
-        sender_id,
-        receiver_id,
-        conversationId,
-        message,
-        attachment = [],
-        story_reply = null,
-      } = data;
+    const {
+      message_id,
+      sender_id,
+      conversationId,
+      message,
+      attachment = [],
+      story_reply = null,
+    } = data;
 
-      const user = await query.user.findFirst({
-        where: {
-          user_id: sender_id,
-        },
-      });
+    try {
+      const [sender, conversation] = await Promise.all([
+        query.user.findFirst({
+          where: { user_id: sender_id },
+          select: {
+            id: true,
+            user_id: true,
+            flags: true,
+            UserPoints: { select: { points: true } },
+            UserWallet: { select: { id: true, wallet_id: true, balance: true } },
+          },
+        }),
+        query.conversations.findFirst({
+          where: { conversation_id: conversationId },
+          select: { participants: { select: { user_1: true, user_2: true } } },
+        }),
+      ]);
+
+      if (!sender || !conversation || !conversation.participants.length) {
+        throw new Error("Invalid sender or conversation data");
+      }
+
+      const participant = conversation.participants[0];
+      const actualReceiverId =
+        participant.user_1 === sender_id ? participant.user_2 : participant.user_1;
 
       const checkCanUserSendFreeMessage = RBAC.checkUserFlag(
-        user?.flags,
-        Permissions.SEND_FREE_MESSAGES,
+        sender.flags,
+        Permissions.SEND_FREE_MESSAGES
       );
 
-      if (checkCanUserSendFreeMessage === false) {
-        const pointsResult = await this.RemovePointsFromUser(
-          sender_id,
-          receiver_id,
-        );
-        // If points are not removed return an error with details
-        if (pointsResult.success === false) {
-          console.error(
-            "❌ Failed to remove points from user - message sending aborted",
-          );
+      if (!checkCanUserSendFreeMessage) {
+        const pointsResult = await this.RemovePointsFromUser(sender_id, actualReceiverId, conversationId);
+        if (!pointsResult.success) {
+          console.error("❌ Failed to remove points from user - message sending aborted");
           return pointsResult;
         }
       }
 
-      // Get the receiver id
-      const receiverId = await query.conversations.findFirst({
-        where: {
-          conversation_id: conversationId,
-        },
-        select: {
-          participants: true,
-        },
-      });
+      const sanitizedMessage = sanitizeHtml(message);
 
-      // Sanitize the message
-      const sanitizedHtml = sanitizeHtml(message);
-      // Destructure the participants for better readability
-      const [participant1] = receiverId?.participants || [];
-      // Ensure the participants are available
-      if (!participant1) {
-        throw new Error("Invalid participants data");
-      }
+      const modifiedAttachment = attachment.map((file: any) => ({
+        ...file,
+        ...(file.type === "video" && file.id
+          ? {
+            poster: `${process.env.CLOUDFLARE_CUSTOMER_DOMAIN}/${file.id}/thumbnails/thumbnail.gif?time=1s&height=400&duration=4s`,
+          }
+          : {}),
+      }));
 
-      // Determine the receiver based on the sender_id
-      const receiver =
-        participant1.user_1 === sender_id
-          ? participant1.user_2
-          : participant1.user_1;
-
-      // Process attachments with better video handling
-      const modifiedAttachment = attachment.map((file: any) => {
-        const baseAttachment = {
-          ...file,
-        };
-
-        // Add poster for video files
-        if (file.type === "video" && file.id) {
-          baseAttachment.poster = `${process.env.CLOUDFLARE_CUSTOMER_SUBDOMAIN}/${file.id}/thumbnails/thumbnail.gif?time=1s&height=400&duration=4s`;
-        }
-
-        return baseAttachment;
-      });
-
-      // Save the message to the database
       const newMessage = await query.messages.create({
         data: {
           message_id: String(message_id),
-          sender_id: sender_id,
+          sender_id,
           conversationsId: conversationId,
-          message: sanitizedHtml,
+          message: sanitizedMessage,
           seen: false,
-          receiver_id: receiver,
+          receiver_id: actualReceiverId,
           attachment: modifiedAttachment,
           story_reply: story_reply as any,
         },
@@ -109,60 +91,45 @@ class SaveMessageToDb {
           },
         },
       });
-      // Return the data
+
       return {
         error: false,
         ...newMessage,
       };
     } catch (error) {
       console.error("❌ Error in SaveMessage:", error);
-      return false;
+      return {
+        success: false,
+        message: "Failed to save message",
+        error: "SAVE_MESSAGE_ERROR",
+      };
     }
   }
 
-  // Remove points from user
   static async RemovePointsFromUser(
     sender_id: string,
     receiver_id: string,
+    conversationId: string
   ): Promise<DatabaseOperationResult> {
     try {
-      const sender = await query.user.findFirst({
-        where: {
-          user_id: sender_id,
-        },
-        select: {
-          name: true,
-          id: true,
-          username: true,
-          UserPoints: true,
-          UserWallet: {
-            select: {
-              id: true,
-              wallet_id: true,
-              balance: true,
-            },
+      const [sender, receiver] = await Promise.all([
+        query.user.findUnique({
+          where: { user_id: sender_id },
+          include: {
+            UserPoints: true,
+            UserWallet: true,
+            Settings: true,
           },
-        },
-      });
-
-      const receiver = await query.user.findFirst({
-        where: {
-          user_id: receiver_id,
-        },
-        select: {
-          name: true,
-          id: true,
-          username: true,
-          Settings: true,
-          UserWallet: {
-            select: {
-              id: true,
-              wallet_id: true,
-              balance: true,
-            },
+        }),
+        query.user.findUnique({
+          where: { user_id: receiver_id },
+          include: {
+            UserPoints: true,
+            UserWallet: true,
+            Settings: true,
           },
-        },
-      });
+        }),
+      ]);
 
       if (!sender || !receiver) {
         return {
@@ -172,161 +139,153 @@ class SaveMessageToDb {
         };
       }
 
-      const receiverPrice = receiver?.Settings?.price_per_message || 0;
+      // Check if both users have enabled free messages for this conversation
+      const freeMessageSettings = await query.conversationFreeMessage.findMany({
+        where: {
+          conversation_id: conversationId,
+          user: {
+            user_id: { in: [sender_id, receiver_id] },
+          },
+        },
+        include: {
+          user: { select: { user_id: true } },
+        },
+      });
 
-      // If receiver hasn't set a price, allow the message to go through
-      if (receiverPrice === 0) {
+      const bothEnabledFreeMessages =
+        freeMessageSettings.filter((s) => s.enabled).length === 2;
+
+      if (bothEnabledFreeMessages) {
         return { success: true };
       }
 
-      const senderPoints = sender?.UserPoints?.points || 0;
+      const pricePerMessage = receiver.Settings?.price_per_message || 0;
 
-      // Check if sender has enough points
-      if (!sender?.UserPoints || senderPoints < receiverPrice) {
+      if (pricePerMessage === 0) {
+        return { success: true };
+      }
+
+      const senderPoints = sender.UserPoints?.points ?? 0;
+
+      if (senderPoints < pricePerMessage) {
         return {
           success: false,
-          message: `You have ${senderPoints} points but need ${receiverPrice} points to send this message`,
+          message: `You have ${senderPoints} points but need ${pricePerMessage} points to send this message`,
           error: "INSUFFICIENT_POINTS",
           currentPoints: senderPoints,
-          requiredPoints: receiverPrice,
+          requiredPoints: pricePerMessage,
         };
       }
 
-      // Update sender points (decrement)
-      await query.user.update({
-        where: {
-          id: sender.id,
-        },
-        data: {
-          UserPoints: {
-            upsert: {
-              create: {
-                points: -receiverPrice,
-                conversion_rate: 1.0,
-              },
-              update: {
-                points: {
-                  decrement: receiverPrice,
-                },
+      // Use Prisma transaction for atomic operations
+      await query.$transaction([
+        // Deduct points from sender
+        query.user.update({
+          where: { id: sender.id },
+          data: {
+            UserPoints: {
+              upsert: {
+                create: { points: -pricePerMessage, conversion_rate: 1.0 },
+                update: { points: { decrement: pricePerMessage } },
               },
             },
           },
-        },
-      });
-
-      // Update receiver points (increment)
-      await query.user.update({
-        where: {
-          id: receiver.id,
-        },
-        data: {
-          UserPoints: {
-            upsert: {
-              create: {
-                points: receiverPrice,
-                conversion_rate: 1.0,
-              },
-              update: {
-                points: {
-                  increment: receiverPrice,
-                },
+        }),
+        // Add points to receiver
+        query.user.update({
+          where: { id: receiver.id },
+          data: {
+            UserPoints: {
+              upsert: {
+                create: { points: pricePerMessage, conversion_rate: 1.0 },
+                update: { points: { increment: pricePerMessage } },
               },
             },
           },
-        },
-      });
+        }),
+      ]);
 
-      const purchase_id = `TRN${GenerateUniqueId()}`;
-      const purchase_id2 = `TRN${GenerateUniqueId()}`;
+      // Ensure wallets exist
+      let senderWallet = sender.UserWallet;
+      let receiverWallet = receiver.UserWallet;
 
-      // Ensure sender has a wallet
-      let senderWallet = sender?.UserWallet?.id;
-
-      if (!senderWallet && sender?.id) {
+      if (!senderWallet) {
         try {
-          const newSenderWallet = await query.userWallet.create({
+          senderWallet = await query.userWallet.create({
             data: {
               user_id: sender.id,
               wallet_id: `WALLET_${GenerateUniqueId()}`,
               balance: 0,
             },
           });
-          senderWallet = newSenderWallet.id;
         } catch (error: any) {
-          // If wallet already exists due to race condition, fetch it
           if (error.code === "P2002") {
-            const existingWallet = await query.userWallet.findUnique({
+            senderWallet = await query.userWallet.findUnique({
               where: { user_id: sender.id },
-              select: { id: true },
             });
-            senderWallet = existingWallet?.id;
           } else {
             throw error;
           }
         }
       }
 
-      // Ensure receiver has a wallet
-      let receiverWallet = receiver?.UserWallet?.id;
-
-      if (!receiverWallet && receiver?.id) {
+      if (!receiverWallet) {
         try {
-          const newReceiverWallet = await query.userWallet.create({
+          receiverWallet = await query.userWallet.create({
             data: {
               user_id: receiver.id,
               wallet_id: `WALLET_${GenerateUniqueId()}`,
               balance: 0,
             },
           });
-          receiverWallet = newReceiverWallet.id;
         } catch (error: any) {
-          // If wallet already exists due to race condition, fetch it
           if (error.code === "P2002") {
-            const existingWallet = await query.userWallet.findUnique({
+            receiverWallet = await query.userWallet.findUnique({
               where: { user_id: receiver.id },
-              select: { id: true },
             });
-            receiverWallet = existingWallet?.id;
           } else {
             throw error;
           }
         }
       }
 
-      if (receiverPrice > 0 && senderWallet && receiverWallet) {
-        const optionsForSender = {
-          transactionId: purchase_id,
-          transaction: `Message to ${receiver?.username} with id ${receiver_id}`,
-          userId: sender?.id,
-          amount: receiverPrice,
-          transactionType: "debit",
-          transactionMessage: `Message to ${receiver?.username}`,
-          walletId: senderWallet,
-        };
-        const optionsForReceiver = {
-          transactionId: purchase_id2,
-          transaction: `Message from ${sender?.username} with id ${sender_id}`,
-          userId: receiver?.id,
-          amount: receiverPrice,
-          transactionType: "credit",
-          transactionMessage: `Message from ${sender?.username}`,
-          walletId: receiverWallet,
-        };
+      const purchase_id = `TRN${GenerateUniqueId()}`;
+      const purchase_id2 = `TRN${GenerateUniqueId()}`;
 
-        await Promise.all([
-          UserTransactionQueue.add("userTransaction", optionsForSender, {
-            removeOnComplete: true,
-            attempts: 3,
-          }),
-          UserTransactionQueue.add("userTransaction", optionsForReceiver, {
-            removeOnComplete: true,
-            attempts: 3,
-          }),
-        ]);
-      }
+      const optionsForSender = {
+        transactionId: purchase_id,
+        transaction: `Message to ${receiver.username} with id ${receiver_id}`,
+        userId: sender.id,
+        amount: pricePerMessage,
+        transactionType: "debit",
+        transactionMessage: `Message to ${receiver.username}`,
+        walletId: senderWallet?.id,
+      };
+
+      const optionsForReceiver = {
+        transactionId: purchase_id2,
+        transaction: `Message from ${sender.username} with id ${sender_id}`,
+        userId: receiver.id,
+        amount: pricePerMessage,
+        transactionType: "credit",
+        transactionMessage: `Message from ${sender.username}`,
+        walletId: receiverWallet?.id,
+      };
+
+      await Promise.all([
+        UserTransactionQueue.add("userTransaction", optionsForSender, {
+          removeOnComplete: true,
+          attempts: 3,
+        }),
+        UserTransactionQueue.add("userTransaction", optionsForReceiver, {
+          removeOnComplete: true,
+          attempts: 3,
+        }),
+      ]);
 
       return { success: true };
-    } catch {
+    } catch (error) {
+      console.error("❌ Transaction error:", error);
       return {
         success: false,
         message: "An error occurred while processing the transaction",

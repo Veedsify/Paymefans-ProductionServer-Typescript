@@ -49,7 +49,7 @@ class CloudflareWatermarkConfig {
     this.accountId = this.getRequiredEnvVar("CLOUDFLARE_ACCOUNT_ID");
     this.accountToken = this.getRequiredEnvVar("CLOUDFLARE_ACCOUNT_TOKEN");
     this.customerSubdomain = this.getRequiredEnvVar(
-      "CLOUDFLARE_CUSTOMER_SUBDOMAIN",
+      "CLOUDFLARE_CUSTOMER_DOMAIN",
     );
     this.imageKey = this.getRequiredEnvVar("CLOUDFLARE_IMAGE_KEY");
     this.appUrl = this.processAppUrl(this.getRequiredEnvVar("APP_URL"));

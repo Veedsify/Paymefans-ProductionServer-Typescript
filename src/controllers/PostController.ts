@@ -169,7 +169,7 @@ export default class PostController {
         userId: parseInt(req.params.userId) as number,
         page: req.query.page as string,
         limit: req.query.limit as string,
-        authUserId: req.user?.id!,
+        authUserId: req.user?.id || undefined,
       });
 
       if (UserPost?.error) {
@@ -206,7 +206,7 @@ export default class PostController {
     try {
       const SinglePost = await PostService.GetSinglePost({
         postId: req.params.postId as string,
-        authUserId: req.user?.id!,
+        authUserId: req.user?.id || undefined,
       });
       if (SinglePost.error) {
         return res.status(400).json({ ...SinglePost });
@@ -299,7 +299,7 @@ export default class PostController {
     try {
       const options = {
         postId: req.params.postId as string,
-        userId: req.user?.id!,
+        userId: req.user?.id || undefined,
         page: req.query.page as string,
         limit: req.query.limit as string,
       };

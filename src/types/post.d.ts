@@ -260,7 +260,7 @@ export type GetUserPostByIdProps = {
   userId: number;
   page: string;
   limit: string;
-  authUserId: number;
+  authUserId: number | undefined;
 };
 /**
  * Single post data structure
@@ -429,7 +429,36 @@ export interface RepostResponse {
  */
 export interface GetPostCommentsProps extends GetMyPostProps {
   postId: string;
-  userId: number;
+  userId: number | undefined;
+}
+/**
+ * Comment data structure
+ */
+export interface Comments extends PostCommentAttachments {
+  id: number;
+  comment_id: string;
+  post_id: number;
+  user_id: number;
+  content: string;
+  created_at: Date;
+  updated_at: Date;
+  total_likes: number;
+  total_replies: number;
+  parent_comment_id: string | null;
+  comment_status: string;
+  User: {
+    id: number;
+    user_id: string;
+    username: string;
+    name: string;
+    profile_image: string | null;
+    isVerified: boolean;
+  };
+  CommentLikes: {
+    id: number;
+    user_id: number;
+    comment_id: number;
+  }[];
 }
 /**
  * Response for fetching post comments

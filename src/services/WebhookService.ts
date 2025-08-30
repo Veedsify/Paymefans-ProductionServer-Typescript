@@ -8,8 +8,8 @@ import sharp from "sharp";
 import { PaystackService } from "./PaystackService";
 import { GenerateStreamToken } from "@libs/GenerateSignedUrls";
 // Retry intervals in milliseconds: 2 minutes, 4 minutes, 10 minutes, 30 minutes.
-const RETRY_DELAYS = [120000, 240000, 600000, 1800000];
-const CLOUDFLARE_CUSTOMER_SUBDOMAIN = process.env.CLOUDFLARE_CUSTOMER_SUBDOMAIN;
+const RETRY_DELAYS = [60_000, 120_000, 240_000, 600_000, 1_800_000];
+const CLOUDFLARE_CUSTOMER_DOMAIN = process.env.CLOUDFLARE_CUSTOMER_DOMAIN;
 const MAX_RETRIES = 4;
 export class WebhookService {
   // Handle Cloudflare processed media
@@ -17,7 +17,7 @@ export class WebhookService {
     try {
       const { uid, duration, readyToStream } = response;
       const token = await GenerateStreamToken(uid)
-      const thumbnail = `${CLOUDFLARE_CUSTOMER_SUBDOMAIN}${token}/thumbnails/thumbnail.jpg`
+      const thumbnail = `${CLOUDFLARE_CUSTOMER_DOMAIN}${token}/thumbnails/thumbnail.jpg`
       const mediaRecord = await query.userMedia.findUnique({
         where: { media_id: String(uid) },
         select: { post_id: true },
@@ -68,42 +68,33 @@ export class WebhookService {
         .toBuffer();
 
       // Upload the thumbnail to S3.
-      const command = new PutObjectCommand({
-        Bucket: process.env.S3_BUCKET_NAME!,
-        Key: fileKey,
-        Body: ImageBuffer,
-        ContentType: "image/jpeg",
-      });
+      const [blurCommand, publicCommand] = [
+        new PutObjectCommand({
+          Bucket: process.env.S3_BUCKET_NAME!,
+          Key: bluredFileKey,
+          Body: ImageBlurBuffer,
+          ContentType: "image/webp", // Changed to webp since you're converting to webp
+        }),
+        new PutObjectCommand({
+          Bucket: process.env.S3_BUCKET_NAME!,
+          Key: fileKey,
+          Body: ImageBuffer,
+          ContentType: "image/webp", // Changed to webp since you're converting to webp
+        })
+      ];
 
-      const command2 = new PutObjectCommand({
-        Bucket: process.env.S3_BUCKET_NAME!,
-        Key: bluredFileKey,
-        Body: ImageBlurBuffer,
-        ContentType: "image/jpeg",
-      });
-
-
-      await s3.send(command);
-      await s3.send(command2);
+      await Promise.all([s3.send(blurCommand), s3.send(publicCommand)]);
 
       const bluredUrl = `${process.env.AWS_CLOUDFRONT_URL}/${bluredFileKey}`;
       const publicUrl = `${process.env.AWS_CLOUDFRONT_URL}/${fileKey}`;
 
-      // Update the media record with the thumbnail URL.
+      // Update the media record with processed data and thumbnails
       await query.userMedia.update({
         where: { media_id: uid },
         data: {
-          poster: publicUrl,
-          blur: bluredUrl,
-        },
-      });
-      // Update the media record using the cloud-processed data.
-      await query.userMedia.update({
-        where: { media_id: String(uid) },
-        data: {
           duration: String(duration),
           media_state: readyToStream ? "completed" : "processing",
-          poster: thumbnail,
+          poster: publicUrl,
           blur: bluredUrl,
         },
       });

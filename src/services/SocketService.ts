@@ -207,6 +207,7 @@ export default class SocketService {
     io: any,
   ) {
     try {
+      console.log("Message Data:", data); // Log the incoming message data
       const messageResult = await SaveMessageToDb.SaveMessage(data);
 
       if (

@@ -145,8 +145,8 @@ class ProfileService {
         profileImpressions: impression,
         user: {
           ...user,
-          isFollowing: !!iFollowThem,
-          followsYou: !!theyFollowMe,
+          isFollowing: !authUserId ? false : !!iFollowThem,
+          followsYou: !authUserId ? false : !!theyFollowMe,
         },
       };
       return response;

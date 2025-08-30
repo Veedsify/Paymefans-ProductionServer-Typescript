@@ -44,7 +44,7 @@ export default class UploadService {
           filetype: fileType,
           allowedorigins: btoa("*.paymefans.com,paymefans.com,localhost:3000"),
           watermark: isWatermarkEnabled && btoa(watermarkUid!),
-          requiresignedurls: btoa(true.toString())
+          ...(data.shouldUseSignedUrls && ({ requiresignedurls: btoa(true.toString()) }))
         };
 
         const uploadMetadataString = Object.entries(uplaodMetadata)
@@ -94,7 +94,7 @@ export default class UploadService {
       if ("explicitImageType" in data && data.type == "image") {
         const directUpload = await client.images.v2.directUploads.create({
           account_id: CLOUDFLARE_ACCOUNT_ID!,
-          requireSignedURLs: true,
+          // requireSignedURLs: true,
         });
 
 

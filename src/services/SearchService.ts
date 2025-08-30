@@ -3,14 +3,14 @@ import { Permissions, RBAC } from "@utils/FlagsConfig";
 import query from "@utils/prisma";
 import { SearchPlatformResponse } from "types/search";
 import { AuthUser } from "types/user";
-import GenerateCloudflareSignedUrl from "@libs/GenerateSignedUrls";
+import { GenerateBatchSignedUrls } from "@libs/GenerateSignedUrls";
 
 export default class SearchService {
   private static async searchInPosts(
     searchQuery: string,
     authUserid: number,
   ): Promise<any> {
-    const cacheKey = `search:posts:${query}`;
+    const cacheKey = `search:posts:${searchQuery}`;
     const cachedResult = await redis.get(cacheKey);
     if (cachedResult) {
       return JSON.parse(cachedResult);
@@ -122,13 +122,14 @@ export default class SearchService {
 
       return {
         ...post,
-        UserMedia: post.watermark_enabled ? await Promise.all(
-          (post.UserMedia || []).map(async (media) => ({
-            ...media,
-            url: await GenerateCloudflareSignedUrl(media.media_id, media.media_type, media.url),
-            poster: media.media_type === "image" ? await GenerateCloudflareSignedUrl(media.media_id, media.media_type, media.url) : media.poster,
-            blur: await GenerateCloudflareSignedUrl(media.media_id, media.media_type, media.blur),
-          })),
+        UserMedia: post.watermark_enabled ? await GenerateBatchSignedUrls(
+          (post.UserMedia || []).map(media => ({
+            media_id: media.media_id,
+            media_type: media.media_type,
+            url: media.url,
+            poster: media.poster,
+            blur: media.blur
+          }))
         ) : post.UserMedia,
         likedByme: postLike ? true : false,
         wasReposted: !!isReposted,
@@ -142,7 +143,7 @@ export default class SearchService {
     const resolvedPosts = await Promise.all(postsChecked);
 
     // Cache the results
-    await redis.set(cacheKey, JSON.stringify(resolvedPosts), "EX", 30); // Cache for 30 seconds
+    await redis.set(cacheKey, JSON.stringify(resolvedPosts), "EX", 1800); // Cache for 30 minutes to match signed URLs
     return resolvedPosts;
   }
   private static async searchInUsers(
@@ -284,11 +285,16 @@ export default class SearchService {
     const processedResults = await Promise.all(
       results.map(async (media) => {
         if (media.post?.watermark_enabled) {
+          const signedMedia = await GenerateBatchSignedUrls([{
+            media_id: media.media_id,
+            media_type: media.media_type,
+            url: media.url,
+            poster: media.poster,
+            blur: media.blur
+          }]);
           return {
             ...media,
-            url: await GenerateCloudflareSignedUrl(media.media_id, media.media_type, media.url),
-            poster: media.media_type === "image" ? await GenerateCloudflareSignedUrl(media.media_id, media.media_type, media.url) : media.poster,
-            blur: await GenerateCloudflareSignedUrl(media.media_id, media.media_type, media.blur),
+            ...signedMedia[0]
           };
         }
         return media;
@@ -296,7 +302,7 @@ export default class SearchService {
     );
 
     // Cache the results
-    await redis.set(cacheKey, JSON.stringify(processedResults), "EX", 30); // Cache for 30 seconds
+    await redis.set(cacheKey, JSON.stringify(processedResults), "EX", 1800); // Cache for 30 minutes to match signed URLs
     return processedResults;
   }
 

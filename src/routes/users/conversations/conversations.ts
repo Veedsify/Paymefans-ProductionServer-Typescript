@@ -38,4 +38,6 @@ conversations.post(
   ConversationController.SearchMessages
 );
 conversations.get("/unread-count", Auth, ConversationController.GetUnreadCount);
+conversations.post("/toggle-free-messages", Auth, ConversationController.ToggleFreeMessages);
+conversations.get("/free-message-status/:conversationId", Auth, ConversationController.GetFreeMessageStatus);
 export default conversations;
