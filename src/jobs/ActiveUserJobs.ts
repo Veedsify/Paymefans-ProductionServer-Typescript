@@ -35,7 +35,6 @@ const pruneInactiveUsersWorker = new Worker(
       // Emit updated active users list after cleanup
       const instance = await IoInstance.getIO();
       await EmitActiveUsers(instance);
-      console.log(`Pruned ${toDelete.length} inactive users`);
     }
   },
   {

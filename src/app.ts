@@ -22,11 +22,11 @@ import helmet from "helmet";
 import auth from "@routes/users/auth/auth";
 import Paths from "@utils/paths";
 import query from "@utils/prisma";
+import { config } from "config/config";
 const { ADMIN_PANEL_URL, VERIFICATION_URL, APP_URL } = process.env;
 
 const app = express();
 const server = http.createServer(app);
-const port = process.env.PORT || 3009;
 
 // Configure server timeouts and connection limits for DDoS protection
 server.timeout = 30000; // 30 seconds timeout
@@ -45,26 +45,29 @@ if (process.env.NODE_ENV === "production") {
 }
 
 // Security headers middleware
-app.use(helmet({
-  contentSecurityPolicy: false, // Disable CSP for now, configure as needed
-  crossOriginEmbedderPolicy: false // Disable for Socket.IO compatibility
-}));
+app.use(
+  helmet({
+    contentSecurityPolicy: false, // Disable CSP for now, configure as needed
+    crossOriginEmbedderPolicy: false, // Disable for Socket.IO compatibility
+  }),
+);
 
 // Trust proxy if behind reverse proxy (Cloudflare, nginx, etc.)
-app.set('trust proxy', 1);
+app.set("trust proxy", 1);
 
 // Prevent common attacks
 app.use((req: Request, res: Response, next: NextFunction) => {
   // Prevent null byte attacks
-  if (req.url.indexOf('\0') !== -1) {
-    res.status(400).json({ error: 'Invalid request' });
+  if (req.url.indexOf("\0") !== -1) {
+    res.status(400).json({ error: "Invalid request" });
     return;
   }
 
   // Prevent excessive header size
   const headerSize = JSON.stringify(req.headers).length;
-  if (headerSize > 8192) { // 8KB limit
-    res.status(413).json({ error: 'Request headers too large' });
+  if (headerSize > 8192) {
+    // 8KB limit
+    res.status(413).json({ error: "Request headers too large" });
     return;
   }
 
@@ -77,14 +80,14 @@ const generalLimiter = rateLimit({
   max: 1000, // limit each IP to 1000 requests per windowMs
   message: {
     error: "Too many requests from this IP, please try again later.",
-    retryAfter: "15 minutes"
+    retryAfter: "15 minutes",
   },
   standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
   legacyHeaders: false, // Disable the `X-RateLimit-*` headers
   skip: (req) => {
     // Skip rate limiting for certain routes if needed
-    return req.ip === '127.0.0.1' || req.ip === '::1'; // Skip localhost in development
-  }
+    return req.ip === "127.0.0.1" || req.ip === "::1"; // Skip localhost in development
+  },
 });
 
 // API-specific rate limiting - more restrictive for API routes
@@ -93,14 +96,14 @@ const apiLimiter = rateLimit({
   max: 1000, // limit each IP to 100 API requests per windowMs
   message: {
     error: "Too many API requests from this IP, please try again later.",
-    retryAfter: "15 minutes"
+    retryAfter: "15 minutes",
   },
   standardHeaders: true,
   legacyHeaders: false,
   skip: (req) => {
     // Skip rate limiting for certain routes if needed
-    return req.ip === '127.0.0.1' || req.ip === '::1'; // Skip localhost in development
-  }
+    return req.ip === "127.0.0.1" || req.ip === "::1"; // Skip localhost in development
+  },
 });
 
 // Auth route rate limiting - very restrictive for login/register routes
@@ -108,15 +111,16 @@ const authLimiter = rateLimit({
   windowMs: 10 * 60 * 1000, // 15 minutes
   max: 1000, // limit each IP to 5 auth attempts per windowMs
   message: {
-    error: "Too many authentication attempts from this IP, please try again later.",
-    retryAfter: "15 minutes"
+    error:
+      "Too many authentication attempts from this IP, please try again later.",
+    retryAfter: "15 minutes",
   },
   standardHeaders: true,
   legacyHeaders: false,
   skip: (req) => {
     // Skip rate limiting for certain routes if needed
-    return req.ip === '127.0.0.1' || req.ip === '::1'; // Skip localhost in development
-  }
+    return req.ip === "127.0.0.1" || req.ip === "::1"; // Skip localhost in development
+  },
 });
 
 // Slow down middleware - progressively delays responses
@@ -130,7 +134,7 @@ const speedLimiter = slowDown({
   legacyHeaders: false, // Disable the `X-SlowDown-*` headers
   skip: (req) => {
     // Skip speed limiting for certain routes if needed
-    return req.ip === '127.0.0.1' || req.ip === '::1'; // Skip localhost in development
+    return req.ip === "127.0.0.1" || req.ip === "::1"; // Skip localhost in development
   },
   maxDelayMs: 2000, // maximum delay of 2 seconds
 });
@@ -142,16 +146,16 @@ app.use(generalLimiter);
 app.use(speedLimiter);
 
 // ShrinkRay - Compression middleware
-app.use(compression({ filter: shouldCompress }))
+app.use(compression({ filter: shouldCompress }));
 
 function shouldCompress(req: Request, res: Response) {
-  if (req.headers['x-no-compression']) {
+  if (req.headers["x-no-compression"]) {
     // don't compress responses with this request header
-    return false
+    return false;
   }
 
   // fallback to standard filter function
-  return compression.filter(req, res)
+  return compression.filter(req, res);
 }
 
 // Cookie parser
@@ -186,8 +190,8 @@ RegisterCloudflareStreamWebhook();
 
 // Serve static files from the "public" directory
 app.use(express.static(path.join("public")));
-app.use(express.urlencoded({ extended: false, limit: '10mb' })); // Limit request size
-app.use(express.json({ limit: '10mb' })); // Limit JSON payload size
+app.use(express.urlencoded({ extended: false, limit: "10mb" })); // Limit request size
+app.use(express.json({ limit: "10mb" })); // Limit JSON payload size
 
 // Basic route with specific rate limiting for auth routes
 app.use(Paths.API.Base + Paths.API.Auth.Base, authLimiter, auth); // Apply strict auth limiting to auth routes
@@ -196,10 +200,10 @@ app.use("/admin", admin);
 //Bullmq For Emails,
 
 // 404 handler for undefined routes
-app.use('*', (req: Request, res: Response) => {
+app.use("*", (req: Request, res: Response) => {
   res.status(404).json({
-    error: 'Route not found',
-    message: `The requested route ${req.originalUrl} was not found on this server.`
+    error: "Route not found",
+    message: `The requested route ${req.originalUrl} was not found on this server.`,
   });
 });
 
@@ -207,20 +211,24 @@ app.use('*', (req: Request, res: Response) => {
 app.use((err: any, req: Request, res: Response, next: NextFunction): any => {
   // Rate limit error handling
   if (err.status === 429) {
-    console.warn(`Rate limit exceeded for IP: ${req.ip}, User-Agent: ${req.get('User-Agent')}`);
+    console.warn(
+      `Rate limit exceeded for IP: ${req.ip}, User-Agent: ${req.get("User-Agent")}`,
+    );
     return res.status(429).json({
-      error: 'Too Many Requests',
-      message: 'Rate limit exceeded. Please try again later.',
-      retryAfter: err.retryAfter || '15 minutes'
+      error: "Too Many Requests",
+      message: "Rate limit exceeded. Please try again later.",
+      retryAfter: err.retryAfter || "15 minutes",
     });
   }
 
   // Payload too large error handling
-  if (err.type === 'entity.too.large') {
-    console.warn(`Large payload attempt from IP: ${req.ip}, Size: ${err.length}`);
+  if (err.type === "entity.too.large") {
+    console.warn(
+      `Large payload attempt from IP: ${req.ip}, Size: ${err.length}`,
+    );
     return res.status(413).json({
-      error: 'Payload Too Large',
-      message: 'Request payload exceeds the maximum allowed size.'
+      error: "Payload Too Large",
+      message: "Request payload exceeds the maximum allowed size.",
     });
   }
 
@@ -247,9 +255,8 @@ process.on("SIGINT", async () => {
 });
 
 // Start the server
-server.listen(port, () => {
-  console.log(`Server running at http://localhost:${port}`);
-  console.info(`Server started on port ${port}`);
+server.listen(config.defaultPort, () => {
+  console.info(`Server started on port ${config.defaultPort}`);
 });
 
 // Handle uncaught exceptions and unhandled promise rejections

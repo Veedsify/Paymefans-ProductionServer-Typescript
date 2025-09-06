@@ -52,12 +52,6 @@ export default class AdminWithdrawalController {
         reference,
       });
 
-      console.log("Withdrawal approval completed:", {
-        withdrawal_id: result.withdrawal.id,
-        user: result.user.email,
-        status: result.withdrawal.status,
-      });
-
       res.status(200).json({
         error: false,
         message: "Withdrawal approved successfully",
@@ -97,7 +91,7 @@ export default class AdminWithdrawalController {
       }
 
       const withdrawal = await WithdrawalService.getWithdrawalById(
-        parseInt(withdrawal_id)
+        parseInt(withdrawal_id),
       );
 
       if (!withdrawal) {
@@ -126,12 +120,7 @@ export default class AdminWithdrawalController {
    */
   static async getWithdrawals(req: Request, res: Response): Promise<void> {
     try {
-      const {
-        page = "1",
-        limit = "10",
-        status,
-        user_id,
-      } = req.query;
+      const { page = "1", limit = "10", status, user_id } = req.query;
 
       const result = await WithdrawalService.getWithdrawals({
         page: parseInt(page as string),
@@ -166,9 +155,21 @@ export default class AdminWithdrawalController {
 
       // Get status-based counts
       const [pending, completed, rejected] = await Promise.all([
-        WithdrawalService.getWithdrawals({ page: 1, limit: 1, status: "pending" }),
-        WithdrawalService.getWithdrawals({ page: 1, limit: 1, status: "completed" }),
-        WithdrawalService.getWithdrawals({ page: 1, limit: 1, status: "rejected" }),
+        WithdrawalService.getWithdrawals({
+          page: 1,
+          limit: 1,
+          status: "pending",
+        }),
+        WithdrawalService.getWithdrawals({
+          page: 1,
+          limit: 1,
+          status: "completed",
+        }),
+        WithdrawalService.getWithdrawals({
+          page: 1,
+          limit: 1,
+          status: "rejected",
+        }),
       ]);
 
       res.status(200).json({

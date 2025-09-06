@@ -35,7 +35,6 @@ export default class PointController {
   // Purchase points
   static async PurchasePoints(req: Request, res: Response): Promise<any> {
     try {
-      console.log(req.body);
       const Points = await PointService.PurchasePoints(
         req?.user!,
         req.body.amount,

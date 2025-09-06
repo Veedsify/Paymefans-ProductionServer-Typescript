@@ -1502,7 +1502,7 @@ export default class PostService {
           error: true,
           status: false,
           data: null,
-          message: "Post not Private",
+          message: "Post not found",
         };
       }
       // one query for like

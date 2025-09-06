@@ -6,9 +6,8 @@ class ProfileController {
   // Load Profile
   static async Profile(req: Request, res: Response): Promise<any> {
     try {
-      const body = req.body;
-      const authUserId = body.viewerId as number;
-      const username = body.username as string;
+      const authUserId = req.user?.id as number;
+      const username = req.body.username as string;
       const user = await ProfileService.Profile(username, authUserId);
       if (!user.status) {
         return res.status(400).json(user);

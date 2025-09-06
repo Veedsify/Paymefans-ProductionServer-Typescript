@@ -30,8 +30,6 @@ const welcomeMessageWorker = new Worker(
     const { userId, userEmail, username } = job.data;
 
     try {
-      console.log(`Processing welcome message job for user ${username} (ID: ${userId})`);
-
       const result = await WelcomeMessageService.sendWelcomeMessage({
         userId,
         userEmail,
@@ -41,11 +39,12 @@ const welcomeMessageWorker = new Worker(
       if (!result.success) {
         throw new Error(result.message);
       }
-
-      console.log(`Welcome message sent successfully to user ${username}`);
       return result;
     } catch (error) {
-      console.error(`Error processing welcome message job for user ${username}:`, error);
+      console.error(
+        `Error processing welcome message job for user ${username}:`,
+        error,
+      );
       throw error;
     }
   },
@@ -66,7 +65,6 @@ export async function scheduleWelcomeMessage(
     const config = await WelcomeMessageService.getWelcomeConfig();
 
     if (!config || !config.enabled) {
-      console.log(`Welcome messages are disabled, skipping for user ${data.username}`);
       return;
     }
 
@@ -81,15 +79,7 @@ export async function scheduleWelcomeMessage(
       jobOptions.delay = delay * 1000; // Convert seconds to milliseconds
     }
 
-    await WelcomeMessageQueue.add(
-      "sendWelcomeMessage",
-      data,
-      jobOptions,
-    );
-
-    console.log(
-      `Welcome message scheduled for user ${data.username} with ${delay}s delay`
-    );
+    await WelcomeMessageQueue.add("sendWelcomeMessage", data, jobOptions);
   } catch (error) {
     console.error("Error scheduling welcome message:", error);
   }
@@ -110,8 +100,6 @@ export async function sendWelcomeMessageImmediate(
         priority: 1, // High priority for immediate messages
       },
     );
-
-    console.log(`Immediate welcome message queued for user ${data.username}`);
   } catch (error) {
     console.error("Error sending immediate welcome message:", error);
   }
@@ -136,7 +124,12 @@ export async function getWelcomeMessageQueueStats() {
       completed: completed.length,
       failed: failed.length,
       delayed: delayed.length,
-      total: waiting.length + active.length + completed.length + failed.length + delayed.length,
+      total:
+        waiting.length +
+        active.length +
+        completed.length +
+        failed.length +
+        delayed.length,
     };
   } catch (error) {
     console.error("Error getting welcome message queue stats:", error);
@@ -153,13 +146,15 @@ export async function getWelcomeMessageQueueStats() {
 
 // Handle worker events
 welcomeMessageWorker.on("completed", (job) => {
-  console.log(`Welcome message job ${job.id} completed for user ${job.data.username}`);
+  console.log(
+    `Welcome message job ${job.id} completed for user ${job.data.username}`,
+  );
 });
 
 welcomeMessageWorker.on("failed", (job, err) => {
   console.error(
     `Welcome message job ${job?.id} failed for user ${job?.data?.username}:`,
-    err.message
+    err.message,
   );
 });
 

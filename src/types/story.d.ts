@@ -41,12 +41,12 @@ interface CaptionElement {
   };
 }
 
-
 export type StoryType = {
   id: number;
   index: number;
   media_type: string;
   media_url: string;
+  media_id: string;
   caption?: string;
   captionElements?: CaptionElement[];
 };
@@ -68,6 +68,7 @@ export interface SaveStoryResponse {
 
 export interface UploadStoryProps {
   files: Express.Multer.File[];
+  user: AuthUser;
 }
 
 export interface UploadStoryResponse {

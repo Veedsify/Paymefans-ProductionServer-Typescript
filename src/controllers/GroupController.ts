@@ -808,19 +808,10 @@ export default class GroupController {
         });
       }
 
-      console.log("uploadAttachment - Files received:", files.length);
-
       // Process each file and upload to S3
       const uploadResults = [];
 
       for (const file of files) {
-        console.log("uploadAttachment - Processing file:", {
-          originalname: file.originalname,
-          mimetype: file.mimetype,
-          size: file.size,
-          path: file.path,
-        });
-
         try {
           let fileUrl: string;
 
@@ -868,8 +859,6 @@ export default class GroupController {
           });
         }
       }
-
-      console.log("uploadAttachment - Upload results:", uploadResults);
 
       return res.status(200).json({
         success: true,

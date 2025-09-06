@@ -186,10 +186,6 @@ async function AppSocket(io: any) {
               // Clean up user from group room with member left event
               await GroupChatHandler.cleanupGroupRoom(groupId, data.userId, io);
               leftGroups++;
-
-              console.log(
-                `User ${user.username} (ID: ${data.userId}) left group room: ${roomName} (Group ID: ${groupId})`,
-              );
             } catch (groupError) {
               console.error(
                 `Error leaving group ${groupId} for user ${data.userId}:`,
@@ -208,10 +204,6 @@ async function AppSocket(io: any) {
           groupsLeft: leftGroups,
           message: `Successfully left ${leftGroups} groups`,
         });
-
-        console.log(
-          `User ${user.username} (ID: ${data.userId}) left all groups (${leftGroups} groups)`,
-        );
       } catch (error) {
         console.error("Error leaving all groups:", error);
         socket.emit("group-error", {
@@ -253,18 +245,7 @@ async function AppSocket(io: any) {
       },
     );
 
-    socket.on("disconnect", async (reason: any) => {
-      console.log(
-        "🔌 Socket disconnected:",
-        username,
-        "Socket ID:",
-        socket.id,
-        "Reason:",
-        reason,
-        "Time:",
-        new Date().toISOString(),
-      );
-
+    socket.on("disconnect", async (_: any) => {
       // Remove user from Redis active users
       const userKey = `user:${user.username}`;
       await redis.hdel("activeUsers", userKey);
@@ -289,10 +270,6 @@ async function AppSocket(io: any) {
                   user.userId,
                   io,
                 );
-
-                console.log(
-                  `User ${user.username} (ID: ${user.userId}) removed from group room: ${roomName} (Group ID: ${groupId})`,
-                );
               } catch (groupError) {
                 console.error(
                   `Error cleaning up group ${groupId} for user ${user.userId}:`,
@@ -304,10 +281,6 @@ async function AppSocket(io: any) {
             // Clean up the user's group rooms mapping
             await redis.del(key);
           }
-
-          console.log(
-            `Completed group room cleanup for user ${user.username} (ID: ${user.userId})`,
-          );
         } catch (error) {
           console.error("Error cleaning up group rooms on disconnect:", error);
         }
@@ -332,8 +305,6 @@ async function AppSocket(io: any) {
  */
 async function performPeriodicGroupCleanup(io: any) {
   try {
-    console.log("Starting periodic group cleanup...");
-
     // Get all group member keys
     const groupMemberKeys = await redis.keys("group-members:*");
 
@@ -355,10 +326,6 @@ async function performPeriodicGroupCleanup(io: any) {
 
             // If no group rooms found for this user, they're likely disconnected
             if (Object.keys(userGroupRooms).length === 0) {
-              console.log(
-                `Cleaning up orphaned group membership: User ${userId} in Group ${groupId}`,
-              );
-
               // Clean up the orphaned membership
               await GroupChatHandler.cleanupGroupRoom(groupId, userId, io);
             }
@@ -373,8 +340,6 @@ async function performPeriodicGroupCleanup(io: any) {
         }
       }
     }
-
-    console.log("Periodic group cleanup completed");
   } catch (error) {
     console.error("Error in periodic group cleanup:", error);
   }

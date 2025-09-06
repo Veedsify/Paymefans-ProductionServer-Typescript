@@ -297,8 +297,6 @@ const createPoints = async () => {
         },
       });
     }
-
-    console.log("Points created");
   } catch (error) {
     console.log(error);
   }

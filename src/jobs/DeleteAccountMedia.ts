@@ -23,7 +23,6 @@ const deleteAccountWorker = new Worker(
     });
 
     if (usersTodelete.length === 0) {
-      console.log("No users to delete media for.");
       return;
     }
 

@@ -8,7 +8,7 @@ const UserTransactionQueue = new Queue("userTransactionQueue", {
     removeOnComplete: true,
     attempts: 3,
     backoff: 5000,
-  }
+  },
 });
 
 const UserTransactionWorker = new Worker(
@@ -26,35 +26,27 @@ const UserTransactionWorker = new Worker(
     try {
       // Only create transaction if walletId is provided
       if (!walletId) {
-        console.warn(`Skipping transaction creation - no wallet ID provided for user ${userId}`);
+        console.warn(
+          `Skipping transaction creation - no wallet ID provided for user ${userId}`,
+        );
         return;
       }
-
-      console.log("💳 Creating user transaction:", {
-        transactionId,
-        userId,
-        walletId,
-        amount,
-        transactionType,
-      });
 
       await query.userTransaction.create({
         data: {
           transaction_id: transactionId,
           transaction,
           user: {
-            connect: { id: userId }
+            connect: { id: userId },
           },
           UserWallet: {
-            connect: { id: walletId }
+            connect: { id: walletId },
           },
           amount,
           transaction_type: transactionType,
           transaction_message: transactionMessage,
         },
       });
-
-      console.log("✅ User transaction created successfully:", transactionId);
     } catch (err: any) {
       console.error(`Error creating user transaction: ${err.message}`);
       throw err;
@@ -62,7 +54,7 @@ const UserTransactionWorker = new Worker(
   },
   {
     connection: redis,
-  }
+  },
 );
 
 UserTransactionWorker.on("completed", (job) => {

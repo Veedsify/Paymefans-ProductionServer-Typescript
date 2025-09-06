@@ -16,8 +16,8 @@ export class WebhookService {
   static async HandleCloudflareProcessedMedia(response: any): Promise<void> {
     try {
       const { uid, duration, readyToStream } = response;
-      const token = await GenerateStreamToken(uid)
-      const thumbnail = `${CLOUDFLARE_CUSTOMER_DOMAIN}${token}/thumbnails/thumbnail.jpg`
+      const token = await GenerateStreamToken(uid);
+      const thumbnail = `${CLOUDFLARE_CUSTOMER_DOMAIN}${token}/thumbnails/thumbnail.jpg`;
       const mediaRecord = await query.userMedia.findUnique({
         where: { media_id: String(uid) },
         select: { post_id: true },
@@ -80,7 +80,7 @@ export class WebhookService {
           Key: fileKey,
           Body: ImageBuffer,
           ContentType: "image/webp", // Changed to webp since you're converting to webp
-        })
+        }),
       ];
 
       await Promise.all([s3.send(blurCommand), s3.send(publicCommand)]);
@@ -102,9 +102,6 @@ export class WebhookService {
       const isAllMediaProcessed =
         await WebhookService.checkIfAllMediaProcessed(mediaRecord);
       if (isAllMediaProcessed) {
-        console.log(
-          `All media processed for post ${mediaRecord.post_id}, marking as approved.`,
-        );
         await query.post.update({
           where: { id: Number(mediaRecord.post_id) },
           data: { post_status: "approved" },
@@ -130,12 +127,7 @@ export class WebhookService {
     if (existingRetry) return;
     const delay = RETRY_DELAYS[attempt] as number;
     const executeAt = Date.now() + delay; // timestamp when the retry should execute.
-    console.log(
-      `Scheduling retry for media ID ${uid} in ${delay / 1000
-      } seconds. Attempt ${attempt + 1}`,
-    );
     // Store the retry data along with the scheduled execution time.
-    // The key will expire a bit after the intended run period to prevent stale data.
     await redis.setex(
       `retry:media:${uid}`,
       Math.ceil(delay / 1000) + 60,
@@ -181,15 +173,9 @@ export class WebhookService {
         select: { post_status: true },
       });
       if (post?.post_status === "approved") {
-        console.log(
-          `Post ${mediaRecord.post_id} already approved. Cancelling retry for media ${mediaId}.`,
-        );
         await redis.del(key);
         continue;
       }
-      console.log(
-        `Retrying processing for media ${mediaId}, attempt ${attempt}`,
-      );
       await WebhookService.HandleCloudflareProcessedMedia(response);
       await redis.del(key);
     }
@@ -220,10 +206,6 @@ export class WebhookService {
         });
         return true;
       }
-      console.log(
-        `Post ${postId} still has ${totalMedia - completedMedia
-        } media files processing.`,
-      );
       return false;
     } catch (error) {
       console.error("Error in checkIfAllMediaProcessed:", error);
@@ -232,7 +214,6 @@ export class WebhookService {
   }
   // Handle model signup callback
   // This function is called when a model signs up.
-  // It initializes a payment for the model.
   static async HandleModelSignupCallback(reference: string): Promise<any> {
     try {
       const models = await query.model.findFirst({

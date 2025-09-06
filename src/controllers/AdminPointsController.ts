@@ -9,19 +9,11 @@ export default class AdminPointsController {
     try {
       const { user_id, points, operation = "add" } = req.body;
 
-      console.log("UpdateUserPoints called with:", {
-        user_id,
-        points,
-        operation,
-      });
-
       const result = await PointsService.updateUserPoints({
         user_id,
         points,
         operation,
       });
-
-      console.log("Points update result:", result);
 
       const response = {
         error: false,
@@ -31,8 +23,6 @@ export default class AdminPointsController {
           timestamp: new Date().toISOString(),
         },
       };
-
-      console.log("Sending response:", response);
 
       res.status(200).json(response);
     } catch (err: any) {
@@ -56,11 +46,7 @@ export default class AdminPointsController {
     try {
       const { user_id } = req.params;
 
-      console.log("GetUserPointsBalance called for user_id:", user_id);
-
       const userInfo = await PointsService.getUserPointsBalance(user_id);
-
-      console.log("User points info:", userInfo);
 
       const response = {
         error: false,
@@ -73,8 +59,6 @@ export default class AdminPointsController {
         },
         last_updated: userInfo.last_updated,
       };
-
-      console.log("Sending balance response:", response);
 
       res.status(200).json(response);
     } catch (err: any) {

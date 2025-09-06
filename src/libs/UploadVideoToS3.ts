@@ -6,7 +6,8 @@ import IoInstance from "@libs/io";
 const UploadVideoToS3 = async (
   file: Express.Multer.File,
   s3Key: string,
-  socketChannel: string
+  socketChannel: string,
+  bucket: string | undefined,
 ) => {
   const io = IoInstance.getIO();
   return new Promise(async (resolve, reject) => {
@@ -17,10 +18,14 @@ const UploadVideoToS3 = async (
         reject(new Error(`Error reading file: ${err.message}`));
       });
 
+      if (bucket === undefined) {
+        bucket = process.env.S3_BUCKET_NAME!;
+      }
+
       const uploadParams = {
         client: s3,
         params: {
-          Bucket: process.env.S3_BUCKET_NAME!,
+          Bucket: bucket!,
           Key: s3Key,
           Body: fileStream,
           ContentLength: file.size,
@@ -38,7 +43,7 @@ const UploadVideoToS3 = async (
           total: progress.total,
         });
         console.log(
-          `Uploaded ${progress.loaded} bytes out of ${progress.total}`
+          `Uploaded ${progress.loaded} bytes out of ${progress.total}`,
         );
       });
 

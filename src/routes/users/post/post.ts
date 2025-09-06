@@ -3,6 +3,7 @@ import Auth from "@middleware/Auth";
 import UploadController from "@controllers/UploadController";
 import PostController from "@controllers/PostController";
 import Paths from "@utils/paths";
+import AuthPublic from "@middleware/AuthPublic";
 const post = express();
 // Personal Posts
 post.post(Paths.API.Post.Create, Auth, PostController.CreatePost);
@@ -33,8 +34,12 @@ post.get(
   Auth,
   PostController.GetOtherPrivateMedia,
 );
-post.get(Paths.API.Post.UserPostsByID, PostController.GetUserPostByID);
-post.get(Paths.API.Post.SinglePost, PostController.GetSinglePost);
+post.get(
+  Paths.API.Post.UserPostsByID,
+  AuthPublic,
+  PostController.GetUserPostByID,
+);
+post.post(Paths.API.Post.SinglePost, AuthPublic, PostController.GetSinglePost);
 post.get(Paths.API.Post.EditPost, Auth, PostController.EditPost);
 post.post(Paths.API.Post.UpdatePost, Auth, PostController.UpdatePost);
 post.put(
@@ -43,7 +48,11 @@ post.put(
   PostController.UpdatePostAudience,
 );
 post.post(Paths.API.Post.Repost, Auth, PostController.CreateRepost);
-post.get(Paths.API.Post.PostComments, PostController.GetPostComments);
+post.post(
+  Paths.API.Post.PostComments,
+  AuthPublic,
+  PostController.GetPostComments,
+);
 post.get(Paths.API.Post.CommentReplies, Auth, PostController.GetCommentReplies);
 
 // Post Actions

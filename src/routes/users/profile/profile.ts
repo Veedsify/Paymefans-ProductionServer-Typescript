@@ -4,6 +4,7 @@ import ProfileController from "@controllers/ProfileController";
 import { CreateUpload } from "@middleware/FileUploadConfig";
 import Paths from "@utils/paths";
 import ProfileViewsMiddleware from "@middleware/ProfileViewsMiddleware";
+import AuthPublic from "@middleware/AuthPublic";
 const profile = express.Router();
 
 // Multer Instance
@@ -14,6 +15,7 @@ const uploadAvatar = CreateUpload("avatars");
 profile.post(
   Paths.API.Profile.User,
   ProfileViewsMiddleware,
+  AuthPublic,
   ProfileController.Profile,
 );
 profile.post(

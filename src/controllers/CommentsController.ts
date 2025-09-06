@@ -69,6 +69,15 @@ export default class CommentsController {
         });
       }
 
+      if (!user && !req.user?.id) {
+        return res.status(200).json({
+          status: true,
+          error: false,
+          message: "Skipped Recording Comment View",
+          data: null,
+        });
+      }
+
       const viewComment = await CommentsService.ViewComment(commentId, user);
       if (viewComment.error) {
         return res.status(400).json({ ...viewComment });

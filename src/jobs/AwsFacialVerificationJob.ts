@@ -1,19 +1,22 @@
 import { redis } from "@libs/RedisStore";
 import { AwsFaceVerification } from "@services/AwsRekognitionFacialVerification";
-import { analyzeDocumentQuality, detectFaceQuality, extractNamesFromDocument } from "@services/AwsDocumentValidationService";
+import {
+  analyzeDocumentQuality,
+  detectFaceQuality,
+  extractNamesFromDocument,
+} from "@services/AwsDocumentValidationService";
 import EmailService from "@services/EmailService";
 import GetSinglename from "@utils/GetSingleName";
 import { NameMatchingService } from "@utils/NameMatchingService";
 import query from "@utils/prisma";
 import { Queue, Worker } from "bullmq";
 import type { AwsRekognitionObject } from "../types/verification";
-import { RekognitionClient, DetectTextCommand } from "@aws-sdk/client-rekognition";
+import {
+  RekognitionClient,
+  DetectTextCommand,
+} from "@aws-sdk/client-rekognition";
 
-const {
-  AWS_REGION,
-  AWS_ACCESS_KEY,
-  AWS_SECRET_KEY,
-} = process.env;
+const { AWS_REGION, AWS_ACCESS_KEY, AWS_SECRET_KEY } = process.env;
 
 const rekognitionClient = new RekognitionClient({
   region: AWS_REGION as string,
@@ -30,13 +33,13 @@ const AwsVerificationQueue = new Queue("aws-verification", {
     attempts: 3,
     backoff: 5000,
     delay: 1000, // 1 second delay before starting
-  }
+  },
 });
 
 const ProcessFaceComparison = async (
   front: AwsRekognitionObject,
   faceVideo: AwsRekognitionObject,
-  back?: AwsRekognitionObject
+  back?: AwsRekognitionObject,
 ): Promise<{ success: boolean; message: string; confidence?: number }> => {
   try {
     // Enhanced face quality validation
@@ -97,9 +100,13 @@ const ProcessFaceComparison = async (
 
 const UpdateVerificationStatus = async (
   token: string,
-  verificationResult: { success: boolean; message: string; confidence?: number },
+  verificationResult: {
+    success: boolean;
+    message: string;
+    confidence?: number;
+  },
   front: AwsRekognitionObject,
-  faceVideo: AwsRekognitionObject
+  faceVideo: AwsRekognitionObject,
 ) => {
   // Check For Verification
   const model = await query.model.findFirst({
@@ -170,9 +177,8 @@ const UpdateVerificationStatus = async (
 const ProcessNameMatching = async (
   front: AwsRekognitionObject,
   back: AwsRekognitionObject | undefined,
-  token: string
+  token: string,
 ): Promise<{ success: boolean; message: string; confidence?: number }> => {
-  console.log(`[${token}] Starting name matching process...`);
   try {
     // Get user data for name matching
     const model = await query.model.findFirst({
@@ -198,15 +204,6 @@ const ProcessNameMatching = async (
       };
     }
 
-    console.log(`[${token}] Found model data:`, {
-      firstname: model.firstname,
-      lastname: model.lastname,
-      country: model.country,
-      userFullname: model.user.fullname
-    });
-
-    // Extract text from front of ID document
-    console.log(`[${token}] Extracting text from front document: ${front.bucket}/${front.key}`);
     const frontTextCommand = new DetectTextCommand({
       Image: {
         S3Object: {
@@ -217,16 +214,14 @@ const ProcessNameMatching = async (
     });
 
     const frontTextResponse = await rekognitionClient.send(frontTextCommand);
-    const frontTexts = frontTextResponse.TextDetections?.map(
-      (detection) => detection.DetectedText || ""
-    ).filter(text => text.trim().length > 0) || [];
-
-    console.log(`[${token}] Extracted ${frontTexts.length} text elements from front`);
+    const frontTexts =
+      frontTextResponse.TextDetections?.map(
+        (detection) => detection.DetectedText || "",
+      ).filter((text) => text.trim().length > 0) || [];
 
     // Extract text from back of ID document if available
     let backTexts: string[] = [];
     if (back) {
-      console.log(`[${token}] Extracting text from back document: ${back.bucket}/${back.key}`);
       const backTextCommand = new DetectTextCommand({
         Image: {
           S3Object: {
@@ -237,39 +232,36 @@ const ProcessNameMatching = async (
       });
 
       const backTextResponse = await rekognitionClient.send(backTextCommand);
-      backTexts = backTextResponse.TextDetections?.map(
-        (detection) => detection.DetectedText || ""
-      ).filter(text => text.trim().length > 0) || [];
-
-      console.log(`[${token}] Extracted ${backTexts.length} text elements from back`);
+      backTexts =
+        backTextResponse.TextDetections?.map(
+          (detection) => detection.DetectedText || "",
+        ).filter((text) => text.trim().length > 0) || [];
     }
 
     // Combine all detected texts
     const allDetectedTexts = [...frontTexts, ...backTexts];
-    console.log(`[${token}] Total detected texts:`, allDetectedTexts.slice(0, 10)); // Log first 10 for debugging
-
     if (allDetectedTexts.length === 0) {
       console.warn(`[${token}] No text detected from documents`);
       return {
         success: false,
-        message: "No text could be detected from the ID document. Please ensure the image is clear and well-lit.",
+        message:
+          "No text could be detected from the ID document. Please ensure the image is clear and well-lit.",
       };
     }
 
     // Extract names from the document
-    console.log(`[${token}] Extracting names from detected text...`);
-    const extractedNames = extractNamesFromDocument(allDetectedTexts, model.country);
-    console.log(`[${token}] Extracted names:`, extractedNames);
-
+    const extractedNames = extractNamesFromDocument(
+      allDetectedTexts,
+      model.country,
+    );
     if (extractedNames.length === 0) {
       console.warn(`[${token}] No names extracted from document text`);
       return {
         success: false,
-        message: "No names could be extracted from the ID document. Please ensure the name fields are clearly visible.",
+        message:
+          "No names could be extracted from the ID document. Please ensure the name fields are clearly visible.",
       };
     }
-
-    console.log(`[${token}] Performing name matching...`);
 
     // Perform name matching
     const nameMatchResult = NameMatchingService.matchNames(
@@ -277,10 +269,8 @@ const ProcessNameMatching = async (
       model.lastname,
       model.user.fullname,
       extractedNames,
-      0.75 // Slightly more lenient for international names
+      0.75, // Slightly more lenient for international names
     );
-
-    console.log(`[${token}] Name matching result:`, nameMatchResult);
 
     if (!nameMatchResult.isMatch) {
       console.warn(`[${token}] Name matching failed`);
@@ -291,20 +281,20 @@ const ProcessNameMatching = async (
     }
 
     if (nameMatchResult.confidence < 0.6) {
-      console.warn(`[${token}] Name matching confidence too low: ${nameMatchResult.confidence}`);
+      console.warn(
+        `[${token}] Name matching confidence too low: ${nameMatchResult.confidence}`,
+      );
       return {
         success: false,
         message: `Name verification confidence too low (${Math.round(nameMatchResult.confidence * 100)}%). Please ensure your ID document clearly shows your name.`,
       };
     }
 
-    console.log(`[${token}] Name matching successful with confidence: ${nameMatchResult.confidence}`);
     return {
       success: true,
       message: `Name verification successful with ${Math.round(nameMatchResult.confidence * 100)}% confidence`,
       confidence: nameMatchResult.confidence,
     };
-
   } catch (error: any) {
     console.error(`[${token}] Name matching error:`, error);
     return {
@@ -318,17 +308,25 @@ const AwsVerificationWorker = new Worker(
   "aws-verification",
   async (job) => {
     const { front, faceVideo, back, token } = job.data;
-    console.log(`[${token}] Starting verification job ${job.id}`);
 
     try {
       // Step 1: Face comparison
-      console.log(`[${token}] Step 1: Starting face comparison...`);
-      const faceVerificationResult = await ProcessFaceComparison(front, faceVideo, back);
-      console.log(`[${token}] Face verification result:`, faceVerificationResult);
+      const faceVerificationResult = await ProcessFaceComparison(
+        front,
+        faceVideo,
+        back,
+      );
 
       if (!faceVerificationResult.success) {
-        console.log(`[${token}] Face verification failed, updating status...`);
-        await UpdateVerificationStatus(token, faceVerificationResult, front, faceVideo);
+        console.error(
+          `[${token}] Face verification failed, updating status...`,
+        );
+        await UpdateVerificationStatus(
+          token,
+          faceVerificationResult,
+          front,
+          faceVideo,
+        );
         return {
           error: true,
           message: faceVerificationResult.message,
@@ -336,26 +334,31 @@ const AwsVerificationWorker = new Worker(
       }
 
       // Step 2: Name matching verification (with fallback)
-      console.log(`[${token}] Step 2: Starting name matching...`);
       let nameMatchingResult;
       let nameVerificationEnabled = true;
 
       try {
         nameMatchingResult = await ProcessNameMatching(front, back, token);
-        console.log(`[${token}] Name matching result:`, nameMatchingResult);
       } catch (nameError) {
-        console.error(`[${token}] Name matching failed with error, proceeding with face-only verification:`, nameError);
+        console.error(
+          `[${token}] Name matching failed with error, proceeding with face-only verification:`,
+          nameError,
+        );
         nameVerificationEnabled = false;
         nameMatchingResult = {
           success: true,
           message: "Name verification skipped due to technical issue",
-          confidence: 0.5
+          confidence: 0.5,
         };
       }
 
       if (nameVerificationEnabled && !nameMatchingResult.success) {
-        console.log(`[${token}] Name matching failed, updating status...`);
-        await UpdateVerificationStatus(token, nameMatchingResult, front, faceVideo);
+        await UpdateVerificationStatus(
+          token,
+          nameMatchingResult,
+          front,
+          faceVideo,
+        );
         return {
           error: true,
           message: nameMatchingResult.message,
@@ -369,18 +372,19 @@ const AwsVerificationWorker = new Worker(
           ? `Verification successful. Face verification: ${Math.round((faceVerificationResult.confidence || 0) * 100)}%, Name verification: ${Math.round((nameMatchingResult.confidence || 0) * 100)}%`
           : `Verification successful with face verification only: ${Math.round((faceVerificationResult.confidence || 0) * 100)}%`,
         confidence: nameVerificationEnabled
-          ? Math.min(faceVerificationResult.confidence || 0, nameMatchingResult.confidence || 0)
-          : faceVerificationResult.confidence || 0
+          ? Math.min(
+              faceVerificationResult.confidence || 0,
+              nameMatchingResult.confidence || 0,
+            )
+          : faceVerificationResult.confidence || 0,
       };
 
-      console.log(`[${token}] Both verifications passed, updating final status...`);
       const result = await UpdateVerificationStatus(
         token,
         combinedResult,
         front,
-        faceVideo
+        faceVideo,
       );
-      console.log(`[${token}] Final result:`, result);
 
       if (result.error) {
         return {
@@ -389,7 +393,6 @@ const AwsVerificationWorker = new Worker(
         };
       }
 
-      console.log(`[${token}] Verification job completed successfully!`);
       return {
         error: false,
         message: "Verification successful",
@@ -399,16 +402,15 @@ const AwsVerificationWorker = new Worker(
       throw new Error(error.message);
     }
   },
-  { connection: redis }
+  { connection: redis },
 );
 
 AwsVerificationWorker.on("failed", (job) =>
   console.log(
-    `${job?.name} - with ID ${job?.id} Failed cause ${job?.failedReason}`
-  )
+    `${job?.name} - with ID ${job?.id} Failed cause ${job?.failedReason}`,
+  ),
 );
 AwsVerificationWorker.on("completed", (job) => {
-  console.log(`Job ${job.id} completed!`);
   // Handle the completion of the job
 });
 

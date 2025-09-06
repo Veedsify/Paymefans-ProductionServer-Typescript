@@ -9,7 +9,6 @@ const connectDB = async () => {
       socketTimeoutMS: 45000,
       retryWrites: true,
     });
-    console.log(`MongoDB Connected: ${conn.connection.host}`);
     return conn;
   } catch (error: any) {
     console.error(`MongoDB connection error: ${error.message}`);
@@ -28,7 +27,4 @@ mongo.once("open", () => {
   console.log("MongoDB connected successfully");
 });
 
-export {
-  connectDB,
-  mongo,
-};
+export { connectDB, mongo };

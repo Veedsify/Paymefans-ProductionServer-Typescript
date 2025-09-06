@@ -35,9 +35,6 @@ const automatedMessageWorker = new Worker(
 
     try {
       await sendAutomatedMessage(senderId, receiverId, messageData);
-      console.log(
-        `Automated ${messageType} message sent from user ${senderId} to user ${receiverId}`,
-      );
     } catch (error) {
       console.error("Error processing automated message job:", error);
       throw error;

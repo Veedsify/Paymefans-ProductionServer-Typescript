@@ -5,45 +5,43 @@ import { MentionService } from "@services/MentionService";
 
 // Create the mention notification queue
 export const MentionNotificationQueue = new Queue("mentionNotification", {
-    connection: redis,
-    defaultJobOptions: {
-        removeOnComplete: true,
-        removeOnFail: true,
-    }
+  connection: redis,
+  defaultJobOptions: {
+    removeOnComplete: true,
+    removeOnFail: true,
+  },
 });
 
 // Create worker to process mention notifications
 const mentionWorker = new Worker(
-    "mentionNotification",
-    async (job: Job<MentionJobData>) => {
-        const { mentions, mentioner, type, contentId, content } = job.data;
+  "mentionNotification",
+  async (job: Job<MentionJobData>) => {
+    const { mentions, mentioner, type, contentId, content } = job.data;
 
-        try {
-            await MentionService.processMentions({
-                mentions,
-                mentioner,
-                type,
-                contentId,
-                content,
-            });
-
-            console.log(`Processed ${mentions.length} mention notifications for ${type} ${contentId}`);
-        } catch (error) {
-            console.error("Error processing mention notifications:", error);
-            throw error;
-        }
-    },
-    {
-        connection: redis,
+    try {
+      await MentionService.processMentions({
+        mentions,
+        mentioner,
+        type,
+        contentId,
+        content,
+      });
+    } catch (error) {
+      console.error("Error processing mention notifications:", error);
+      throw error;
     }
+  },
+  {
+    connection: redis,
+  },
 );
 
 mentionWorker.on("completed", (job) => {
-    console.log(`Mention notification job ${job.id} completed`);
+  console.log(`Mention notification job ${job.id} completed`);
 });
 
 mentionWorker.on("failed", (job, err) => {
-    console.error(`Mention notification job ${job?.id} failed:`, err);
+  console.error(`Mention notification job ${job?.id} failed:`, err);
 });
 
 export { mentionWorker };

@@ -1,9 +1,13 @@
+import GenerateCloudflareSignedUrl from "@libs/GenerateSignedUrls";
 import { getDuration } from "@libs/GetVideoDuration";
 import { UploadImageToS3 } from "@libs/UploadImageToS3";
 import UploadVideoToS3 from "@libs/UploadVideoToS3";
 import type { UserStory } from "@prisma/client";
 import { GenerateUniqueId } from "@utils/GenerateUniqueId";
 import query from "@utils/prisma";
+import { config } from "config/config";
+import { nanoid } from "nanoid";
+import path from "path";
 import type {
   GetStoriesResponse,
   GetStoryMediaProps,
@@ -201,6 +205,13 @@ export default class StoryService {
           },
           skip: (validPage - 1) * validLimit,
           take: validLimit + 1,
+          include: {
+            post: {
+              select: {
+                watermark_enabled: true,
+              },
+            },
+          },
           orderBy: {
             created_at: "desc",
           },
@@ -211,11 +222,27 @@ export default class StoryService {
           media.pop();
         }
 
+        const mediaWithSignedUrls = await Promise.all(
+          media.map(async (m) => {
+            return {
+              ...m,
+              url:
+                m.media_type === "video"
+                  ? await GenerateCloudflareSignedUrl(
+                    m.media_id,
+                    m.media_type,
+                    m.url,
+                  )
+                  : m.url,
+            };
+          }),
+        );
+
         return {
           status: true,
           error: false,
           message: "Media retrieved successfully",
-          data: media,
+          data: mediaWithSignedUrls,
           hasMore: hasMore,
           total: mediaCount,
         };
@@ -250,7 +277,10 @@ export default class StoryService {
           StoryMedia: {
             create: stories.map((story, index) => {
               return {
-                media_id: `MED${GenerateUniqueId()}`,
+                media_id:
+                  story.media_type === "image"
+                    ? `MED${GenerateUniqueId()}`
+                    : story.media_id,
                 media_type: story.media_type,
                 filename: story.media_url,
                 media_url: story.media_url,
@@ -281,14 +311,20 @@ export default class StoryService {
   // Upload Story
   static async UploadStory({
     files,
+    user,
   }: UploadStoryProps): Promise<UploadStoryResponse> {
     try {
       const fileUploads = files.map(async (file) => {
-        const s3Key = `stories/videos/${file.filename}`;
+        const filename = nanoid(10)
+        const username = user.username.replace("@", "")
+        const s3Key = `${username}/${String(filename) + path.extname(file.originalname || file.filename)}`;
+        const s3KeyProcessedOutput = `videos/${filename}/${filename}.m3u8`;
+        const cloudfrontUrl = `${config.storyCloudfrontUrl}/${s3KeyProcessedOutput}`;
         if (file.mimetype.includes("video")) {
-          await UploadVideoToS3(file, s3Key, "test");
+          await UploadVideoToS3(file, s3Key, "test", config.storyVideoBucket);
+          console.log("Video uploaded", cloudfrontUrl);
           return {
-            filename: `${process.env.AWS_CLOUDFRONT_URL}/${s3Key}`,
+            filename: cloudfrontUrl,
             mimetype: file.mimetype,
           };
         }
@@ -307,6 +343,7 @@ export default class StoryService {
                 height: null,
               },
               saveToDb: true,
+              bucket: config.storyImageBucket,
               onUploadComplete: async (url) => {
                 resolve({
                   filename: url,
