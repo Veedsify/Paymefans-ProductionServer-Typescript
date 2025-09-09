@@ -377,6 +377,18 @@ class ProfileService {
           }),
         );
       }
+
+      if (bodyUsername !== user.username) {
+        queries.push(
+          query.oldUsername.create({
+            data: {
+              user_id: user.id,
+              old_username: user.username || "",
+            }
+          })
+        )
+      }
+
       if (queries.length) await query.$transaction(queries);
 
       return { error: false, message: "Profile updated successfully" };
@@ -597,9 +609,9 @@ class ProfileService {
       );
       const followingRelations = otherUserIds.length
         ? await query.follow.findMany({
-            where: { follower_id: user.id, user_id: { in: otherUserIds } },
-            select: { user_id: true },
-          })
+          where: { follower_id: user.id, user_id: { in: otherUserIds } },
+          select: { user_id: true },
+        })
         : [];
 
       const followingSet = new Set(followingRelations.map((f) => f.user_id));

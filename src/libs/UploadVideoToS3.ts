@@ -1,15 +1,12 @@
 import s3 from "@utils/s3";
 import fs from "fs";
 import { Upload } from "@aws-sdk/lib-storage";
-import IoInstance from "@libs/io";
 
 const UploadVideoToS3 = async (
   file: Express.Multer.File,
   s3Key: string,
-  socketChannel: string,
   bucket: string | undefined,
 ) => {
-  const io = IoInstance.getIO();
   return new Promise(async (resolve, reject) => {
     try {
       const fileStream = fs.createReadStream(file.path);
@@ -37,11 +34,6 @@ const UploadVideoToS3 = async (
       const parallelUpload = new Upload(uploadParams);
 
       parallelUpload.on("httpUploadProgress", (progress) => {
-        // Emit progress to the socket channel
-        io.to(socketChannel).emit("uploadProgress", {
-          progress: progress.loaded,
-          total: progress.total,
-        });
         console.log(
           `Uploaded ${progress.loaded} bytes out of ${progress.total}`,
         );

@@ -7,9 +7,15 @@ export default class SettingsController {
     res: Response,
   ): Promise<any> {
     try {
+      const user = req.user as AuthUser;
+      if (!user) {
+        res.status(401).json({ message: "Unauthorized" });
+        return;
+      }
       const profileChange = await SettingsService.SettingsProfileChange(
         req.body,
-        req.user?.id!,
+        user.id,
+        user.username,
       );
       if (profileChange.error) {
         res

@@ -21,19 +21,20 @@ export default class SettingsService {
   static async SettingsProfileChange(
     body: SettingProfileProps,
     userId: number,
+    userName: string,
   ): Promise<SettingsProfileChangeResponse> {
     try {
       const { name, location, bio, website, email, username } = body;
       return await query.$transaction(async (tx) => {
-        const checkEmail = await tx.user.findUnique({
+        const checkUser = await tx.user.findUnique({
           where: {
             username: username,
           },
         });
-        if (checkEmail && checkEmail.id !== userId) {
+        if (checkUser && checkUser.id !== userId) {
           return {
             error: true,
-            message: "Email already exists",
+            message: "Username already exists",
           };
         }
         await tx.user.update({
@@ -49,6 +50,14 @@ export default class SettingsService {
             website,
           },
         });
+
+        await tx.oldUsername.create({
+          data: {
+            user_id: userId,
+            old_username: userName || "",
+          }
+        })
+
         return {
           error: false,
           message: "Profile Updated Successfully",
@@ -283,7 +292,7 @@ export default class SettingsService {
   }
 
 
-  static async GetUserSettings(userId: number) { 
+  static async GetUserSettings(userId: number) {
     try {
       const settings = await query.settings.findUnique({
         where: { user_id: userId },

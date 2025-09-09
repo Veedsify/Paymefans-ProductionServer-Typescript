@@ -309,70 +309,13 @@ export default class StoryService {
     }
   }
   // Upload Story
-  static async UploadStory({
-    files,
-    user,
-  }: UploadStoryProps): Promise<UploadStoryResponse> {
-    try {
-      const fileUploads = files.map(async (file) => {
-        const filename = nanoid(10)
-        const username = user.username.replace("@", "")
-        const s3Key = `${username}/${String(filename) + path.extname(file.originalname || file.filename)}`;
-        const s3KeyProcessedOutput = `videos/${filename}/${filename}.m3u8`;
-        const cloudfrontUrl = `${config.storyCloudfrontUrl}/${s3KeyProcessedOutput}`;
-        if (file.mimetype.includes("video")) {
-          await UploadVideoToS3(file, s3Key, "test", config.storyVideoBucket);
-          console.log("Video uploaded", cloudfrontUrl);
-          return {
-            filename: cloudfrontUrl,
-            mimetype: file.mimetype,
-          };
-        }
-        return await new Promise<{ filename: string; mimetype: string }>(
-          async (resolve, _) => {
-            return await UploadImageToS3({
-              file,
-              contentType: file.mimetype,
-              folder: "stories",
-              format: "webp",
-              quality: 100,
-              resize: {
-                width: 1200,
-                fit: "cover",
-                position: "center",
-                height: null,
-              },
-              saveToDb: true,
-              bucket: config.storyImageBucket,
-              onUploadComplete: async (url) => {
-                resolve({
-                  filename: url,
-                  mimetype: file.mimetype,
-                });
-              },
-            });
-          },
-        );
-      });
-
-      const results = await Promise.all(fileUploads);
-
-      const uploadedFiles = results.map((file) => {
-        return {
-          filename: file.filename,
-          mimetype: file.mimetype,
-        };
-      });
-
-      return {
-        error: false,
-        data: uploadedFiles,
-      };
-    } catch (error) {
-      console.log(error);
-      throw new Error("An error occurred while uploading stories");
-    }
-  }
+  // static async UploadStory({
+  //   files,
+  //   user,
+  // }: UploadStoryProps): Promise<UploadStoryResponse> {
+  //   // This method is deprecated. Upload is now handled directly in the controller with multer-s3.
+  //   throw new Error("UploadStory method is deprecated");
+  // }
 
   // View Story
   static async ViewStory({

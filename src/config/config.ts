@@ -8,5 +8,5 @@ export const config = {
   storyProcessedVideoBucket: process.env.S3_STORY_PROCESSED_BUCKET,
   // AWS CLOUDFRONTS
   mainCloudfrontUrl: process.env.AWS_CLOUDFRONT_URL,
-  storyCloudfrontUrl: process.env.AWS_STORY_BUCKET_CLOUDFRONT_URL,
+  processedCloudfrontUrl: process.env.AWS_PROCESSED_CLOUDFRONT_URL,
 } as const;

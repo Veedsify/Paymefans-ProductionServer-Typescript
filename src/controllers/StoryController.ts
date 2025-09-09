@@ -1,4 +1,5 @@
 import StoryService from "@services/StoryService";
+import { config } from "config/config";
 import type { Request, Response } from "express";
 import type { StoryType } from "types/story";
 import type { AuthUser } from "types/user";
@@ -64,14 +65,20 @@ export default class StoryController {
   // Upload Story
   static async UploadStory(req: Request, res: Response): Promise<any> {
     try {
-      const storyUpload = await StoryService.UploadStory({
-        files: req.files as Express.Multer.File[],
-        user: req.user as AuthUser,
+      const files = req.files as any[];
+      console.log('Uploaded files:', files);
+      const uploadedFiles = files.map((file) => {
+        const isVideo = file.mimetype.startsWith('video/');
+        const cloudfrontUrl = isVideo ? `${config.processedCloudfrontUrl}/${file.key.split(".").slice(0, -1).join(".")}.mp4` : `${config.mainCloudfrontUrl}/${file.key}`;
+        return {
+          url: cloudfrontUrl,
+          mimetype: file.mimetype,
+          filename: file.originalname,
+          media_id: file.key,
+          size: file.size,
+        };
       });
-      if (storyUpload.error) {
-        return res.status(400).json(storyUpload);
-      }
-      res.status(200).json({ ...storyUpload });
+      res.status(200).json({ error: false, data: uploadedFiles });
     } catch (error: any) {
       console.log(error);
       res.status(500).json({
