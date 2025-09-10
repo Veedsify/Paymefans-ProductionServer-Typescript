@@ -232,7 +232,6 @@ app.use((err: any, req: Request, res: Response, next: NextFunction): any => {
     });
   }
 
-  console.error(`Error occurred: ${err.message}`);
   if (res.headersSent) {
     return next(err);
   }
