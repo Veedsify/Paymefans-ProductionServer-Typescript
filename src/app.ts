@@ -196,7 +196,7 @@ app.use(express.json({ limit: "10mb" })); // Limit JSON payload size
 // Basic route with specific rate limiting for auth routes
 app.use(Paths.API.Base + Paths.API.Auth.Base, authLimiter, auth); // Apply strict auth limiting to auth routes
 app.use(Paths.API.Base, apiLimiter, api);
-app.use("/admin", admin);
+app.use(Paths.ADMIN.Base, admin);
 //Bullmq For Emails,
 
 // 404 handler for undefined routes

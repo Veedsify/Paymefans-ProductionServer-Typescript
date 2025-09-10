@@ -7,6 +7,9 @@ const Paths = {
   CONFIG: __dirname + "/../config",
   LOGS: __dirname + "/../logs",
 
+  ADMIN: {
+    Base: "/admin",
+  },
   // API Endpoints
   API: {
     Base: "/api",
