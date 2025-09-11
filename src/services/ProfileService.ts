@@ -29,74 +29,93 @@ class ProfileService {
     authUserId: number,
   ): Promise<ProfileServiceResponse> {
     try {
-      if (!username)
+      if (!username) {
         return {
           message: "User not found",
           status: false,
           user: undefined,
           profileImpressions: 0,
         };
-      const user_name = username.replace(/%40/g, "@");
-      const user = await query.user.findFirst({
-        where: { username: user_name },
-        select: {
-          id: true,
-          username: true,
-          name: true,
-          fullname: true,
-          user_id: true,
-          admin: true,
-          role: true,
-          is_active: true,
-          is_model: true,
-          is_verified: true,
-          website: true,
-          country: true,
-          location: true,
-          city: true,
-          zip: true,
-          active_status: true,
-          show_active: true,
-          post_watermark: true,
-          total_followers: true,
-          total_following: true,
-          total_subscribers: true,
-          email: true,
-          profile_image: true,
-          profile_banner: true,
-          bio: true,
-          flags: true,
-          created_at: true,
-          Settings: {
-            select: {
-              telegram_url: true,
-              facebook_url: true,
-              instagram_url: true,
-              twitter_url: true,
-              tiktok_url: true,
-              youtube_url: true,
-              snapchat_url: true,
-            },
-          },
-          Subscribers: {
-            select: { subscriber_id: true },
+      }
+
+      const userSelect = {
+        id: true,
+        username: true,
+        name: true,
+        fullname: true,
+        user_id: true,
+        admin: true,
+        role: true,
+        is_active: true,
+        is_model: true,
+        is_verified: true,
+        website: true,
+        country: true,
+        location: true,
+        city: true,
+        zip: true,
+        active_status: true,
+        show_active: true,
+        post_watermark: true,
+        total_followers: true,
+        total_following: true,
+        total_subscribers: true,
+        email: true,
+        profile_image: true,
+        profile_banner: true,
+        bio: true,
+        flags: true,
+        created_at: true,
+        Settings: {
+          select: {
+            telegram_url: true,
+            facebook_url: true,
+            instagram_url: true,
+            twitter_url: true,
+            tiktok_url: true,
+            youtube_url: true,
+            snapchat_url: true,
           },
         },
+        Subscribers: {
+          select: { subscriber_id: true },
+        },
+      };
+
+      const user_name = username.replace(/%40/g, "@");
+
+      // Run both lookups in one transaction
+      const [getUser, oldUser] = await query.$transaction(async (tx) => {
+        const user = await tx.user.findFirst({
+          where: { username: user_name },
+          select: userSelect,
+        });
+        const oldUser = await tx.oldUsername.findFirst({
+          where: { old_username: user_name },
+          select: {
+            id: true,
+            old_username: true,
+            user: { select: userSelect },
+          },
+        });
+        return [user, oldUser];
       });
 
-      if (!user)
+      console.log(getUser);
+
+      let user = getUser ?? oldUser?.user;
+
+      if (!user) {
         return {
           message: "User not found",
           status: false,
           profileImpressions: 0,
         };
+      }
 
-      const checkFlags = RBAC.checkUserFlag(
-        user.flags,
-        Permissions.PROFILE_HIDDEN,
-      );
-
-      if (checkFlags && user.id !== authUserId) {
+      // Hidden profile check
+      const hidden = RBAC.checkUserFlag(user.flags, Permissions.PROFILE_HIDDEN);
+      if (hidden && user.id !== authUserId) {
         return {
           message: "User profile is hidden",
           status: false,
@@ -104,17 +123,12 @@ class ProfileService {
           user: undefined,
         };
       }
-      // Check if either user has blocked the other
-      const [theyBlockedMe] = await Promise.all([
-        // query.userBlock.findFirst({
-        //   where: { blocker_id: authUserId, blocked_id: user.id },
-        // }),
-        query.userBlock.findFirst({
-          where: { blocker_id: user.id, blocked_id: authUserId },
-        }),
-      ]);
 
-      // If the profile user blocked the requesting user, return user not found
+      // Check if they blocked me
+      const theyBlockedMe = await query.userBlock.findFirst({
+        where: { blocker_id: user.id, blocked_id: authUserId },
+      });
+
       if (theyBlockedMe) {
         return {
           message: "User not found",
@@ -123,33 +137,29 @@ class ProfileService {
         };
       }
 
-      // Batch follow checks
-      const [iFollowThem, theyFollowMe] = await Promise.all([
+      // Run follow checks + impressions in one transaction
+      const [iFollowThem, theyFollowMe, impression] = await query.$transaction([
         query.follow.findFirst({
           where: { follower_id: authUserId, user_id: user.id },
         }),
         query.follow.findFirst({
           where: { user_id: authUserId, follower_id: user.id },
         }),
+        query.profileView.count({
+          where: { profile_id: user.id },
+        }),
       ]);
 
-      const impression = await query.profileView.count({
-        where: {
-          profile_id: user.id,
-        },
-      });
-
-      const response = {
+      return {
         message: "User found",
         status: true,
         profileImpressions: impression,
         user: {
           ...user,
-          isFollowing: !authUserId ? false : !!iFollowThem,
-          followsYou: !authUserId ? false : !!theyFollowMe,
+          isFollowing: !!authUserId && !!iFollowThem,
+          followsYou: !!authUserId && !!theyFollowMe,
         },
       };
-      return response;
     } catch (error: any) {
       throw new Error(error.message);
     }
@@ -384,9 +394,9 @@ class ProfileService {
             data: {
               user_id: user.id,
               old_username: user.username || "",
-            }
-          })
-        )
+            },
+          }),
+        );
       }
 
       if (queries.length) await query.$transaction(queries);
@@ -609,9 +619,9 @@ class ProfileService {
       );
       const followingRelations = otherUserIds.length
         ? await query.follow.findMany({
-          where: { follower_id: user.id, user_id: { in: otherUserIds } },
-          select: { user_id: true },
-        })
+            where: { follower_id: user.id, user_id: { in: otherUserIds } },
+            select: { user_id: true },
+          })
         : [];
 
       const followingSet = new Set(followingRelations.map((f) => f.user_id));
