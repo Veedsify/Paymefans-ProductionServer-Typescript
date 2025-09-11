@@ -161,6 +161,7 @@ class ProfileService {
         },
       };
     } catch (error: any) {
+      console.error("Profile service error:", error);
       throw new Error(error.message);
     }
   }

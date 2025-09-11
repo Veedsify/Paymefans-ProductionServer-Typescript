@@ -17,8 +17,7 @@ export default async function ProfileViewsMiddleware(
   });
 
   if (!user) {
-    res.status(404).json({ message: "User not found", status: false });
-    return;
+    return next();
   }
 
   await query.profileView.create({

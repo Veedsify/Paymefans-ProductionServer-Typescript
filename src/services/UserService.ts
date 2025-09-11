@@ -11,7 +11,9 @@ import query from "@utils/prisma";
 import LoginHistoryService from "./LoginHistory";
 
 export default class UserService {
-  static async GetUserJwtPayload(email: string): Promise<UserJwtPayloadResponse | null> {
+  static async GetUserJwtPayload(
+    email: string,
+  ): Promise<UserJwtPayloadResponse | null> {
     try {
       const user = await query.user.findFirst({
         where: {
@@ -53,11 +55,56 @@ export default class UserService {
         where: {
           id: userid,
         },
-        include: {
-          UserPoints: true,
-          UserWallet: true,
+        select: {
+          id: true,
+          user_id: true,
+          name: true,
+          username: true,
+          is_model: true,
+          bio: true,
+          is_active: true,
+          is_verified: true,
+          profile_banner: true,
+          profile_image: true,
+          location: true,
+          website: true,
+          country: true,
+          state: true,
+          active_status: true,
+          watermarkEnabled: true,
+          total_followers: true,
+          total_following: true,
+          total_subscribers: true,
+          show_active: true,
+          UserPoints: {
+            select: {
+              id: true,
+              user_id: true,
+              points: true,
+            },
+          },
+          UserWallet: {
+            select: {
+              id: true,
+              user_id: true,
+              balance: true,
+            },
+          },
           Settings: true,
-          Model: true,
+          Model: {
+            select: {
+              id: true,
+              firstname: true,
+              lastname: true,
+              user_id: true,
+              gender: true,
+              country: true,
+              hookup: true,
+              verification_status: true,
+              verification_state: true,
+              watermark: true,
+            },
+          },
         },
       });
 

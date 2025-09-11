@@ -8,8 +8,13 @@ class ProfileController {
     try {
       const authUserId = req.user?.id as number;
       const username = req.body.username as string;
+      if (!username) {
+        return res
+          .status(400)
+          .json({ message: "Username is required", status: false });
+      }
       const user = await ProfileService.Profile(username, authUserId);
-      if (!user.status) {
+      if (!user || !user.status) {
         return res.status(400).json(user);
       }
       res.json(user);
