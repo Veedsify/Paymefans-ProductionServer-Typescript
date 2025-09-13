@@ -15,7 +15,6 @@ import { connectDB } from "@utils/mongodb";
 import cookieParser from "cookie-parser";
 import InitializeQueueJobs from "@libs/InitializeQueueJobs";
 import { CronJobService } from "@services/CronJobService";
-import compression from "compression";
 import rateLimit from "express-rate-limit";
 import slowDown from "express-slow-down";
 import helmet from "helmet";
@@ -139,24 +138,11 @@ const speedLimiter = slowDown({
   maxDelayMs: 2000, // maximum delay of 2 seconds
 });
 
-// Apply general rate limiting to all requests
+// // Apply general rate limiting to all requests
 app.use(generalLimiter);
 
-// Apply speed limiting to all requests
+// // Apply speed limiting to all requests
 app.use(speedLimiter);
-
-// ShrinkRay - Compression middleware
-app.use(compression({ filter: shouldCompress }));
-
-function shouldCompress(req: Request, res: Response) {
-  if (req.headers["x-no-compression"]) {
-    // don't compress responses with this request header
-    return false;
-  }
-
-  // fallback to standard filter function
-  return compression.filter(req, res);
-}
 
 // Cookie parser
 app.use(cookieParser());
@@ -164,12 +150,20 @@ app.use(cookieParser());
 // Cors Origins
 const origins = [VERIFICATION_URL!, ADMIN_PANEL_URL!, APP_URL!].filter(Boolean);
 
-// Cors
+// CORS configuration
 app.use(
   cors({
     origin: origins,
     credentials: true,
     optionsSuccessStatus: 200,
+    allowedHeaders: [
+      "Content-Type",
+      "Authorization",
+      "x-csrf-token",
+      "Accept",
+      "Cache-Control",
+      "Last-Event-ID",
+    ],
   }),
 );
 

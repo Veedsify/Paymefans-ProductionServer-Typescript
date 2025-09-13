@@ -27,9 +27,10 @@ import hookup from "@routes/users/hookup/hookup";
 import report from "@routes/users/report/report";
 import automatedMessages from "@routes/users/automated-messages/automated-messages";
 import block from "@routes/users/block/block";
-import wishlist from "@routes/wishlist";
 import support from "./users/support/support";
 import Paths from "@utils/paths";
+import wishlist from "./users/wishlist/wishlist";
+import events from "./users/events/events";
 const api = express.Router();
 
 // Feeds
@@ -94,4 +95,13 @@ api.use("/block", block);
 api.use("/wishlist", wishlist);
 // Support
 api.use("/support", support);
+// Events (For SSE)
+api.use(
+  "/events",
+  (_, res, next) => {
+    res.setHeader("Content-Encoding", "identity");
+    next();
+  },
+  events,
+);
 export default api;

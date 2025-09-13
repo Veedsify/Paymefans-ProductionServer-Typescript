@@ -1,8 +1,10 @@
 import StoryService from "@services/StoryService";
+import query from "@utils/prisma";
 import { config } from "config/config";
 import type { Request, Response } from "express";
 import type { StoryType } from "types/story";
 import type { AuthUser } from "types/user";
+import { v4 as uuid } from "uuid";
 
 export default class StoryController {
   //Get Stories from the database
@@ -66,19 +68,80 @@ export default class StoryController {
   static async UploadStory(req: Request, res: Response): Promise<any> {
     try {
       const files = req.files as any[];
-      console.log('Uploaded files:', files);
-      const uploadedFiles = files.map((file) => {
-        const isVideo = file.mimetype.startsWith('video/');
-        const cloudfrontUrl = isVideo ? `${config.processedCloudfrontUrl}/${file.key.split(".").slice(0, -1).join(".")}.mp4` : `${config.mainCloudfrontUrl}/${file.key}`;
+      const transaction = await query.$transaction(async (tx) => {
+        const uploadedFiles = files.map(async (file) => {
+          const isVideo = file.mimetype.startsWith("video/");
+          const media_id = uuid();
+          const cloudfrontUrl = isVideo
+            ? `${config.processedCloudfrontUrl}/${file.key
+                .split(".")
+                .slice(0, -1)
+                .join(".")}.mp4`
+            : `${config.mainCloudfrontUrl}/${file.key}`;
+          await tx.uploadedMedia.create({
+            data: {
+              user_id: (req.user as AuthUser).id,
+              media_id: media_id,
+              name: file.originalname,
+              type: isVideo ? "video" : "image",
+              url: cloudfrontUrl,
+              size: file.size,
+              extension: file.originalname.split(".").slice(-1)[0],
+              key: file.key,
+            },
+          });
+          return {
+            url: cloudfrontUrl,
+            mimetype: file.mimetype,
+            filename: file.originalname,
+            media_state: isVideo ? "processing" : "completed",
+            media_id: media_id,
+            size: file.size,
+          };
+        });
+        return Promise.all(uploadedFiles);
+      });
+      res.status(200).json({ error: false, data: transaction, status: true });
+    } catch (error: any) {
+      console.log("Transaction failed: ", error);
+      // Fallback to non-transactional upload in case of failure
+      return StoryController.FallbackUploadStory(req, res);
+    }
+  }
+
+  // Fallback Upload Story without transaction
+  static async FallbackUploadStory(req: Request, res: Response): Promise<any> {
+    try {
+      const files = req.files as any[];
+      const uploadedFiles = files.map(async (file) => {
+        const isVideo = file.mimetype.startsWith("video/");
+        const media_id = uuid();
+        const cloudfrontUrl = isVideo
+          ? `${config.processedCloudfrontUrl}/${file.key.split(".").slice(0, -1).join(".")}.mp4`
+          : `${config.mainCloudfrontUrl}/${file.key}`;
+        await query.uploadedMedia.create({
+          data: {
+            user_id: (req.user as AuthUser).id,
+            media_id: media_id,
+            name: file.originalname,
+            type: isVideo ? "video" : "image",
+            url: cloudfrontUrl,
+            size: file.size,
+            extension: file.originalname.split(".").slice(-1)[0],
+            key: file.key,
+          },
+        });
         return {
           url: cloudfrontUrl,
           mimetype: file.mimetype,
           filename: file.originalname,
-          media_id: file.key,
+          media_state: isVideo ? "processing" : "completed",
+          media_id: media_id,
           size: file.size,
         };
       });
-      res.status(200).json({ error: false, data: uploadedFiles });
+      const resolvedFiles = await Promise.all(uploadedFiles);
+      res.status(200).json({ error: false, data: resolvedFiles });
     } catch (error: any) {
       console.log(error);
       res.status(500).json({

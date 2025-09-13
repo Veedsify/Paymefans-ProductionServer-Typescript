@@ -13,6 +13,7 @@ import { scheduleWelcomeMessage } from "../jobs/WelcomeMessageJob";
 import { countries } from "@libs/countries";
 import LoginService from "./LoginService";
 import { RBAC } from "@utils/FlagsConfig";
+import { customAlphabet } from "nanoid";
 
 export default class RegisterService {
   // Register New User
@@ -201,7 +202,16 @@ export default class RegisterService {
 
   // Create The User
   static async CreateUser(data: RegisterServiceProp): Promise<RegisteredUser> {
-    const uniqueUserId = GenerateUniqueId();
+    let uniqueUserId: string;
+    let exists = true;
+    const nanoid = customAlphabet("0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ", 6);
+    while (exists) {
+      uniqueUserId = nanoid();
+      const existingUser = await query.user.findUnique({
+        where: { user_id: uniqueUserId },
+      });
+      if (!existingUser) exists = false;
+    }
     const hashPass = await CreateHashedPassword(data.password);
     const walletId = `WL${GenerateUniqueId()}`;
     const subscriptionId = `SUB${GenerateUniqueId()}`;
@@ -245,7 +255,7 @@ export default class RegisterService {
               price_per_message: 0,
               enable_free_message: true,
               subscription_price: 0,
-              two_factor_auth: false,
+              two_factor_auth: true,
               subscription_duration: "1 month",
               subscription_type: "free",
             },

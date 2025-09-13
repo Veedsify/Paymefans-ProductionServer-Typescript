@@ -7,5 +7,9 @@ webhooks.post(
   WebhookController.ProcessedMedia,
 );
 webhooks.get("/model-signup-callback", WebhookController.ModelSignupCallback);
+webhooks.post(
+  "/media-processing-complete",
+  WebhookController.MediaProcessingComplete,
+);
 
 export default webhooks;

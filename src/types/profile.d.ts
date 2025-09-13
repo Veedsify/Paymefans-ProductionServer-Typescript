@@ -86,3 +86,12 @@ export interface ProfileDataItem {
   id: number;
   [key: string]: any; // Extend with actual fields
 }
+
+export type CreatorDashboardData = {
+  data?: {
+    profileViews: number;
+    newFollowers: number;
+  };
+  error: boolean;
+  message?: string;
+};

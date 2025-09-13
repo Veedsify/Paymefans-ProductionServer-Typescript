@@ -127,6 +127,10 @@ model User {
   GroupInvitationsReceived  GroupInvitation[]           @relation("GroupInvitationsReceived")
   OldUsernames              OldUsername[]
   ConversationFreeMessages  ConversationFreeMessage[]
+  ReferralEarnings          ReferralEarnings[]
+  Referrals                 Referrals[]                 @relation("UserReferrals")
+  Referrer                  Referrals[]                 @relation("Referrer")
+  UploadedMedia             UploadedMedia[]
 }
 
 model Participants {
@@ -203,6 +207,24 @@ model Model {
   user                User                  @relation(fields: [user_id], references: [id], onDelete: Cascade)
 }
 
+model UploadedMedia {
+  id          Int        @id @default(autoincrement())
+  media_id    String     @unique
+  user_id     Int
+  key         String?
+  type        String
+  url         String?
+  name        String
+  size        Int?
+  extension   String?
+  media_state MediaState @default(processing)
+  created_at  DateTime   @default(now())
+  updated_at  DateTime   @updatedAt
+  user        User       @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id])
+}
+
 model UserMedia {
   id            Int        @id @default(autoincrement())
   media_id      String     @unique
@@ -259,6 +281,7 @@ model StoryMedia {
   story_content   String?
   duration        Int?
   user_id         Int
+  media_state     MediaState  @default(processing)
   created_at      DateTime    @default(now())
   updated_at      DateTime    @updatedAt
   captionElements Json?
@@ -1471,6 +1494,31 @@ model GroupInvitation {
   @@index([status])
 }
 
+model Referrals {
+  id          Int      @id @default(autoincrement())
+  user_id     Int
+  referral_id Int
+  code        String
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+  user        User     @relation("Referrer", fields: [user_id], references: [id], onDelete: Cascade)
+  referral    User     @relation("UserReferrals", fields: [referral_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id])
+}
+
+model ReferralEarnings {
+  id          Int      @id @default(autoincrement())
+  user_id     Int
+  points      Float
+  description String
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+  user        User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id])
+}
+
 enum WithdrawalRequestStatus {
   pending
   processing
@@ -1518,6 +1566,7 @@ enum TransactionType {
   credit
   debit
   pending
+  referral
 }
 
 enum NotificationTypes {
@@ -1542,6 +1591,7 @@ enum VerificationStateEnum {
 enum MediaState {
   processing
   completed
+  failed
 }
 
 enum GroupType {

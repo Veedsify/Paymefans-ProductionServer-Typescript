@@ -42,4 +42,9 @@ profile.delete(
   Auth,
   ProfileController.DeleteAccount,
 );
+profile.get(
+  Paths.API.Profile.CreatorDashboardData,
+  Auth,
+  ProfileController.CreatorDashboardData,
+);
 export default profile;

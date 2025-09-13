@@ -44,7 +44,6 @@ async function TriggerHookups(
 
     // Hookups are now fetched directly via HTTP API
     // This function can be safely removed or used for other purposes
-
     return hookups;
   } catch (error) {
     console.error("Error triggering hookups:", error);

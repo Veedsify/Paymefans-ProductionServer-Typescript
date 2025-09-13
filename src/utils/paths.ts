@@ -41,6 +41,7 @@ const Paths = {
       Action: "/action/:action/:userId",
       TipModel: "/tip/model",
       DeleteAccount: "/delete-account",
+      CreatorDashboardData: "/creator-dashboard-data",
     },
     Post: {
       Base: "/post",

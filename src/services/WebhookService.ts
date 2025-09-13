@@ -256,6 +256,30 @@ export class WebhookService {
       throw new Error(error.message);
     }
   }
+
+  // Handle Complete Media processing
+  static async HandleMediaProcessingComplete(
+    response: HandleCompleteMediaParams,
+  ): Promise<void> {
+    const mediaId = response.media_id;
+    const mediaRecord = await query.uploadedMedia.findUnique({
+      where: { media_id: String(mediaId) },
+    });
+
+    if (!mediaRecord) {
+      console.warn(`Uploaded media not found for ID ${mediaId}.`);
+      return;
+    }
+
+    await query.uploadedMedia.update({
+      where: { media_id: String(mediaId) },
+      data: {
+        media_state: "completed",
+      },
+    });
+
+    redis.publish(`media:processed:${mediaRecord.user_id}`, mediaId);
+  }
 }
 // Run processRetries every minute.
 setInterval(WebhookService.processRetries, 60000);

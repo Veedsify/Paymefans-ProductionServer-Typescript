@@ -48,6 +48,8 @@ export type StoryType = {
   media_url: string;
   media_id: string;
   caption?: string;
+  duration?: number;
+  media_state: "completed" | "processing" | "failed";
   captionElements?: CaptionElement[];
 };
 

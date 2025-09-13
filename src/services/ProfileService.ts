@@ -1,6 +1,7 @@
 import type { Request } from "express";
 import type {
   BannerChangeResponse,
+  CreatorDashboardData,
   ProfileDataItem,
   ProfileServiceResponse,
   ProfileStatsProps,
@@ -940,6 +941,62 @@ class ProfileService {
     } catch (error) {
       console.error("Error deleting account:", error);
       throw new Error("Error deleting account");
+    }
+  }
+
+  // Creator Dashboard Data
+  static async CreatorDashboardData(
+    userId: number,
+  ): Promise<CreatorDashboardData> {
+    try {
+      if (!userId || isNaN(userId)) {
+        return { message: "Invalid user ID", error: true };
+      }
+
+      const cacheKey = `creator_dashboard_${userId}`;
+      const cachedData = await redis.get(cacheKey);
+      if (cachedData) {
+        return {
+          message: "Creator dashboard data fetched successfully",
+          error: false,
+          data: JSON.parse(cachedData),
+        };
+      }
+
+      // Fetch necessary data in parallel
+      const [profileViews, newFollowers] = await Promise.all([
+        query.profileView.count({
+          where: {
+            profile_id: userId,
+            created_at: {
+              gte: new Date(new Date().setDate(new Date().getDate() - 30)), // Last 30 days
+            },
+          },
+        }),
+        query.follow.count({
+          where: {
+            user_id: userId,
+            created_at: {
+              gte: new Date(new Date().setDate(new Date().getDate() - 30)), // Last 30 days
+            },
+          },
+        }),
+      ]);
+
+      const data = { profileViews, newFollowers };
+      await redis.set(cacheKey, JSON.stringify(data), "EX", 300); // Cache for 5 minutes
+
+      return {
+        message: "Creator dashboard data fetched successfully",
+        error: false,
+        data: {
+          profileViews,
+          newFollowers,
+        },
+      };
+    } catch (err) {
+      console.error("Error fetching creator dashboard data:", err);
+      throw new Error("Error fetching creator dashboard data");
     }
   }
 }

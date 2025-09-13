@@ -32,6 +32,16 @@ class WebhookController {
       res.sendStatus(500);
     }
   }
+
+  static async MediaProcessingComplete(req: Request, res: Response) {
+    try {
+      await WebhookService.HandleMediaProcessingComplete(req.body);
+      res.sendStatus(200);
+    } catch (err) {
+      console.error(err);
+      res.sendStatus(500);
+    }
+  }
 }
 
 export default WebhookController;

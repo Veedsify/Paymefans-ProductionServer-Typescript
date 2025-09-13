@@ -126,6 +126,20 @@ class ProfileController {
       res.status(500).json({ error: "Error deleting account" });
     }
   }
+
+  // Creator Dashboard Data
+  static async CreatorDashboardData(req: Request, res: Response): Promise<any> {
+    try {
+      const data = await ProfileService.CreatorDashboardData(req.user!.id);
+      if (data.error) {
+        return res.status(400).json(data);
+      }
+      res.status(200).json(data);
+    } catch (error) {
+      console.error("Creator Dashboard Data error:", error);
+      res.status(500).json({ error: "Error fetching creator dashboard data" });
+    }
+  }
 }
 
 export default ProfileController;

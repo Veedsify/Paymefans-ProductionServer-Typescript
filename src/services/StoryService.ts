@@ -1,21 +1,12 @@
-import GenerateCloudflareSignedUrl from "@libs/GenerateSignedUrls";
-import { getDuration } from "@libs/GetVideoDuration";
-import { UploadImageToS3 } from "@libs/UploadImageToS3";
-import UploadVideoToS3 from "@libs/UploadVideoToS3";
 import type { UserStory } from "@prisma/client";
 import { GenerateUniqueId } from "@utils/GenerateUniqueId";
 import query from "@utils/prisma";
-import { config } from "config/config";
-import { nanoid } from "nanoid";
-import path from "path";
 import type {
   GetStoriesResponse,
   GetStoryMediaProps,
   GetStoryMediaResponse,
   SaveStoryProps,
   SaveStoryResponse,
-  UploadStoryProps,
-  UploadStoryResponse,
 } from "types/story";
 
 export default class StoryService {
@@ -190,9 +181,7 @@ export default class StoryService {
         const postCount = await prisma.post.findMany({
           where: { user_id: user.id },
         });
-
         const postIds = postCount.map((post) => post.id);
-
         const mediaCount = await prisma.userMedia.count({
           where: {
             post_id: { in: postIds },
@@ -202,6 +191,7 @@ export default class StoryService {
         const media = await prisma.userMedia.findMany({
           where: {
             post_id: { in: postIds },
+            media_type: "image",
           },
           skip: (validPage - 1) * validLimit,
           take: validLimit + 1,
@@ -222,27 +212,27 @@ export default class StoryService {
           media.pop();
         }
 
-        const mediaWithSignedUrls = await Promise.all(
-          media.map(async (m) => {
-            return {
-              ...m,
-              url:
-                m.media_type === "video"
-                  ? await GenerateCloudflareSignedUrl(
-                    m.media_id,
-                    m.media_type,
-                    m.url,
-                  )
-                  : m.url,
-            };
-          }),
-        );
+        // const mediaWithSignedUrls = await Promise.all(
+        //   media.map(async (m) => {
+        //     return {
+        //       ...m,
+        //       url:
+        //         m.media_type === "video"
+        //           ? await GenerateCloudflareSignedUrl(
+        //             m.media_id,
+        //             m.media_type,
+        //             m.url,
+        //           )
+        //           : m.url,
+        //     };
+        //   }),
+        // );
 
         return {
           status: true,
           error: false,
           message: "Media retrieved successfully",
-          data: mediaWithSignedUrls,
+          data: media,
           hasMore: hasMore,
           total: mediaCount,
         };
@@ -258,16 +248,6 @@ export default class StoryService {
     user,
   }: SaveStoryProps): Promise<SaveStoryResponse> {
     try {
-      const lengthArray = await Promise.all(
-        stories.map(async (story) => {
-          if (story.media_type === "video") {
-            return await getDuration(story.media_url);
-          } else {
-            return 5000;
-          }
-        }),
-      );
-
       // Save stories
       const story_id = `STR${GenerateUniqueId()}`;
       const story = await query.userStory.create({
@@ -275,19 +255,14 @@ export default class StoryService {
           user_id: user.id,
           story_id,
           StoryMedia: {
-            create: stories.map((story, index) => {
+            create: stories.map((story) => {
               return {
-                media_id:
-                  story.media_type === "image"
-                    ? `MED${GenerateUniqueId()}`
-                    : story.media_id,
+                media_id: story.media_id,
                 media_type: story.media_type,
                 filename: story.media_url,
                 media_url: story.media_url,
-                duration:
-                  story.media_type === "image"
-                    ? Number(5000)
-                    : Number(lengthArray[index]),
+                media_state: story.media_state || "completed",
+                duration: story.duration ?? 5000,
                 story_content: story.caption,
                 captionElements: JSON.stringify(story.captionElements),
               };

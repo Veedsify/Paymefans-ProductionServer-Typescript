@@ -5,7 +5,7 @@ import multer from "multer";
 import multerS3 from "multer-s3";
 import s3 from "@utils/s3";
 import { config } from "config/config";
-import { nanoid } from "nanoid";
+import { v4 as uuid } from "uuid";
 
 const story = express();
 
@@ -16,26 +16,31 @@ const storyUpload = multer({
       cb(null, config.mainPaymefansBucket!);
     },
     key: function (_req, file, cb) {
-      const uniqueSuffix = nanoid(10)
-      const ext = file.originalname.split('.').pop();
-      if (file.mimetype.startsWith('video/')) {
+      const uniqueSuffix = uuid();
+      const ext = file.originalname.split(".").pop();
+      if (file.mimetype.startsWith("video/")) {
         cb(null, `process/${uniqueSuffix}.${ext}`);
-      } else if (file.mimetype.startsWith('image/')) {
+      } else if (file.mimetype.startsWith("image/")) {
         cb(null, `stories/${uniqueSuffix}.${ext}`);
       } else {
-        return cb(new Error('Invalid file type. Only images and videos are allowed.'));
+        return cb(
+          new Error("Invalid file type. Only images and videos are allowed."),
+        );
       }
     },
     contentType: multerS3.AUTO_CONTENT_TYPE,
   }),
   limits: { fileSize: 7 * 1024 * 1024 * 1024 },
   fileFilter: (_, file, cb) => {
-    if (file.mimetype.startsWith('image/') || file.mimetype.startsWith('video/')) {
+    if (
+      file.mimetype.startsWith("image/") ||
+      file.mimetype.startsWith("video/")
+    ) {
       cb(null, true);
     } else {
-      cb(new Error('Invalid file type. Only images and videos are allowed.'));
+      cb(new Error("Invalid file type. Only images and videos are allowed."));
     }
-  }
+  },
 });
 
 story.get("/all", Auth, StoryController.GetStories);
