@@ -47,7 +47,10 @@ type VerificationControllerResponse = {
   success: boolean;
   message: string;
   error: boolean;
-  token?: string;
+  token?: {
+    accessToken: string;
+    refreshToken: string;
+  };
   user?: AuthUser;
 };
 

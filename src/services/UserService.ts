@@ -229,7 +229,10 @@ export default class UserService {
       }
 
       return {
-        token: token.accessToken,
+        token: {
+          accessToken: token.accessToken,
+          refreshToken: token.refreshToken,
+        },
         error: false,
         message: "Login Successful",
         success: true,

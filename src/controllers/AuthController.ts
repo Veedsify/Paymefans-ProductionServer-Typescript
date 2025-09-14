@@ -180,6 +180,25 @@ export default class AuthController {
         return res.status(400).json(user);
       }
 
+      if (user.token) {
+        res.setHeader(
+          "Set-Cookie",
+          [serialize("token", user.token.accessToken as string, {
+            httpOnly: process.env.NODE_ENV === "production",
+            secure: process.env.NODE_ENV === "production",
+            sameSite: "lax",
+            path: "/",
+            maxAge: 3600,
+          }),
+          serialize("refresh_token", user.token.refreshToken as string, {
+            httpOnly: process.env.NODE_ENV === "production",
+            secure: process.env.NODE_ENV === "production",
+            sameSite: "lax",
+            path: "/",
+          })]
+        );
+      }
+
       return res.status(200).json(user);
     } catch (error) {
       return res
