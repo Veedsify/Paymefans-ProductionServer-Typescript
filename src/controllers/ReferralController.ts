@@ -11,7 +11,7 @@ export default class ReferralController {
       if (!userId) {
         return res.status(401).json({
           error: "Unauthorized",
-          status: false
+          status: false,
         });
       }
 
@@ -21,7 +21,7 @@ export default class ReferralController {
       console.error("Error in getReferralStats:", error);
       return res.status(500).json({
         error: error.message || "Internal server error",
-        status: false
+        status: false,
       });
     }
   }
@@ -35,20 +35,26 @@ export default class ReferralController {
       if (!userId) {
         return res.status(401).json({
           error: "Unauthorized",
-          status: false
+          status: false,
         });
       }
 
-      const cursor = req.query.cursor ? parseInt(req.query.cursor as string) : undefined;
+      const cursor = req.query.cursor
+        ? parseInt(req.query.cursor as string)
+        : undefined;
       const limit = req.query.limit ? parseInt(req.query.limit as string) : 10;
 
-      const users = await ReferralService.getReferredUsers(userId, cursor, limit);
+      const users = await ReferralService.getReferredUsers(
+        userId,
+        cursor,
+        limit,
+      );
       return res.status(200).json(users);
     } catch (error: any) {
       console.error("Error in getReferredUsers:", error);
       return res.status(500).json({
         error: error.message || "Internal server error",
-        status: false
+        status: false,
       });
     }
   }
@@ -62,20 +68,26 @@ export default class ReferralController {
       if (!userId) {
         return res.status(401).json({
           error: "Unauthorized",
-          status: false
+          status: false,
         });
       }
 
-      const cursor = req.query.cursor ? parseInt(req.query.cursor as string) : undefined;
+      const cursor = req.query.cursor
+        ? parseInt(req.query.cursor as string)
+        : undefined;
       const limit = req.query.limit ? parseInt(req.query.limit as string) : 10;
 
-      const earnings = await ReferralService.getReferralEarnings(userId, cursor, limit);
+      const earnings = await ReferralService.getReferralEarnings(
+        userId,
+        cursor,
+        limit,
+      );
       return res.status(200).json(earnings);
     } catch (error: any) {
       console.error("Error in getReferralEarnings:", error);
       return res.status(500).json({
         error: error.message || "Internal server error",
-        status: false
+        status: false,
       });
     }
   }
@@ -90,16 +102,17 @@ export default class ReferralController {
       if (!referralCode || !referredUserId) {
         return res.status(400).json({
           error: "Referral code and referred user ID are required",
-          status: false
+          status: false,
         });
       }
 
       // Validate the referral code and get referrer
-      const validation = await ReferralService.validateReferralCode(referralCode);
+      const validation =
+        await ReferralService.validateReferralCode(referralCode);
       if (!validation.status || !validation.referrerId) {
         return res.status(400).json({
           error: validation.message,
-          status: false
+          status: false,
         });
       }
 
@@ -107,7 +120,7 @@ export default class ReferralController {
       const result = await ReferralService.createReferral(
         validation.referrerId,
         referredUserId,
-        referralCode
+        referralCode,
       );
 
       if (!result.status) {
@@ -118,18 +131,19 @@ export default class ReferralController {
       const earningsResult = await ReferralService.addReferralEarnings(
         validation.referrerId,
         50,
-        `Referral bonus for @${referredUserId}`
+        `Referral bonus for @${referredUserId}`,
+        "referrer",
       );
 
       return res.status(200).json({
         ...result,
-        earningsAdded: earningsResult.status
+        earningsAdded: earningsResult.status,
       });
     } catch (error: any) {
       console.error("Error in createReferral:", error);
       return res.status(500).json({
         error: error.message || "Internal server error",
-        status: false
+        status: false,
       });
     }
   }
@@ -141,10 +155,10 @@ export default class ReferralController {
     try {
       const { code } = req.query;
 
-      if (!code || typeof code !== 'string') {
+      if (!code || typeof code !== "string") {
         return res.status(400).json({
           error: "Referral code is required",
-          status: false
+          status: false,
         });
       }
 
@@ -154,7 +168,7 @@ export default class ReferralController {
       console.error("Error in validateReferralCode:", error);
       return res.status(500).json({
         error: error.message || "Internal server error",
-        status: false
+        status: false,
       });
     }
   }
@@ -169,17 +183,22 @@ export default class ReferralController {
       if (!userId || !points || !description) {
         return res.status(400).json({
           error: "User ID, points, and description are required",
-          status: false
+          status: false,
         });
       }
 
-      const result = await ReferralService.addReferralEarnings(userId, points, description);
+      const result = await ReferralService.addReferralEarnings(
+        userId,
+        points,
+        description,
+        "referrer",
+      );
       return res.status(200).json(result);
     } catch (error: any) {
       console.error("Error in addReferralEarnings:", error);
       return res.status(500).json({
         error: error.message || "Internal server error",
-        status: false
+        status: false,
       });
     }
   }

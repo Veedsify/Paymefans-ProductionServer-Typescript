@@ -410,7 +410,7 @@ AwsVerificationWorker.on("failed", (job) =>
     `${job?.name} - with ID ${job?.id} Failed cause ${job?.failedReason}`,
   ),
 );
-AwsVerificationWorker.on("completed", (job) => {
+AwsVerificationWorker.on("completed", () => {
   // Handle the completion of the job
 });
 

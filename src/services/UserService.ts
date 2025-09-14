@@ -126,10 +126,10 @@ export default class UserService {
       });
 
       // const subscriptions = getMySubscriptions.map((sub) => sub.user_id);
-      const { password, ...rest } = user;
+
       const result = {
         message: "User retrieved successfully",
-        user: { ...rest, following },
+        user: { ...user, following } as Partial<AuthUser>,
         status: true,
       };
 
@@ -214,7 +214,11 @@ export default class UserService {
         },
       });
 
-      const token = await Authenticate(user as AuthUser);
+      if (!user) {
+        return { success: false, message: "User not found", error: true };
+      }
+
+      const token = await Authenticate(user as any);
 
       // Save Login History
       try {

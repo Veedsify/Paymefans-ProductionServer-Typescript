@@ -1,10 +1,17 @@
-import { Model, Settings, User, UserPoints, UserRole, UserWallet } from "@prisma/client";
+import {
+  Model,
+  Settings,
+  User,
+  UserPoints,
+  UserRole,
+  UserWallet,
+} from "@prisma/client";
 import { JsonArray, JsonValue } from "@prisma/client/runtime/library";
 
 export interface AuthUser extends Omit<User, "password"> {
-  UserPoints: UserPoints | null;
-  UserWallet: UserWallet | null;
-  Settings: Settings | null;
+  UserPoints?: Partial<UserPoints | null>;
+  UserWallet: Partial<UserWallet | null>;
+  Settings: Partial<Settings | null>;
   Model: Model | null;
   subscriptions: number[];
   purchasedPosts: number[];
@@ -24,12 +31,11 @@ export type RegisteredUser = {
   fullname: string;
 };
 
-export type RetrieveUserResponse =
-  {
-    user?: Partial<AuthUser>;
-    status: boolean;
-    message: string;
-  };
+export type RetrieveUserResponse = {
+  user?: Partial<AuthUser>;
+  status: boolean;
+  message: string;
+};
 
 type UpdateTwoFactorAuthResponse = {
   success: boolean;
@@ -59,4 +65,4 @@ export type UserJwtPayloadResponse = {
   Settings: {
     two_factor_auth: boolean;
   } | null;
-}
+};

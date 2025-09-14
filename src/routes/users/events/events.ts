@@ -2,7 +2,7 @@ import { redisSub } from "@libs/RedisStore";
 import express, { Request, Response } from "express";
 const events = express.Router();
 
-events.get("/ping", (req: Request, res: Response) => {
+events.get("/ping", (_: Request, res: Response) => {
   res.status(200).json({ message: "pong" });
 });
 

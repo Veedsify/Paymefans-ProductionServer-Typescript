@@ -7,7 +7,7 @@ import { Buffer } from "buffer";
 import sharp from "sharp";
 import { PaystackService } from "./PaystackService";
 import { GenerateStreamToken } from "@libs/GenerateSignedUrls";
-import { GetJobCommand, ListJobsCommand } from "@aws-sdk/client-mediaconvert";
+import { GetJobCommand } from "@aws-sdk/client-mediaconvert";
 // Retry intervals in milliseconds: 2 minutes, 4 minutes, 10 minutes, 30 minutes.
 const RETRY_DELAYS = [60_000, 120_000, 240_000, 600_000, 1_800_000];
 const CLOUDFLARE_CUSTOMER_DOMAIN = process.env.CLOUDFLARE_CUSTOMER_DOMAIN;

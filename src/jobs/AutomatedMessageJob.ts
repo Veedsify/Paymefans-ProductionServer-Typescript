@@ -31,7 +31,7 @@ export const AutomatedMessageQueue = new Queue("automatedMessage", {
 const automatedMessageWorker = new Worker(
   "automatedMessage",
   async (job: Job<AutomatedMessageJobData>) => {
-    const { senderId, receiverId, messageType, messageData } = job.data;
+    const { senderId, receiverId, messageData } = job.data;
 
     try {
       await sendAutomatedMessage(senderId, receiverId, messageData);
