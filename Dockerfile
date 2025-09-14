@@ -45,7 +45,7 @@ RUN npm ci --only=production
 
 # Copy built application and Prisma client from build stage
 COPY --from=build /app/dist ./dist
-COPY --from=build tsconfig.json ./
+COPY --from=build /app/tsconfig.json ./
 COPY --from=build /app/prisma ./prisma
 COPY --from=build /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=build /app/node_modules/prisma ./node_modules/prisma
