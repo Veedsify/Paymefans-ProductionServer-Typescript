@@ -1,5 +1,5 @@
 import query from "@utils/prisma";
-
+const { APP_URL } = process.env;
 export interface WelcomeMessageConfig {
   title: string;
   content: string;
@@ -246,7 +246,7 @@ export default class WelcomeMessageService {
             // Add other required fields with default values
             app_name: "PayMeFans",
             app_version: "1.0.0",
-            app_url: "http://localhost:3000",
+            app_url: APP_URL!,
             app_description: "Social platform",
 
             app_logo: "",
