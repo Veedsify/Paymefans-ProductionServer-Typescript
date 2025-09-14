@@ -49,6 +49,10 @@ COPY --from=build /app/prisma ./prisma
 COPY --from=build /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=build /app/node_modules/prisma ./node_modules/prisma
 
+# Add this at the top
+ARG DATABASE_URL
+ENV DATABASE_URL=$DATABASE_URL
+
 # Run database migrations
 RUN npx prisma migrate deploy
 
@@ -56,4 +60,4 @@ EXPOSE 3009
 
 ENV NODE_ENV=production
 
-CMD ["node", "dist/app.js"]
+CMD ["npm", "start"]
