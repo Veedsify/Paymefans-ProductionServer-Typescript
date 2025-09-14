@@ -23,14 +23,11 @@ RUN npm install -g typescript
 COPY package*.json ./
 RUN npm install
 
-# Copy schema
-COPY prisma ./prisma
+# Copy rest of the app
+COPY . .
 
 # Run generate with local CLI (not npx ephemeral)
 RUN npx prisma generate
-
-# Copy rest of the app
-COPY . .
 
 # Build your app
 RUN npm run build
