@@ -50,7 +50,7 @@ export default class UploadService {
           name: fileName,
           filetype: fileType,
           allowedorigins: btoa(
-            `*paymefans.com,paymefans.com,localhost:3000,${APP_URL}/`,
+            `*paymefans.com,paymefans.com,localhost:3000,${APP_URL}`,
           ),
           watermark: isWatermarkEnabled && btoa(watermarkUid!),
           ...(data.shouldUseSignedUrls && {
