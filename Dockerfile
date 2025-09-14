@@ -16,27 +16,24 @@ RUN apk add --no-cache \
 # Set Python environment variable for node-gyp
 ENV PYTHON=/usr/bin/python3
 
-# Copy package files for better cache efficiency
-COPY package.json package-lock.json* ./
-
-# Copy prisma schema first (required for prisma generate)
-COPY prisma ./prisma
-
 # Install dependencies and TypeScript globally
 RUN npm install -g typescript
 
-# Install dependencies (including dev for build)
-RUN npm install --include=dev
+# Install dependencies first
+COPY package*.json ./
+RUN npm install
 
-# Generate Prisma client (needed for TypeScript build)
+# Copy schema
+COPY prisma ./prisma
+
+# Run generate with local CLI (not npx ephemeral)
 RUN npx prisma generate
 
-# Copy the rest of the application files
+# Copy rest of the app
 COPY . .
 
-# Build the application
+# Build your app
 RUN npm run build
-
 
 # Production stage
 FROM node:22-alpine
