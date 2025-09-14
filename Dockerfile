@@ -10,7 +10,8 @@ RUN apk add --no-cache \
     make \
     g++ \
     gcc \
-    libc-dev
+    libc-dev \
+    openssl-dev
 
 # Set Python environment variable for node-gyp
 ENV PYTHON=/usr/bin/python3
@@ -18,17 +19,20 @@ ENV PYTHON=/usr/bin/python3
 # Copy package files for better cache efficiency
 COPY package.json package-lock.json* ./
 
+# Copy prisma schema first (required for prisma generate)
+COPY prisma ./prisma
+
 # Install dependencies and TypeScript globally
 RUN npm install -g typescript
 
 # Install dependencies
 RUN npm install
 
+# Prisma Generate (run before copying other files)
+RUN npx prisma generate
+
 # Copy the rest of the application files
 COPY . .
-
-# Prisma Generate (run migration and seed separately in production)
-RUN npx prisma generate
 
 # Build the application
 RUN npm run build
@@ -45,7 +49,8 @@ RUN apk add --no-cache \
     make \
     g++ \
     gcc \
-    libc-dev
+    libc-dev \
+    openssl-dev
 
 # Set Python environment variable for node-gyp
 ENV PYTHON=/usr/bin/python3
@@ -53,15 +58,17 @@ ENV PYTHON=/usr/bin/python3
 # Copy package files
 COPY package.json ./
 
+# Copy prisma schema for production
+COPY prisma ./prisma
+
 # Install only production dependencies
-RUN npm install
+RUN npm install --only=production
+
+# Generate Prisma client in production stage
+RUN npx prisma generate
 
 # Copy built app from the build stage
 COPY --from=build /app/dist ./dist
-
-# Copy other necessary files
-COPY --from=build /app/node_modules/ ./node_modules/
-COPY --from=build /app/prisma ./prisma
 
 # Expose the correct port
 EXPOSE 3009
