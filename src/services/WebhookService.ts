@@ -1,12 +1,13 @@
 import { PutObjectCommand } from "@aws-sdk/client-s3";
 import { redis } from "@libs/RedisStore";
 import query from "@utils/prisma";
-import s3 from "@utils/s3";
+import { mediaConvert, s3 } from "@utils/aws";
 import axios, { AxiosResponse } from "axios";
 import { Buffer } from "buffer";
 import sharp from "sharp";
 import { PaystackService } from "./PaystackService";
 import { GenerateStreamToken } from "@libs/GenerateSignedUrls";
+import { GetJobCommand, ListJobsCommand } from "@aws-sdk/client-mediaconvert";
 // Retry intervals in milliseconds: 2 minutes, 4 minutes, 10 minutes, 30 minutes.
 const RETRY_DELAYS = [60_000, 120_000, 240_000, 600_000, 1_800_000];
 const CLOUDFLARE_CUSTOMER_DOMAIN = process.env.CLOUDFLARE_CUSTOMER_DOMAIN;
@@ -261,24 +262,35 @@ export class WebhookService {
   static async HandleMediaProcessingComplete(
     response: HandleCompleteMediaParams,
   ): Promise<void> {
-    const mediaId = response.media_id;
-    const mediaRecord = await query.uploadedMedia.findUnique({
-      where: { media_id: String(mediaId) },
+    const jobId = response.detail.jobId;
+    const command = new GetJobCommand({
+      Id: jobId,
+    });
+    const data = await mediaConvert.send(command);
+    const mediaRecord = await query.uploadedMedia.findFirst({
+      where: {
+        key: {
+          contains: data?.Job?.UserMetadata?.video_id as string,
+        },
+      },
     });
 
     if (!mediaRecord) {
-      console.warn(`Uploaded media not found for ID ${mediaId}.`);
+      console.warn(`Uploaded media not found`);
       return;
     }
 
     await query.uploadedMedia.update({
-      where: { media_id: String(mediaId) },
+      where: { id: mediaRecord.id },
       data: {
         media_state: "completed",
       },
     });
 
-    redis.publish(`media:processed:${mediaRecord.user_id}`, mediaId);
+    await redis.publish(
+      `media:processed:${mediaRecord.user_id}`,
+      mediaRecord.media_id,
+    );
   }
 }
 // Run processRetries every minute.

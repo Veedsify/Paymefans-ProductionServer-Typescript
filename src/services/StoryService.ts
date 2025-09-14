@@ -262,7 +262,9 @@ export default class StoryService {
                 filename: story.media_url,
                 media_url: story.media_url,
                 media_state: story.media_state || "completed",
-                duration: story.duration ?? 5000,
+                duration: story.duration
+                  ? Number(story?.duration * 1000)
+                  : 5000,
                 story_content: story.caption,
                 captionElements: JSON.stringify(story.captionElements),
               };

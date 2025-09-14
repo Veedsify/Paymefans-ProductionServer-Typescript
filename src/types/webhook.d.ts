@@ -1,3 +1,5 @@
 type HandleCompleteMediaParams = {
-  media_id: string;
+  detail: {
+    jobId: string;
+  };
 };

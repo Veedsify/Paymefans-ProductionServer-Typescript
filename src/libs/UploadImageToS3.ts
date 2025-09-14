@@ -3,7 +3,7 @@ import sharp from "sharp";
 import type { ResizeOptions } from "sharp";
 import { PutObjectCommand } from "@aws-sdk/client-s3";
 import path from "path";
-import s3 from "@utils/s3";
+import { s3 } from "@utils/aws";
 import { config } from "config/config";
 export interface UploadOptions {
   file: Express.Multer.File;
@@ -49,7 +49,7 @@ export async function UploadImageToS3({
   await sharp(file.path)
     .resize(resize as ResizeOptions)
     .toFormat(format)
-  [format]?.({ quality })
+    [format]?.({ quality })
     .toFile(tempFilePath);
   // Read file buffer
   const fileStream = await fs.readFile(tempFilePath);

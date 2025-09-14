@@ -20,6 +20,7 @@ import query from "@utils/prisma";
 import { GenerateUniqueId } from "@utils/GenerateUniqueId";
 import { redis } from "@libs/RedisStore";
 import { PaystackService } from "./PaystackService";
+import ReferralService from "./ReferralService";
 
 export default class ModelService {
   static async GetModels(body: { limit: number }): Promise<GetModelsResponse> {
@@ -211,7 +212,15 @@ export default class ModelService {
     user: AuthUser,
   ): Promise<SignupModelResponse> {
     try {
-      const { firstname, lastname, dob, country, available, gender } = body;
+      const {
+        firstname,
+        lastname,
+        dob,
+        country,
+        available,
+        gender,
+        referral_code,
+      } = body;
 
       const checkUserIsModel = await query.model.findFirst({
         where: {
@@ -249,7 +258,6 @@ export default class ModelService {
         };
       }
 
-
       const checkModelIsAlreadyUsingThatName = await query.model.findFirst({
         where: {
           firstname: String(firstname).toLowerCase(),
@@ -268,9 +276,7 @@ export default class ModelService {
         };
       }
 
-
       const referenceId = `MDL${GenerateUniqueId()}`;
-
       let signUpUserAsModel = await query.model.create({
         data: {
           user_id: user.id,
@@ -293,6 +299,56 @@ export default class ModelService {
           is_model: true,
         },
       });
+      const validate = await ReferralService.validateReferralCode(
+        referral_code as string,
+      );
+
+      if (!validate.status) {
+        return {
+          error: true,
+          errorTitle: "Invalid Referral Code",
+          status: false,
+          message: validate.message,
+        };
+      }
+
+      if (validate && validate?.referrerId === user.id) {
+        return {
+          error: true,
+          errorTitle: "Invalid Referral Code",
+          status: false,
+          message: "You cannot use your own referral code",
+        };
+      }
+
+      if (referral_code && !validate.status) {
+        return {
+          error: true,
+          errorTitle: "Invalid Referral Code",
+          status: false,
+          message: "The referral code you entered is invalid",
+        };
+      }
+
+      await ReferralService.createReferral(
+        validate.referrerId as number,
+        user.id,
+        referral_code as string,
+      );
+
+      await ReferralService.addReferralEarnings(
+        validate?.referrerId as number,
+        10,
+        `Referral bonus for referring model ${user.username}`,
+        "referrer",
+      );
+
+      await ReferralService.addReferralEarnings(
+        user?.id as number,
+        10,
+        `Referral bonus for signing up as a model`,
+        "model",
+      );
 
       if (!signUpUserAsModel) {
         return {

@@ -1,4 +1,4 @@
-import s3 from "@utils/s3";
+import { s3 } from "@utils/aws";
 import fs from "fs";
 import { Upload } from "@aws-sdk/lib-storage";
 

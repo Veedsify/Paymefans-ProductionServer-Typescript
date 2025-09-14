@@ -31,6 +31,7 @@ import support from "./users/support/support";
 import Paths from "@utils/paths";
 import wishlist from "./users/wishlist/wishlist";
 import events from "./users/events/events";
+import referral from "./users/referral/referral";
 const api = express.Router();
 
 // Feeds
@@ -96,12 +97,7 @@ api.use("/wishlist", wishlist);
 // Support
 api.use("/support", support);
 // Events (For SSE)
-api.use(
-  "/events",
-  (_, res, next) => {
-    res.setHeader("Content-Encoding", "identity");
-    next();
-  },
-  events,
-);
+api.use("/events", events);
+// Referral
+api.use("/referral", referral);
 export default api;

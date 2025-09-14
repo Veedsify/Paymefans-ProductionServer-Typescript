@@ -22,6 +22,7 @@ import auth from "@routes/users/auth/auth";
 import Paths from "@utils/paths";
 import query from "@utils/prisma";
 import { config } from "config/config";
+import fs from "fs";
 const { ADMIN_PANEL_URL, VERIFICATION_URL, APP_URL } = process.env;
 
 const app = express();
@@ -191,6 +192,23 @@ app.use(express.json({ limit: "10mb" })); // Limit JSON payload size
 app.use(Paths.API.Base + Paths.API.Auth.Base, authLimiter, auth); // Apply strict auth limiting to auth routes
 app.use(Paths.API.Base, apiLimiter, api);
 app.use(Paths.ADMIN.Base, admin);
+
+app.post("/test", (req, res) => {
+  try {
+    const logData = {
+      timestamp: new Date().toISOString(),
+      body: req.body,
+      request: req,
+      headers: req.headers,
+    };
+
+    console.log("Log Data:", logData); // Log to console
+    res.json({ message: "Test route working!" });
+  } catch (error) {
+    console.error("Error writing log file:", error);
+    res.status(500).json({ error: "Failed to log data" });
+  }
+});
 //Bullmq For Emails,
 
 // 404 handler for undefined routes
