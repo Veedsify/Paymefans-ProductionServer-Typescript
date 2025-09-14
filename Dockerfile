@@ -66,7 +66,8 @@ RUN npm install --only=production
 
 # Generate Prisma client in production stage
 RUN npx prisma generate
-
+RUN npx prisma migrate deploy
+RUN npx prisma db seed
 # Copy built app from the build stage
 COPY --from=build /app/dist ./dist
 
