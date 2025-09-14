@@ -6,30 +6,26 @@ WORKDIR /app
 # Install system dependencies for native module compilation
 RUN apk add --no-cache \
     python3 \
-    py3-pip \
     make \
     g++ \
     gcc \
     libc-dev \
     openssl-dev
 
-# Set Python environment variable for node-gyp
 ENV PYTHON=/usr/bin/python3
 
-# Install dependencies and TypeScript globally
+# Install TypeScript globally
 RUN npm install -g typescript
 
-# Install dependencies first
+# Copy package files and install all dependencies (including dev dependencies)
 COPY package*.json ./
-RUN npm install
+RUN npm ci --include=dev
 
-# Copy rest of the app
+# Copy source code
 COPY . .
 
-# Run generate with local CLI (not npx ephemeral)
+# Generate Prisma client and build the application
 RUN npx prisma generate
-
-# Build your app
 RUN npm run build
 
 # Production stage
@@ -37,34 +33,27 @@ FROM node:22-alpine
 
 WORKDIR /app
 
-# Install system dependencies for runtime
-RUN apk add --no-cache \
-    python3 \
-    make \
-    g++ \
-    gcc \
-    libc-dev \
-    openssl-dev
+# Install only runtime dependencies (if needed by your app)
+# Remove this if your app doesn't need native modules at runtime
+RUN apk add --no-cache libc-dev openssl-dev
 
-ENV PYTHON=/usr/bin/python3
-
-# Copy only necessary files
-COPY package.json package-lock.json* ./
+# Copy package files
+COPY package*.json ./
 
 # Install only production dependencies
-RUN npm install --include=dev
+RUN npm ci --only=production
 
-# Copy built app and Prisma client from build stage
+# Copy built application and Prisma client from build stage
 COPY --from=build /app/dist ./dist
-COPY --from=build /app/node_modules/.prisma ./node_modules/.prisma
-COPY --from=build /app/node_modules/@prisma ./node_modules/@prisma
 COPY --from=build /app/prisma ./prisma
+COPY --from=build /app/node_modules/.prisma ./node_modules/.prisma
+COPY --from=build /app/node_modules/prisma ./node_modules/prisma
 
-# Run migrations & seeds
+# Run database migrations
 RUN npx prisma migrate deploy
-RUN npx prisma db seed
 
 EXPOSE 3009
+
 ENV NODE_ENV=production
 
-CMD ["npm", "start"]
+CMD ["node", "dist/app.js"]
