@@ -3,7 +3,8 @@ import Cloudflare from "cloudflare";
 import { AuthUser } from "types/user";
 import UserService from "./UserService";
 import WatermarkService from "./WatermarkService";
-const { CLOUDFLARE_ACCOUNT_ID, CLOUDFLARE_ACCOUNT_TOKEN } = process.env;
+const { CLOUDFLARE_ACCOUNT_ID, CLOUDFLARE_ACCOUNT_TOKEN, APP_URL } =
+  process.env;
 const client = new Cloudflare({
   apiToken: CLOUDFLARE_ACCOUNT_TOKEN,
 });
@@ -11,7 +12,7 @@ const client = new Cloudflare({
 export default class UploadService {
   static async CreateMediaUploadSignedUrl({
     data,
-    user
+    user,
   }: {
     data: UploadMedieDataProps;
     user: AuthUser;
@@ -22,17 +23,23 @@ export default class UploadService {
     }
 
     const isWatermarkEnabled = await WatermarkService.isUserWatermarkEnabled(
-      authUser.user?.id!
+      authUser.user?.id!,
     );
 
     let watermarkUid = null;
     if (isWatermarkEnabled) {
-      watermarkUid = await WatermarkService.getUserWatermarkUid(authUser.user?.id!);
+      watermarkUid = await WatermarkService.getUserWatermarkUid(
+        authUser.user?.id!,
+      );
       if (!watermarkUid) {
-        watermarkUid = await WatermarkService.createWatermarkForUser(authUser.user?.id!);
+        watermarkUid = await WatermarkService.createWatermarkForUser(
+          authUser.user?.id!,
+        );
       }
     } else {
-      watermarkUid = await WatermarkService.createWatermarkForUser(authUser.user?.id!);
+      watermarkUid = await WatermarkService.createWatermarkForUser(
+        authUser.user?.id!,
+      );
     }
     try {
       if ("fileSize" in data && data.type === "video") {
@@ -42,9 +49,13 @@ export default class UploadService {
           maxDurationSeconds: maxDuration,
           name: fileName,
           filetype: fileType,
-          allowedorigins: btoa("*.paymefans.com,paymefans.com,localhost:3000"),
+          allowedorigins: btoa(
+            `*paymefans.com,paymefans.com,localhost:3000,${APP_URL}/`,
+          ),
           watermark: isWatermarkEnabled && btoa(watermarkUid!),
-          ...(data.shouldUseSignedUrls && ({ requiresignedurls: btoa(true.toString()) }))
+          ...(data.shouldUseSignedUrls && {
+            requiresignedurls: btoa(true.toString()),
+          }),
         };
 
         const uploadMetadataString = Object.entries(uplaodMetadata)
@@ -62,16 +73,16 @@ export default class UploadService {
               "Content-Type": "application/json",
               "Tus-Resumable": "1.0.0",
               "Upload-Length": `${fileSize}`,
-              "Upload-Metadata": uploadMetadataString
+              "Upload-Metadata": uploadMetadataString,
             },
-          }
+          },
         );
 
         if (!response.ok) {
           const errorData = await response.json().catch(() => ({}));
           throw new Error(
             errorData?.errors?.[0]?.message ||
-            `Failed to get upload URL: ${response.statusText} `
+              `Failed to get upload URL: ${response.statusText} `,
           );
         }
 
@@ -96,7 +107,6 @@ export default class UploadService {
           account_id: CLOUDFLARE_ACCOUNT_ID!,
           // requireSignedURLs: true,
         });
-
 
         return {
           error: false,
