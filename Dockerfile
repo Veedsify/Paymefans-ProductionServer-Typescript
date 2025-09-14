@@ -26,7 +26,7 @@ COPY prisma ./prisma
 RUN npm install -g typescript
 
 # Install dependencies (including dev for build)
-RUN npm install
+RUN npm install --include=dev
 
 # Generate Prisma client (needed for TypeScript build)
 RUN npx prisma generate
@@ -58,7 +58,7 @@ ENV PYTHON=/usr/bin/python3
 COPY package.json package-lock.json* ./
 
 # Install only production dependencies
-RUN npm install --omit=dev
+RUN npm install --include=dev
 
 # Copy built app and Prisma client from build stage
 COPY --from=build /app/dist ./dist
