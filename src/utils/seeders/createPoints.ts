@@ -1,4 +1,5 @@
-import query from "@utils/prisma";
+import { PrismaClient } from "@prisma/client";
+const query = new PrismaClient();
 import { v4 as uuidv4 } from "uuid";
 
 export const pointSeeding = [
