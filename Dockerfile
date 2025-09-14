@@ -17,7 +17,7 @@ RUN apk add --no-cache \
 ENV PYTHON=/usr/bin/python3
 
 # Copy package files for better cache efficiency
-COPY package.json package-lock.json* ./
+COPY package.json ./
 
 # Copy prisma schema first (required for prisma generate)
 COPY prisma ./prisma
