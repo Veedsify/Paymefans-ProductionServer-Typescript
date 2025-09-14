@@ -31,7 +31,8 @@
     "@views": "dist/views",
     "@jobs": "dist/jobs",
     "@permissions": "dist/permissions",
-    "@emails": "dist/emails"
+    "@emails": "dist/emails",
+    "@configs": "dist/configs"
   },
   "dependencies": {
     "@aws-sdk/client-mediaconvert": "^3.888.0",

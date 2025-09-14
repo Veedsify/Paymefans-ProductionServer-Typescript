@@ -21,7 +21,7 @@ import helmet from "helmet";
 import auth from "@routes/users/auth/auth";
 import Paths from "@utils/paths";
 import query from "@utils/prisma";
-import { config } from "config/config";
+import { config } from "@configs/config";
 const { ADMIN_PANEL_URL, VERIFICATION_URL, APP_URL } = process.env;
 
 const app = express();

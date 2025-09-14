@@ -1,4 +1,4 @@
-export const config = {
+const config = {
   // App
   defaultPort: process.env.PORT,
   // AWS BUCKETS
@@ -9,4 +9,6 @@ export const config = {
   // AWS CLOUDFRONTS
   mainCloudfrontUrl: process.env.AWS_CLOUDFRONT_URL,
   processedCloudfrontUrl: process.env.AWS_PROCESSED_CLOUDFRONT_URL,
-} as const;
+};
+
+export { config };

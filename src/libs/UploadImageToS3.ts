@@ -4,7 +4,8 @@ import type { ResizeOptions } from "sharp";
 import { PutObjectCommand } from "@aws-sdk/client-s3";
 import path from "path";
 import { s3 } from "@utils/aws";
-import { config } from "config/config";
+import { config } from "@configs/config";
+
 export interface UploadOptions {
   file: Express.Multer.File;
   folder?: string;

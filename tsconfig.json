@@ -22,7 +22,8 @@
       "@utils/*": ["utils/*"],
       "@views/*": ["views/*"],
       "@jobs/*": ["jobs/*"],
-      "@permissions/*": ["permissions/*"]
+      "@permissions/*": ["permissions/*"],
+      "@configs/*": ["configs/*"]
     },
     "declaration": false,
     "noImplicitAny": true,

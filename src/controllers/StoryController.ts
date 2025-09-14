@@ -1,6 +1,6 @@
 import StoryService from "@services/StoryService";
 import query from "@utils/prisma";
-import { config } from "config/config";
+import { config } from "co@nfig/config";
 import type { Request, Response } from "express";
 import type { StoryType } from "types/story";
 import type { AuthUser } from "types/user";
