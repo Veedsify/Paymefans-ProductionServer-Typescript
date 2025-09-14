@@ -51,16 +51,16 @@ RUN apk add --no-cache \
 ENV PYTHON=/usr/bin/python3
 
 # Copy package files
-COPY package.json package-lock.json* ./
+COPY package.json ./
 
 # Install only production dependencies
-RUN npm install 
+RUN npm install
 
 # Copy built app from the build stage
 COPY --from=build /app/dist ./dist
 
 # Copy other necessary files
-COPY --from=build /app/node_modules/.prisma ./node_modules/.prisma
+COPY --from=build /app/node_modules/ ./node_modules/
 COPY --from=build /app/prisma ./prisma
 
 # Expose the correct port
