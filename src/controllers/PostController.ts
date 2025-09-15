@@ -5,14 +5,14 @@ export default class PostController {
   // Create Post
   static async CreatePost(req: Request, res: Response): Promise<any> {
     try {
+      const options = {
+        user: req.user,
+        ...req.body,
+      }
       const SavePost = await PostService.CreatePost(
-        {
-          user: req.user,
-          ...req.body,
-        },
+        options,
         req.user?.id!,
       );
-
       if ("error" in SavePost && SavePost.error) {
         return res.status(400).json({ message: SavePost.error });
       }
@@ -24,11 +24,12 @@ export default class PostController {
   // My Posts
   static async GetMyPosts(req: Request, res: Response): Promise<any> {
     try {
-      const MyPosts = await PostService.GetMyPosts({
+      const options = {
         userId: req.user?.id!,
         page: req.query.page as string,
         limit: req.query.limit as string,
-      });
+      }
+      const MyPosts = await PostService.GetMyPosts(options);
       return res.status(200).json(MyPosts);
     } catch (err: any) {
       console.error(err.message);
@@ -40,11 +41,12 @@ export default class PostController {
   // My Private Posts
   static async MyPrivatePosts(req: Request, res: Response): Promise<any> {
     try {
-      const PrivatePosts = await PostService.GetMyPrivatePosts({
+      const options = {
         userId: req.user?.id!,
         page: req.query.page as string,
         limit: req.query.limit as string,
-      });
+      }
+      const PrivatePosts = await PostService.GetMyPrivatePosts(options);
       return res.status(200).json(PrivatePosts);
     } catch (err: any) {
       console.error(err.message);
@@ -56,11 +58,12 @@ export default class PostController {
   // My Reposts
   static async GetMyReposts(req: Request, res: Response): Promise<any> {
     try {
-      const MyReposts = await PostService.MyReposts({
+      const options = {
         userId: req.user?.id!,
         page: req.query.page as string,
         limit: req.query.limit as string,
-      });
+      }
+      const MyReposts = await PostService.MyReposts(options);
       return res.status(200).json(MyReposts);
     } catch (err: any) {
       console.error(err.message);
@@ -72,12 +75,13 @@ export default class PostController {
   // Get Reposts
   static async GetReposts(req: Request, res: Response): Promise<any> {
     try {
-      const Reposts = await PostService.Reposts({
+      const options = {
         userId: Number(req.params.userId) as number,
         page: req.query.page as string,
         limit: req.query.limit as string,
         authUserId: req.user?.id!,
-      });
+      }
+      const Reposts = await PostService.Reposts(options);
       return res.status(200).json(Reposts);
     } catch (err: any) {
       console.error(err.message);
@@ -89,16 +93,17 @@ export default class PostController {
   // Get Media
   static async GetMedia(req: Request, res: Response): Promise<any> {
     try {
-      const Media = await PostService.GetMedia({
+      const options = {
         userId: req.user?.id!,
         page: req.query.page as string,
         limit: req.query.limit as string,
-      });
+      }
+      const media = await PostService.GetMedia(options);
       return res.status(200).json({
         status: true,
-        message: "Media Retreived Successfully",
-        data: Media.data,
-        total: Media.total,
+        message: "media retrieved successfully",
+        data: media.data,
+        total: media.total,
       });
     } catch (err: any) {
       console.error(err.message);
@@ -110,13 +115,14 @@ export default class PostController {
   //Get Other Media
   static async GetOtherMedia(req: Request, res: Response): Promise<any> {
     try {
-      const Media = await PostService.GetOtherMedia({
+      const options = {
         userId: req.params.userId as string,
         page: req.query.page as string,
         limit: req.query.limit as string,
         authUserId: req.user?.id!,
-      });
-      return res.status(200).json(Media);
+      }
+      const media = await PostService.GetOtherMedia(options);
+      return res.status(200).json(media);
     } catch (err: any) {
       console.error(err.message);
       res
@@ -127,16 +133,17 @@ export default class PostController {
   // Get Private Media
   static async GetPrivateMedia(req: Request, res: Response): Promise<any> {
     try {
-      const Media = await PostService.GetPrivateMedia({
+      const options = {
         userId: req.user?.id!,
         page: req.query.page as string,
         limit: req.query.limit as string,
-      });
+      }
+      const media = await PostService.GetPrivateMedia(options);
       return res.status(200).json({
         status: true,
         message: "Private Media Retrieved Successfully",
-        data: Media.data,
-        total: Media.total,
+        data: media.data,
+        total: media.total,
       });
     } catch (err: any) {
       console.error(err.message);
@@ -148,13 +155,14 @@ export default class PostController {
   //Get Other Private Media
   static async GetOtherPrivateMedia(req: Request, res: Response): Promise<any> {
     try {
-      const Media = await PostService.GetOtherPrivateMedia({
+      const options = {
         userId: req.params.userId as string,
         page: req.query.page as string,
         limit: req.query.limit as string,
         authUserId: req.user?.id!,
-      });
-      return res.status(200).json(Media);
+      }
+      const media = await PostService.GetOtherPrivateMedia(options);
+      return res.status(200).json(media);
     } catch (err: any) {
       console.error(err.message);
       res
@@ -165,12 +173,13 @@ export default class PostController {
   // Get User Post By User ID
   static async GetUserPostByID(req: Request, res: Response): Promise<any> {
     try {
-      const UserPost = await PostService.GetUserPostByID({
+      const options = {
         userId: parseInt(req.params.userId) as number,
         page: req.query.page as string,
         limit: req.query.limit as string,
         authUserId: req.user?.id || undefined,
-      });
+      }
+      const UserPost = await PostService.GetUserPostByID(options);
 
       if (UserPost?.error) {
         return res.status(400).json({ ...UserPost });
@@ -187,12 +196,13 @@ export default class PostController {
   // Get User Private User Posts By ID
   static async GetPrivatePostByID(req: Request, res: Response): Promise<any> {
     try {
-      const UserPost = await PostService.GetUserPrivatePostByID({
+      const options = {
         userId: parseInt(req.params.userId) as number,
         page: req.query.page as string,
         limit: req.query.limit as string,
         authUserId: req.user?.id!,
-      });
+      }
+      const UserPost = await PostService.GetUserPrivatePostByID(options);
       return res.status(200).json({ ...UserPost });
     } catch (err: any) {
       console.error(err.message);
@@ -204,14 +214,15 @@ export default class PostController {
   // Get Post By Post ID
   static async GetSinglePost(req: Request, res: Response): Promise<any> {
     try {
-      const SinglePost = await PostService.GetSinglePost({
+      const options = {
         postId: req.params.postId as string,
         authUserId: req.user?.id || undefined,
-      });
-      if (SinglePost.error) {
-        return res.status(400).json({ ...SinglePost });
       }
-      return res.status(200).json({ ...SinglePost });
+      const singlePost = await PostService.GetSinglePost(options);
+      if (singlePost.error) {
+        return res.status(400).json({ ...singlePost });
+      }
+      return res.status(200).json({ ...singlePost });
     } catch (err: any) {
       console.error(err.message);
       res
@@ -222,11 +233,12 @@ export default class PostController {
   // Edit Post
   static async EditPost(req: Request, res: Response): Promise<any> {
     try {
-      const EditPost = await PostService.EditPost({
+      const options = {
         postId: req.params.postId,
         userId: req.user?.id!,
         ...req.body,
-      });
+      }
+      const EditPost = await PostService.EditPost(options);
       if (!EditPost.status) {
         return res.status(400).json(EditPost);
       }
@@ -241,18 +253,19 @@ export default class PostController {
   // Update Post
   static async UpdatePost(req: Request, res: Response): Promise<any> {
     try {
-      const UpdatePost = await PostService.UpdatePost({
+      const options = {
         postId: req.params.postId,
         userId: req.user?.id!,
         ...req.body,
-      });
-      if (UpdatePost.error) {
-        return res.status(400).json({ ...UpdatePost });
+      }
+      const updatePost = await PostService.UpdatePost(options);
+      if (updatePost.error) {
+        return res.status(400).json({ ...updatePost });
       }
       return res.status(200).json({
         status: true,
         message: "Post updated successfully",
-        data: UpdatePost,
+        data: updatePost,
       });
     } catch (err: any) {
       console.error(err.message);
@@ -264,12 +277,13 @@ export default class PostController {
   // Update Post Audience
   static async UpdatePostAudience(req: Request, res: Response): Promise<any> {
     try {
-      const UpdateAudience = await PostService.UpdatePostAudience({
+      const options = {
+        visibility: req.body.visibility,
         postId: req.params.postId as string,
         userId: req.user?.id!,
-        visibility: req.body.visibility,
-      });
-      return res.status(200).json({ ...UpdateAudience });
+      }
+      const updateAudience = await PostService.UpdatePostAudience(options);
+      return res.status(200).json(updateAudience);
     } catch (error: any) {
       console.log(error.message);
       res.status(500).json({
@@ -281,11 +295,12 @@ export default class PostController {
   // Create Repost
   static async CreateRepost(req: Request, res: Response): Promise<any> {
     try {
-      const Repost = await PostService.CreateRepost({
+      const options = {
         postId: req.params.postId as string,
         userId: req.user?.id!,
-      });
-      return res.status(200).json({ ...Repost });
+      }
+      const repost = await PostService.CreateRepost(options);
+      return res.status(200).json(repost);
     } catch (error: any) {
       console.log(error.message);
       res.status(500).json({
@@ -358,8 +373,8 @@ export default class PostController {
         postId: req.params.postId as string,
         userId: req.user?.id!,
       };
-      const Delete = await PostService.DeletePost(options);
-      return res.status(200).json({ ...Delete });
+      const deletePost = await PostService.DeletePost(options);
+      return res.status(200).json(deletePost);
     } catch (error: any) {
       console.log(error.message);
       res.status(500).json({
@@ -379,8 +394,8 @@ export default class PostController {
         points_buy_id: req.body.points_buy_id,
         receiver_id: req.body.user_id,
       };
-      const Gift = await PostService.GiftPoints(options);
-      return res.status(200).json({ ...Gift });
+      const gift = await PostService.GiftPoints(options);
+      return res.status(200).json(gift);
     } catch (error: any) {
       console.log(error.message);
       res.status(500).json({
@@ -398,8 +413,8 @@ export default class PostController {
         user: req.user as AuthUser,
         price: req.body.price,
       };
-      const Payment = await PostService.PayForPost(options);
-      return res.status(200).json({ ...Payment });
+      const payment = await PostService.PayForPost(options);
+      return res.status(200).json(payment);
     } catch (error: any) {
       console.log(error.message);
       res.status(500).json({
@@ -416,8 +431,8 @@ export default class PostController {
         userId: req.user?.id!,
         query: req.query.query as string,
       };
-      const Mentions = await PostService.GetMentions(options);
-      return res.status(200).json({ ...Mentions });
+      const mentions = await PostService.GetMentions(options);
+      return res.status(200).json(mentions);
     } catch (error: any) {
       console.log(error.message);
       res.status(500).json({

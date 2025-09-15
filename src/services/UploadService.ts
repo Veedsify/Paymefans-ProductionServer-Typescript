@@ -3,7 +3,7 @@ import Cloudflare from "cloudflare";
 import { AuthUser } from "types/user";
 import UserService from "./UserService";
 import WatermarkService from "./WatermarkService";
-const { CLOUDFLARE_ACCOUNT_ID, CLOUDFLARE_ACCOUNT_TOKEN, APP_URL } =
+const { CLOUDFLARE_ACCOUNT_ID, CLOUDFLARE_ACCOUNT_TOKEN } =
   process.env;
 const client = new Cloudflare({
   apiToken: CLOUDFLARE_ACCOUNT_TOKEN,
@@ -50,7 +50,7 @@ export default class UploadService {
           name: fileName,
           filetype: fileType,
           allowedorigins: btoa(
-            `*paymefans.com,paymefans.com,localhost:3000,${APP_URL}`,
+            `*paymefans.com,paymefans.com,localhost:3000`
           ),
           watermark: isWatermarkEnabled && btoa(watermarkUid!),
           ...(data.shouldUseSignedUrls && {
@@ -82,7 +82,7 @@ export default class UploadService {
           const errorData = await response.json().catch(() => ({}));
           throw new Error(
             errorData?.errors?.[0]?.message ||
-              `Failed to get upload URL: ${response.statusText} `,
+            `Failed to get upload URL: ${response.statusText} `,
           );
         }
 

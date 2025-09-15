@@ -20,7 +20,6 @@ export default class CartService {
       // Validate products and calculate total
       let totalAmount = 0;
       const orderItems = [];
-
       for (const item of items) {
         const product = await query.product.findUnique({
           where: { product_id: item.product_id },
