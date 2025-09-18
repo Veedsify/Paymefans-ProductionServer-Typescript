@@ -316,8 +316,8 @@ export default class PointService {
       //Send Email Confirmation
       await EmailService.SendPointPurchaseEmail({
         email: user?.email as string,
-        name: user?.fullname
-          ? user.fullname.split(" ")[1] || user.fullname
+        name: user?.name
+          ? user.name.split(" ")[1] || user.name
           : "User",
         points: purchase.points,
         subject: "Paypoints Purchase Confirmation",

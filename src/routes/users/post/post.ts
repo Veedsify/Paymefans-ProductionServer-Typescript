@@ -57,6 +57,8 @@ post.get(Paths.API.Post.CommentReplies, Auth, PostController.GetCommentReplies);
 
 // Post Actions
 post.post(Paths.API.Post.LikePost, Auth, PostController.LikePost);
+post.get(Paths.API.Post.GetPostLikeData, AuthPublic, PostController.GetPostLikeData);
+post.post(Paths.API.Post.GetMultiplePostsLikeData, AuthPublic, PostController.GetMultiplePostsLikeData);
 post.delete(Paths.API.Post.DeletePost, Auth, PostController.DeletePost);
 post.post(
   Paths.API.Post.MediaSignedUrl,

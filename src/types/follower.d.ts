@@ -24,7 +24,6 @@ export interface FollowType {
     id: number;
     username: string;
     name: string;
-    fullname: string;
     profile_image: string | null;
 }
 

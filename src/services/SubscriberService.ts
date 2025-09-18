@@ -128,7 +128,7 @@ export default class SubscriberService {
         select: {
           id: true,
           user_id: true,
-          fullname: true,
+          name: true,
           username: true,
           email: true,
           ModelSubscriptionPack: {
@@ -301,7 +301,7 @@ export default class SubscriberService {
 
       await Promise.all([
         EmailService.NewSubscriberNotification({
-          name: profileData?.fullname ? profileData.fullname.split(" ")[0] : profileData?.fullname,
+          name: profileData?.name ? profileData.name.split(" ")[0] : profileData?.name,
           username: authUser.username as string,
           email: profileData?.email as string,
           duration: Number(tierDuration) as number,

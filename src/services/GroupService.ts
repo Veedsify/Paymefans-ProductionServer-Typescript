@@ -1,4 +1,4 @@
-import type {AuthUser} from "../types/user";
+import type { AuthUser } from "../types/user";
 import type {
     CreateGroupRequest,
     UpdateGroupRequest,
@@ -28,8 +28,8 @@ import {
     JoinRequestStatus,
     InvitationStatus,
 } from "@prisma/client";
-import {UploadImageToS3} from "@libs/UploadImageToS3";
-import {redis} from "@libs/RedisStore";
+import { UploadImageToS3 } from "@libs/UploadImageToS3";
+import { redis } from "@libs/RedisStore";
 
 export default class GroupService {
     // Create a new group
@@ -115,7 +115,7 @@ export default class GroupService {
         params: GroupSearchParams = {},
     ): Promise<GroupServiceResponse<any>> {
         try {
-            const {page = 1, limit = 20, query: searchQuery, groupType} = params;
+            const { page = 1, limit = 20, query: searchQuery, groupType } = params;
             const skip = (page - 1) * limit;
 
             let whereClause: any = {
@@ -367,7 +367,7 @@ export default class GroupService {
             if (cachedResult) {
                 return {
                     success: true,
-                    data: {isBlocked: JSON.parse(cachedResult)},
+                    data: { isBlocked: JSON.parse(cachedResult) },
                 }
             }
             // Check if user is blocked by checking GroupMember.isBlocked field
@@ -419,7 +419,7 @@ export default class GroupService {
             }
 
             const updatedGroup = await query.groups.update({
-                where: {id: groupId},
+                where: { id: groupId },
                 data: {
                     name: data.name,
                     description: data.description,
@@ -484,7 +484,7 @@ export default class GroupService {
             }
 
             const settings = await query.groupSettings.upsert({
-                where: {groupId},
+                where: { groupId },
                 update: {
                     allowMemberInvites: data.allowMemberInvites,
                     allowMediaSharing: data.allowMediaSharing,
@@ -588,9 +588,9 @@ export default class GroupService {
             const groupMembers = await query.groupMember.findMany({
                 where: {
                     groupId: groupId,
-                    userId: {not: user.id},
+                    userId: { not: user.id },
                 },
-                select: {userId: true},
+                select: { userId: true },
             });
 
             // Create delivery records for all members
@@ -607,8 +607,8 @@ export default class GroupService {
 
                 // Update message status to delivered
                 await query.groupMessage.update({
-                    where: {id: message.id},
-                    data: {deliveryStatus: "delivered"},
+                    where: { id: message.id },
+                    data: { deliveryStatus: "delivered" },
                 });
             }
 
@@ -681,7 +681,7 @@ export default class GroupService {
         params: GroupMessagesParams = {},
     ): Promise<GroupServiceResponse<any>> {
         try {
-            const {page = 1, limit = 100, cursor} = params;
+            const { page = 1, limit = 100, cursor } = params;
 
             // Check if user is a member
             const membership = await query.groupMember.findFirst({
@@ -704,7 +704,7 @@ export default class GroupService {
             };
 
             if (cursor) {
-                whereClause.id = {lt: cursor};
+                whereClause.id = { lt: cursor };
             } else {
             }
 
@@ -739,7 +739,7 @@ export default class GroupService {
 
             // Get total count for pagination info
             const total = await query.groupMessage.count({
-                where: {groupId},
+                where: { groupId },
             });
 
             const pages = Math.ceil(total / limit);
@@ -792,7 +792,7 @@ export default class GroupService {
     ): Promise<GroupServiceResponse<any>> {
         try {
             const group = await query.groups.findFirst({
-                where: {id: groupId},
+                where: { id: groupId },
                 include: {
                     settings: true,
                     _count: {
@@ -897,7 +897,7 @@ export default class GroupService {
     ): Promise<GroupServiceResponse<any>> {
         try {
             const group = await query.groups.findFirst({
-                where: {id: groupId},
+                where: { id: groupId },
             });
 
             if (!group) {
@@ -960,7 +960,7 @@ export default class GroupService {
     ): Promise<GroupServiceResponse<any>> {
         try {
             const group = await query.groups.findFirst({
-                where: {id: groupId},
+                where: { id: groupId },
                 include: {
                     settings: true,
                 },
@@ -1008,7 +1008,7 @@ export default class GroupService {
             for (const userId of data.userIds) {
                 // Check if user exists
                 const invitee = await query.user.findFirst({
-                    where: {id: userId},
+                    where: { id: userId },
                 });
 
                 if (!invitee) {
@@ -1122,7 +1122,7 @@ export default class GroupService {
             // Accept invitation and join group
             await Promise.all([
                 query.groupInvitation.update({
-                    where: {id: invitationId},
+                    where: { id: invitationId },
                     data: {
                         status: InvitationStatus.ACCEPTED,
                         updated_at: new Date(),
@@ -1175,7 +1175,7 @@ export default class GroupService {
             }
 
             await query.groupInvitation.update({
-                where: {id: invitationId},
+                where: { id: invitationId },
                 data: {
                     status: InvitationStatus.DECLINED,
                     updated_at: new Date(),
@@ -1203,7 +1203,7 @@ export default class GroupService {
         params: GroupMemberParams = {},
     ): Promise<GroupServiceResponse<GroupMembersResponse>> {
         try {
-            const {cursor, limit = 20, role} = params;
+            const { cursor, limit = 20, role } = params;
 
             // Check if user can view members
             const membership = await query.groupMember.findFirst({
@@ -1243,7 +1243,7 @@ export default class GroupService {
                     mutedByUser: true,
                 },
                 take: limit + 1, // Take one extra to check if there are more results
-                orderBy: [{role: "asc"}, {joinedAt: "asc"}, {id: "asc"}],
+                orderBy: [{ role: "asc" }, { joinedAt: "asc" }, { id: "asc" }],
             });
 
             const hasNextPage = members.length > limit;
@@ -1256,7 +1256,7 @@ export default class GroupService {
             const total = await query.groupMember.count({
                 where: {
                     groupId: groupId,
-                    ...(role && {role}),
+                    ...(role && { role }),
                 },
             });
 
@@ -1292,7 +1292,7 @@ export default class GroupService {
     ): Promise<GroupServiceResponse<any>> {
         try {
             const group = await query.groups.findFirst({
-                where: {id: groupId},
+                where: { id: groupId },
             });
 
             if (!group) {
@@ -1357,7 +1357,7 @@ export default class GroupService {
             }
 
             await query.groupMember.update({
-                where: {id: memberId},
+                where: { id: memberId },
                 data: {
                     role: data.role,
                     updated_at: new Date(),
@@ -1386,7 +1386,7 @@ export default class GroupService {
     ): Promise<GroupServiceResponse<any>> {
         try {
             const group = await query.groups.findFirst({
-                where: {id: groupId},
+                where: { id: groupId },
             });
 
             if (!group) {
@@ -1451,7 +1451,7 @@ export default class GroupService {
             }
 
             await query.groupMember.delete({
-                where: {id: memberId},
+                where: { id: memberId },
             });
 
             return {
@@ -1537,7 +1537,7 @@ export default class GroupService {
             // Approve request and add member
             await Promise.all([
                 query.groupJoinRequest.update({
-                    where: {id: requestId},
+                    where: { id: requestId },
                     data: {
                         status: JoinRequestStatus.APPROVED,
                         updated_at: new Date(),
@@ -1605,7 +1605,7 @@ export default class GroupService {
             }
 
             await query.groupJoinRequest.update({
-                where: {id: requestId},
+                where: { id: requestId },
                 data: {
                     status: JoinRequestStatus.REJECTED,
                     updated_at: new Date(),
@@ -1633,7 +1633,7 @@ export default class GroupService {
         params: { page?: number; limit?: number } = {},
     ): Promise<GroupServiceResponse<GroupJoinRequestsResponse>> {
         try {
-            const {page = 1, limit = 20} = params;
+            const { page = 1, limit = 20 } = params;
             const skip = (page - 1) * limit;
 
             // Check if user has permission to view join requests
@@ -1712,7 +1712,6 @@ export default class GroupService {
                             id: true,
                             email: true,
                             name: true,
-                            fullname: true,
                             user_id: true,
                             username: true,
                             profile_image: true,
@@ -1743,7 +1742,7 @@ export default class GroupService {
             if (group) {
                 return {
                     success: true,
-                    data: {groups: group as GroupWithDetails},
+                    data: { groups: group as GroupWithDetails },
                     error: false,
                     message: "Groups Retrived Successfully",
                 };
@@ -1836,7 +1835,7 @@ export default class GroupService {
             }
 
             await query.groups.delete({
-                where: {id: groupId},
+                where: { id: groupId },
             });
 
             return {
@@ -1859,7 +1858,7 @@ export default class GroupService {
         params: { page?: number; limit?: number } = {},
     ): Promise<GroupServiceResponse<GroupInvitationsResponse>> {
         try {
-            const {page = 1, limit = 20} = params;
+            const { page = 1, limit = 20 } = params;
             const skip = (page - 1) * limit;
 
             const [invitations, total] = await Promise.all([

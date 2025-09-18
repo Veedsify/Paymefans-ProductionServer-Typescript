@@ -8,7 +8,6 @@ export type ProfileServiceResponse = {
     id: number;
     username: string;
     name: string;
-    fullname: string;
     user_id: string;
     admin: boolean;
     role: string;

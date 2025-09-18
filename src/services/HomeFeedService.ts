@@ -3,6 +3,7 @@ import query from "@utils/prisma";
 import type { PostWithLike } from "../types/feed";
 import { Permissions, RBAC } from "@utils/FlagsConfig";
 import { GenerateBatchSignedUrls } from "@libs/GenerateSignedUrls";
+import { RedisPostService } from "./RedisPostService";
 
 class FeedService {
   private static readonly POSTS_PER_HOME_PAGE =
@@ -125,7 +126,6 @@ class FeedService {
             id: true,
             email: true,
             name: true,
-            fullname: true,
             user_id: true,
             username: true,
             profile_image: true,
@@ -160,13 +160,13 @@ class FeedService {
     });
 
     const postIds = posts.map((p) => p.id);
+    const postIdStrings = posts.map((p) => p.post_id); // Redis uses string post_id
     const userIds = [...new Set(posts.map((p) => p.user_id))];
 
     // Batch fetch related data
-    const [likes, reposts, subscriptions, paidPosts] = await Promise.all([
-      query.postLike.findMany({
-        where: { post_id: { in: postIds }, user_id: authUserid },
-      }),
+    const [likeData, reposts, subscriptions, paidPosts] = await Promise.all([
+      // Use Redis for like data
+      RedisPostService.getMultiplePostsLikeData(postIdStrings, authUserid),
       query.userRepost.findMany({
         where: { post_id: { in: postIds }, user_id: authUserid },
       }),
@@ -178,7 +178,6 @@ class FeedService {
       }),
     ]);
 
-    const likeMap = new Map(likes.map((l) => [l.post_id, l]));
     const repostMap = new Map(reposts.map((r) => [r.post_id, r]));
     const subscriptionMap = new Map(subscriptions.map((s) => [s.user_id, s]));
     const paidMap = new Map(paidPosts.map((p) => [p.post_id, p]));
@@ -201,7 +200,8 @@ class FeedService {
           hasViewPaidPermission ||
           post.post_audience !== "price";
 
-        const likedByme = !!likeMap.get(post.id);
+        // Get like data from Redis
+        const likeInfo = likeData.get(post.post_id) || { count: post.post_likes, isLiked: false };
         const wasReposted = !!repostMap.get(post.id);
 
         const UserMedia = post.watermark_enabled
@@ -219,7 +219,8 @@ class FeedService {
         return {
           ...post,
           UserMedia,
-          likedByme,
+          likedByme: likeInfo.isLiked,
+          post_likes: likeInfo.count, // Update with Redis like count
           wasReposted,
           hasPaid,
           isSubscribed,
@@ -358,7 +359,6 @@ class FeedService {
             email: true,
             name: true,
             password: true,
-            fullname: true,
             user_id: true,
             username: true,
             profile_image: true,

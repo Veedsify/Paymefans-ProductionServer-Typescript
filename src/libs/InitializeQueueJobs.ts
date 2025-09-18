@@ -4,11 +4,16 @@ import {
 } from "@jobs/ActiveUserJobs";
 import { deleteUserQueue } from "@jobs/DeleteAccountMedia";
 import { pruneInactiveSubscribersQueue } from "@jobs/ModelSubscriberJobs";
+import { schedulePostLikeSync } from "@jobs/PostLikeSyncJob";
 import { CronJobService } from "@services/CronJobService";
 
 async function InitializeQueueJobs() {
   // Initialize Cron Jobs
   CronJobService.initialize();
+
+  // Initialize Post Like Sync Job
+  await schedulePostLikeSync();
+
   // Emit active users to the socket - reduced frequency since we now use event-driven updates
   await activeUsersQueue.add(
     "activeUsersQueue",

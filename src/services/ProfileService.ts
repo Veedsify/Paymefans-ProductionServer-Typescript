@@ -43,7 +43,6 @@ class ProfileService {
         id: true,
         username: true,
         name: true,
-        fullname: true,
         user_id: true,
         admin: true,
         role: true,
@@ -621,9 +620,9 @@ class ProfileService {
       );
       const followingRelations = otherUserIds.length
         ? await query.follow.findMany({
-            where: { follower_id: user.id, user_id: { in: otherUserIds } },
-            select: { user_id: true },
-          })
+          where: { follower_id: user.id, user_id: { in: otherUserIds } },
+          select: { user_id: true },
+        })
         : [];
 
       const followingSet = new Set(followingRelations.map((f) => f.user_id));

@@ -30,7 +30,7 @@ export default class ModelService {
       if (!models) {
         return await query.$transaction(async (tx) => {
           const models: Models = await tx.$queryRaw`
-                  SELECT "User"."id", "User"."username", "User"."fullname", "User"."name", "User"."profile_image", "User"."profile_banner", "User"."is_model",
+                  SELECT "User"."id", "User"."username", "User"."name", "User"."profile_image", "User"."profile_banner", "User"."is_model",
                        "Model"."hookup", "Model"."verification_status"
                   FROM "User"
                   INNER JOIN "Model" ON "User"."id" = "Model"."user_id"
@@ -98,11 +98,6 @@ export default class ModelService {
           ],
           OR: [
             {
-              fullname: {
-                contains: q,
-              },
-            },
-            {
               username: {
                 contains: q,
               },
@@ -113,7 +108,6 @@ export default class ModelService {
           profile_image: true,
           username: true,
           id: true,
-          fullname: true,
           Subscribers: {
             select: {
               id: true,
@@ -160,7 +154,7 @@ export default class ModelService {
         const models: Hookups = await query.$queryRaw`
                     SELECT User.id,
                            User.username,
-                           User.fullname,
+                           User.name,
                            User.profile_image,
                            User.profile_banner,
                            User.is_model,

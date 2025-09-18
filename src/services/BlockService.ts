@@ -296,7 +296,6 @@ export default class BlockService {
             id: true,
             username: true,
             name: true,
-            fullname: true,
             profile_image: true,
           },
         });

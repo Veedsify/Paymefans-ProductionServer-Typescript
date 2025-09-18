@@ -64,6 +64,8 @@ const Paths = {
       PostComments: "/:postId/comments",
       CommentReplies: "/comments/:commentId/replies",
       LikePost: "/like/:postId",
+      GetPostLikeData: "/like-data/:postId",
+      GetMultiplePostsLikeData: "/like-data/multiple",
       DeletePost: "/:postId",
       MediaSignedUrl: "/media/signed-url",
       GiftPoints: "/point/gift",

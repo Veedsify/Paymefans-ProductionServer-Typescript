@@ -44,14 +44,16 @@ export default class UploadService {
     try {
       if ("fileSize" in data && data.type === "video") {
         const { fileSize, maxDuration, fileType, fileName } = data;
-
+        const allowedOrigins = [
+          "paymefans.com",
+          "*.paymefans.com",
+          "localhost:3000",
+        ];
         const uplaodMetadata = {
           maxDurationSeconds: maxDuration,
           name: fileName,
           filetype: fileType,
-          allowedorigins: btoa(
-            `*paymefans.com,paymefans.com,localhost:3000`
-          ),
+          allowedorigins: btoa(allowedOrigins.join(",")),
           watermark: isWatermarkEnabled && btoa(watermarkUid!),
           ...(data.shouldUseSignedUrls && {
             requiresignedurls: btoa(true.toString()),
@@ -119,6 +121,7 @@ export default class UploadService {
 
       throw new Error("Invalid data for upload");
     } catch (error: any) {
+      console.error("Error creating upload URL:", error);
       throw new Error(error?.response?.data?.message || error.message);
     }
   }

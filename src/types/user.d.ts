@@ -28,7 +28,7 @@ export type RegisteredUser = {
   email: string;
   user_id: string;
   username: string;
-  fullname: string;
+  name: string;
 };
 
 export type RetrieveUserResponse = {

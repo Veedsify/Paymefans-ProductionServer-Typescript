@@ -227,7 +227,6 @@ export default class RegisterService {
     return query.$transaction(async (tx) => {
       const user = await tx.user.create({
         data: {
-          fullname: data.name,
           name: data.name,
           user_id: uniqueUserId,
           username: `@${data.username}`,
@@ -354,7 +353,7 @@ export default class RegisterService {
     await query.notifications.create({
       data: {
         notification_id: notificationId,
-        message: `Thanks for joining us and creating an account, <strong>${data.fullname}</strong>. We are thrilled to meet you!`,
+        message: `Thanks for joining us and creating an account, <strong>${data.name}</strong>. We are thrilled to meet you!`,
         user_id: data.id,
         action: "sparkle",
         url: "/profile",

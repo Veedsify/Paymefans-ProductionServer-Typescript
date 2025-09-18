@@ -190,7 +190,6 @@ const ProcessNameMatching = async (
         user: {
           select: {
             name: true,
-            fullname: true,
           },
         },
       },
@@ -267,7 +266,7 @@ const ProcessNameMatching = async (
     const nameMatchResult = NameMatchingService.matchNames(
       model.firstname,
       model.lastname,
-      model.user.fullname,
+      model.user.name,
       extractedNames,
       0.75, // Slightly more lenient for international names
     );

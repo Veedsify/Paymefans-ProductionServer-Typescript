@@ -87,7 +87,6 @@ export default class FollowerService {
             id: true,
             username: true,
             name: true,
-            fullname: true,
             profile_image: true,
           },
         });

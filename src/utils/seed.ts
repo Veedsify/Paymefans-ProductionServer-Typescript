@@ -16,7 +16,6 @@ async function main() {
     update: {},
     create: {
       email: "admin@paymefans.com",
-      fullname: "Paymefans",
       name: "Paymefans",
       password,
       admin: true,
@@ -122,7 +121,6 @@ async function main() {
     update: {},
     create: {
       email: "welcome@paymefans.com",
-      fullname: "Welcome To Paymefans",
       name: "Welcome To Paymefans",
       password,
       admin: true,
@@ -162,7 +160,6 @@ async function main() {
     update: {},
     create: {
       email: "technical@paymefans.com",
-      fullname: "Technical Support",
       name: "Technical Support",
       password,
       admin: true,

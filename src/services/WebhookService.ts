@@ -58,13 +58,12 @@ export class WebhookService {
       const fileKey = `thumbnails/public/${postRecord.user_id}/${uid}`;
 
       const ImageBlurBuffer = await sharp(await fetchImageFile(thumbnail))
-        .resize(800)
+        .resize(720)
         .blur(30)
         .webp({ quality: 80 })
         .toBuffer();
 
       const ImageBuffer = await sharp(await fetchImageFile(thumbnail))
-        .resize(640)
         .webp({ quality: 100 })
         .toBuffer();
 
@@ -85,7 +84,6 @@ export class WebhookService {
       ];
 
       await Promise.all([s3.send(blurCommand), s3.send(publicCommand)]);
-
       const bluredUrl = `${process.env.AWS_CLOUDFRONT_URL}/${bluredFileKey}`;
       const publicUrl = `${process.env.AWS_CLOUDFRONT_URL}/${fileKey}`;
 

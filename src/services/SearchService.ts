@@ -4,6 +4,7 @@ import query from "@utils/prisma";
 import { SearchPlatformResponse } from "types/search";
 import { AuthUser } from "types/user";
 import { GenerateBatchSignedUrls } from "@libs/GenerateSignedUrls";
+import { RedisPostService } from "./RedisPostService";
 
 export default class SearchService {
   private static async searchInPosts(
@@ -69,7 +70,6 @@ export default class SearchService {
             user_id: true,
             username: true,
             name: true,
-            fullname: true,
             profile_image: true,
           },
         },
@@ -98,27 +98,34 @@ export default class SearchService {
       return [];
     }
 
-    const postsChecked = results.map(async (post) => {
-      const postLike = await query.postLike.findFirst({
-        where: {
-          user_id: post.user.id,
-          post_id: post.id,
-        },
-      });
+    // Get post IDs for batch operations
+    const postIds = results.map((post) => post.id);
+    const postIdStrings = results.map((post) => post.post_id);
 
-      const isSubscribed = await query.subscribers.findFirst({
+    // Batch fetch like data from Redis and other relationships
+    const [likeData, subscriptions, reposts] = await Promise.all([
+      RedisPostService.getMultiplePostsLikeData(postIdStrings, authUserid),
+      query.subscribers.findMany({
         where: {
-          user_id: post.user.id,
+          user_id: { in: results.map(post => post.user.id) },
           subscriber_id: authUserid,
         },
-      });
-
-      const isReposted = await query.userRepost.findFirst({
+      }),
+      query.userRepost.findMany({
         where: {
           user_id: authUserid,
-          post_id: post.id,
+          post_id: { in: postIds },
         },
-      });
+      }),
+    ]);
+
+    const subscriptionMap = new Map(subscriptions.map((s) => [s.user_id, s]));
+    const repostMap = new Map(reposts.map((r) => [r.post_id, r]));
+
+    const postsChecked = results.map(async (post) => {
+      const likeInfo = likeData.get(post.post_id) || { count: post.post_likes, isLiked: false };
+      const isSubscribed = subscriptionMap.get(post.user.id);
+      const isReposted = repostMap.get(post.id);
 
       return {
         ...post,
@@ -131,7 +138,8 @@ export default class SearchService {
             blur: media.blur
           }))
         ) : post.UserMedia,
-        likedByme: postLike ? true : false,
+        likedByme: likeInfo.isLiked,
+        post_likes: likeInfo.count, // Update with Redis count
         wasReposted: !!isReposted,
         isSubscribed:
           authUserid === post.user.id ||
@@ -155,7 +163,6 @@ export default class SearchService {
         OR: [
           { username: { contains: searchQuery, mode: "insensitive" } },
           { name: { contains: searchQuery, mode: "insensitive" } },
-          { fullname: { contains: searchQuery, mode: "insensitive" } },
           { location: { contains: searchQuery, mode: "insensitive" } },
           { bio: { contains: searchQuery, mode: "insensitive" } },
           { country: { contains: searchQuery, mode: "insensitive" } },
@@ -182,7 +189,6 @@ export default class SearchService {
         id: true,
         email: true,
         name: true,
-        fullname: true,
         user_id: true,
         username: true,
         profile_image: true,
@@ -270,7 +276,6 @@ export default class SearchService {
             user_id: true,
             username: true,
             name: true,
-            fullname: true,
             profile_image: true,
           },
         },

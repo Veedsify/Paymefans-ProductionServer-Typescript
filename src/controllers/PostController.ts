@@ -1,6 +1,7 @@
 import { type Request, type Response } from "express";
 import PostService from "@services/PostService";
 import { AuthUser } from "types/user";
+import { RedisPostService } from "@services/RedisPostService";
 export default class PostController {
   // Create Post
   static async CreatePost(req: Request, res: Response): Promise<any> {
@@ -344,6 +345,67 @@ export default class PostController {
       console.log(error.message);
       res.status(500).json({
         status: false,
+        message: "Internal Server Error",
+      });
+    }
+  }
+
+  // Get Post Like Data
+  static async GetPostLikeData(req: Request, res: Response): Promise<any> {
+    try {
+      const postId = req.params.postId as string;
+      const userId = req.user?.id;
+
+      // Get like count and user's like status
+      const likeCount = await RedisPostService.getLikeCount(postId);
+      const isLiked = userId ? await RedisPostService.hasUserLiked(postId, userId) : false;
+
+      return res.status(200).json({
+        success: true,
+        data: {
+          postId,
+          likeCount,
+          isLiked,
+        },
+      });
+    } catch (error: any) {
+      console.error("Error getting post like data:", error);
+      res.status(500).json({
+        success: false,
+        message: "Internal Server Error",
+      });
+    }
+  }
+
+  // Get Multiple Posts Like Data
+  static async GetMultiplePostsLikeData(req: Request, res: Response): Promise<any> {
+    try {
+      const { postIds } = req.body; // Array of post IDs
+      const userId = req.user?.id;
+
+      if (!Array.isArray(postIds) || postIds.length === 0) {
+        return res.status(400).json({
+          success: false,
+          message: "Post IDs array is required",
+        });
+      }
+
+      const likeData = await RedisPostService.getMultiplePostsLikeData(postIds, userId);
+
+      // Convert Map to object for JSON response
+      const result: Record<string, { count: number; isLiked: boolean }> = {};
+      likeData.forEach((data, postId) => {
+        result[postId] = data;
+      });
+
+      return res.status(200).json({
+        success: true,
+        data: result,
+      });
+    } catch (error: any) {
+      console.error("Error getting multiple posts like data:", error);
+      res.status(500).json({
+        success: false,
         message: "Internal Server Error",
       });
     }

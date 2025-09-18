@@ -329,6 +329,7 @@ export type LikePostResponse = {
   success: boolean;
   isLiked: boolean;
   message: string;
+  likeCount?: number;
 };
 /**
  * Response for deleting a post

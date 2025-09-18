@@ -48,6 +48,7 @@ import { MentionService } from "./MentionService";
 import { MentionNotificationQueue } from "@jobs/MentionNotificationJob";
 import { GenerateBatchSignedUrls } from "@libs/GenerateSignedUrls";
 import WatermarkService from "./WatermarkService";
+import { RedisPostService } from "./RedisPostService";
 
 export default class PostService {
   // Helper method to process UserMedia with signed URLs
@@ -349,29 +350,35 @@ export default class PostService {
       }
       // batch fetch likes and reposts to reduce N+1 queries
       const postIds = posts.map((post) => post.id);
-      const [likes, reposts] = await Promise.all([
-        query.postLike.findMany({
-          where: { post_id: { in: postIds }, user_id: userId },
-        }),
+      const postIdStrings = posts.map((post) => post.post_id); // Redis uses string post_id
+
+      const [reposts, likeData] = await Promise.all([
         query.userRepost.findMany({
           where: { post_id: { in: postIds }, user_id: userId },
         }),
+        // Use Redis for like data
+        RedisPostService.getMultiplePostsLikeData(postIdStrings, userId),
       ]);
-      const postLikesSet = new Set(likes.map((l) => l.post_id));
+
       const postRepostSet = new Set(reposts.map((r) => r.post_id));
 
       const resolvedPosts = await Promise.all(
-        posts.map(async (post) => ({
-          ...post,
-          UserMedia: await this.processUserMediaSignedUrls(
-            post.UserMedia,
-            post.watermark_enabled,
-          ),
-          isSubscribed: true,
-          wasReposted: postRepostSet.has(post.id),
-          hasPaid: true,
-          likedByme: postLikesSet.has(post.id),
-        })),
+        posts.map(async (post) => {
+          const likeInfo = likeData.get(post.post_id) || { count: post.post_likes, isLiked: false };
+          return {
+            ...post,
+            UserMedia: await this.processUserMediaSignedUrls(
+              post.UserMedia,
+              post.watermark_enabled,
+            ),
+            isSubscribed: true,
+            wasReposted: postRepostSet.has(post.id),
+            hasPaid: true,
+            likedByme: likeInfo.isLiked,
+            // Update the like count with Redis data if available
+            post_likes: likeInfo.count,
+          };
+        }),
       );
 
       return {
@@ -466,31 +473,34 @@ export default class PostService {
       }
 
       const postIds = posts.map((post) => post.id);
+      const postIdStrings = posts.map((post) => post.post_id); // Redis uses string post_id
 
       // Batch likes and reposts
-      const [likes, reposts] = await Promise.all([
-        query.postLike.findMany({
-          where: { post_id: { in: postIds }, user_id: userId },
-        }),
+      const [likeData, reposts] = await Promise.all([
+        RedisPostService.getMultiplePostsLikeData(postIdStrings, userId),
         query.userRepost.findMany({
           where: { post_id: { in: postIds }, user_id: userId },
         }),
       ]);
-      const postLikesSet = new Set(likes.map((l) => l.post_id));
+
       const postRepostSet = new Set(reposts.map((r) => r.post_id));
 
       const resolvedPosts = await Promise.all(
-        posts.map(async (post) => ({
-          ...post,
-          UserMedia: await this.processUserMediaSignedUrls(
-            post.UserMedia,
-            post.watermark_enabled,
-          ),
-          likedByme: postLikesSet.has(post.id),
-          wasReposted: postRepostSet.has(post.id),
-          isSubscribed: true,
-          hasPaid: true,
-        })),
+        posts.map(async (post) => {
+          const likeInfo = likeData.get(post.post_id) || { count: post.post_likes, isLiked: false };
+          return {
+            ...post,
+            UserMedia: await this.processUserMediaSignedUrls(
+              post.UserMedia,
+              post.watermark_enabled,
+            ),
+            likedByme: likeInfo.isLiked,
+            post_likes: likeInfo.count, // Update with Redis count
+            wasReposted: postRepostSet.has(post.id),
+            isSubscribed: true,
+            hasPaid: true,
+          };
+        }),
       );
 
       return {
@@ -587,11 +597,11 @@ export default class PostService {
 
       const reposts = userReposts.map((repost) => repost.post);
       const postIds = reposts.map((post) => post.id);
+      const postIdStrings = reposts.map((post) => post.post_id); // Redis uses string post_id
+
       // Batch likes and reposts
-      const [likes, repostsDb, purchasedPosts] = await Promise.all([
-        query.postLike.findMany({
-          where: { post_id: { in: postIds }, user_id: userId },
-        }),
+      const [likeData, repostsDb, purchasedPosts] = await Promise.all([
+        RedisPostService.getMultiplePostsLikeData(postIdStrings, userId),
         query.userRepost.findMany({
           where: { post_id: { in: postIds }, user_id: userId },
         }),
@@ -599,22 +609,26 @@ export default class PostService {
           where: { post_id: { in: postIds }, user_id: userId },
         }),
       ]);
-      const postLikesSet = new Set(likes.map((l) => l.post_id));
+
       const postRepostSet = new Set(repostsDb.map((r) => r.post_id));
       const purchasedPostsSet = new Set(purchasedPosts.map((r) => r.post_id));
 
       const resolvedPosts = await Promise.all(
-        reposts.map(async (post) => ({
-          ...post,
-          UserMedia: await this.processUserMediaSignedUrls(
-            post.UserMedia,
-            post.watermark_enabled,
-          ),
-          likedByme: postLikesSet.has(post.id),
-          wasReposted: postRepostSet.has(post.id),
-          hasPaid: purchasedPostsSet.has(post.id),
-          isSubscribed: true,
-        })),
+        reposts.map(async (post) => {
+          const likeInfo = likeData.get(post.post_id) || { count: post.post_likes, isLiked: false };
+          return {
+            ...post,
+            UserMedia: await this.processUserMediaSignedUrls(
+              post.UserMedia,
+              post.watermark_enabled,
+            ),
+            likedByme: likeInfo.isLiked,
+            post_likes: likeInfo.count, // Update with Redis count
+            wasReposted: postRepostSet.has(post.id),
+            hasPaid: purchasedPostsSet.has(post.id),
+            isSubscribed: true,
+          };
+        }),
       );
 
       return {
@@ -707,11 +721,11 @@ export default class PostService {
       }
       const reposts = userReposts.map((repost) => repost.post);
       const postIds = reposts.map((post) => post.id);
+      const postIdStrings = reposts.map((post) => post.post_id); // Redis uses string post_id
+
       // Batch likes and reposts
-      const [likes, repostsDb, payedPosts] = await Promise.all([
-        query.postLike.findMany({
-          where: { post_id: { in: postIds }, user_id: userId },
-        }),
+      const [likeData, repostsDb, payedPosts] = await Promise.all([
+        RedisPostService.getMultiplePostsLikeData(postIdStrings, authUserId),
         query.userRepost.findMany({
           where: { post_id: { in: postIds }, user_id: authUserId },
         }),
@@ -719,23 +733,27 @@ export default class PostService {
           where: { post_id: { in: postIds }, user_id: authUserId },
         }),
       ]);
-      const postLikesSet = new Set(likes.map((l) => l.post_id));
+
       const postRepostSet = new Set(repostsDb.map((r) => r.post_id));
       const purchasedPostsSet = new Set(payedPosts.map((l) => l.post_id));
 
       const resolvedPosts = await Promise.all(
-        reposts.map(async (post) => ({
-          ...post,
-          UserMedia: await this.processUserMediaSignedUrls(
-            post.UserMedia,
-            post.watermark_enabled,
-          ),
-          likedByme: postLikesSet.has(post.id),
-          wasReposted: postRepostSet.has(post.id),
-          hasPaid:
-            purchasedPostsSet.has(post.id) || post.post_audience !== "price",
-          isSubscribed: true,
-        })),
+        reposts.map(async (post) => {
+          const likeInfo = likeData.get(post.post_id) || { count: post.post_likes, isLiked: false };
+          return {
+            ...post,
+            UserMedia: await this.processUserMediaSignedUrls(
+              post.UserMedia,
+              post.watermark_enabled,
+            ),
+            likedByme: likeInfo.isLiked,
+            post_likes: likeInfo.count, // Update with Redis count
+            wasReposted: postRepostSet.has(post.id),
+            hasPaid:
+              purchasedPostsSet.has(post.id) || post.post_audience !== "price",
+            isSubscribed: true,
+          };
+        }),
       );
 
       return {
@@ -1235,8 +1253,10 @@ export default class PostService {
       }
 
       const postIds = posts.map((post) => post.id);
+      const postIdStrings = posts.map((post) => post.post_id); // Redis uses string post_id
+
       // Batch queries
-      const [subs, likes, reposts, payedPosts] = await Promise.all([
+      const [subs, likeData, reposts, payedPosts] = await Promise.all([
         query.subscribers.findFirst({
           where: {
             subscriber_id: authUserId,
@@ -1244,12 +1264,8 @@ export default class PostService {
             user_id: parsedUserId,
           },
         }),
-        query.postLike.findMany({
-          where: {
-            post_id: { in: postIds },
-            user_id: authUserId,
-          },
-        }), // note: original used post.user.id, possible logic bug
+        // Use Redis for like data
+        RedisPostService.getMultiplePostsLikeData(postIdStrings, authUserId),
         query.userRepost.findMany({
           where: { post_id: { in: postIds }, user_id: authUserId },
         }),
@@ -1257,7 +1273,7 @@ export default class PostService {
           where: { post_id: { in: postIds }, user_id: authUserId },
         }),
       ]);
-      const postLikesSet = new Set(likes.map((l) => l.post_id));
+
       const postRepostSet = new Set(reposts.map((r) => r.post_id));
       const purchasedPostsSet = new Set(payedPosts.map((l) => l.post_id));
       const checkIfUserCanViewPaidPosts = user
@@ -1265,20 +1281,24 @@ export default class PostService {
         : false;
 
       const resolvedPosts = await Promise.all(
-        posts.map(async (post) => ({
-          ...post,
-          UserMedia: await this.processUserMediaSignedUrls(
-            post.UserMedia,
-            post.watermark_enabled,
-          ),
-          likedByme: postLikesSet.has(post.id),
-          hasPaid:
-            purchasedPostsSet.has(post.id) ||
-            checkIfUserCanViewPaidPosts ||
-            post.post_audience !== "price",
-          wasReposted: postRepostSet.has(post.id),
-          isSubscribed: checkIfUserCanViewPaidPosts || !!subs,
-        })),
+        posts.map(async (post) => {
+          const likeInfo = likeData.get(post.post_id) || { count: post.post_likes, isLiked: false };
+          return {
+            ...post,
+            UserMedia: await this.processUserMediaSignedUrls(
+              post.UserMedia,
+              post.watermark_enabled,
+            ),
+            likedByme: likeInfo.isLiked,
+            post_likes: likeInfo.count, // Update like count with Redis data
+            hasPaid:
+              purchasedPostsSet.has(post.id) ||
+              checkIfUserCanViewPaidPosts ||
+              post.post_audience !== "price",
+            wasReposted: postRepostSet.has(post.id),
+            isSubscribed: checkIfUserCanViewPaidPosts || !!subs,
+          };
+        }),
       );
       return {
         error: false,
@@ -1379,8 +1399,9 @@ export default class PostService {
         hasMore = true;
       }
       const postIds = posts.map((post) => post.id);
+      const postIdStrings = posts.map((post) => post.post_id); // Redis uses string post_id
 
-      const [subs, likes, reposts, payedPosts] = await Promise.all([
+      const [subs, likeData, reposts, payedPosts] = await Promise.all([
         query.subscribers.findFirst({
           where: {
             subscriber_id: authUserId,
@@ -1388,12 +1409,7 @@ export default class PostService {
             user_id: Number(userId),
           },
         }),
-        query.postLike.findMany({
-          where: {
-            post_id: { in: postIds },
-            user_id: posts.length ? posts[0].user.id : 0,
-          },
-        }),
+        RedisPostService.getMultiplePostsLikeData(postIdStrings, authUserId),
         query.userRepost.findMany({
           where: { post_id: { in: postIds }, user_id: authUserId },
         }),
@@ -1401,22 +1417,27 @@ export default class PostService {
           where: { post_id: { in: postIds }, user_id: userId },
         }),
       ]);
-      const postLikesSet = new Set(likes.map((l) => l.post_id));
+
       const postRepostSet = new Set(reposts.map((r) => r.post_id));
       const purchasedPostsSet = new Set(payedPosts.map((l) => l.post_id));
+
       const resolvedPosts = await Promise.all(
-        posts.map(async (post) => ({
-          ...post,
-          UserMedia: await this.processUserMediaSignedUrls(
-            post.UserMedia,
-            post.watermark_enabled,
-          ),
-          likedByme: postLikesSet.has(post.id),
-          wasReposted: postRepostSet.has(post.id),
-          hasPaid:
-            purchasedPostsSet.has(post.id) || post.post_audience !== "price",
-          isSubscribed: !!subs || post.user.id === authUserId,
-        })),
+        posts.map(async (post) => {
+          const likeInfo = likeData.get(post.post_id) || { count: post.post_likes, isLiked: false };
+          return {
+            ...post,
+            UserMedia: await this.processUserMediaSignedUrls(
+              post.UserMedia,
+              post.watermark_enabled,
+            ),
+            likedByme: likeInfo.isLiked,
+            post_likes: likeInfo.count, // Update with Redis count
+            wasReposted: postRepostSet.has(post.id),
+            hasPaid:
+              purchasedPostsSet.has(post.id) || post.post_audience !== "price",
+            isSubscribed: !!subs || post.user.id === authUserId,
+          };
+        }),
       );
 
       return {
@@ -1505,11 +1526,10 @@ export default class PostService {
           message: "Post not found",
         };
       }
-      // one query for like
-      const [postLike, isSubscribed, isReposted, isPaid] = await Promise.all([
-        query.postLike.findFirst({
-          where: { post_id: post.id, user_id: authUserId },
-        }),
+      // Batch queries including Redis-based like check
+      const [isLikedByUser, isSubscribed, isReposted, isPaid] = await Promise.all([
+        // Use Redis for like data
+        authUserId ? RedisPostService.hasUserLiked(post.post_id, authUserId) : Promise.resolve(false),
         query.subscribers.findFirst({
           where: {
             user_id: post.user_id,
@@ -1524,6 +1544,9 @@ export default class PostService {
           where: { post_id: post.id, user_id: authUserId },
         }),
       ]);
+
+      // Also get the current like count from Redis
+      const currentLikeCount = await RedisPostService.getLikeCount(post.post_id);
 
       const checkIfUserCanViewPaidPost =
         (user &&
@@ -1545,8 +1568,9 @@ export default class PostService {
         message: "Post retrieved successfully",
         data: {
           ...processedPost,
-          likedByme: user ? !!postLike : false,
-          wasReposted: user ? !!isReposted : false,
+          likedByme: !!isLikedByUser,
+          post_likes: currentLikeCount, // Use Redis like count
+          wasReposted: !!isReposted,
           hasPaid:
             checkIfUserCanViewPaidPost ||
             post.post_audience !== "price" ||
@@ -2162,41 +2186,21 @@ export default class PostService {
     userId,
   }: LikePostProps): Promise<LikePostResponse> {
     try {
-      // Use transaction for atomic like/unlike+count update
-      const postLike = await query.postLike.findFirst({
-        where: { post_id: parseInt(postId), user_id: userId },
-      });
-      let isLiked = false;
-      await query.$transaction(async (prisma) => {
-        if (!postLike) {
-          await prisma.postLike.create({
-            data: {
-              post_id: parseInt(postId),
-              like_id: 1,
-              user_id: userId,
-            },
-          });
-          await prisma.post.update({
-            where: { id: Number(postId) },
-            data: { post_likes: { increment: 1 } },
-          });
-          isLiked = true;
-        } else {
-          await prisma.postLike.delete({ where: { id: postLike.id } });
-          await prisma.post.update({
-            where: { id: parseInt(postId) },
-            data: { post_likes: { decrement: 1 } },
-          });
-          isLiked = false;
-        }
-      });
+      // Use Redis for real-time like operations
+      const result = await RedisPostService.likePost(postId, userId);
+
+      if (!result.success) {
+        throw new Error("Failed to process like operation");
+      }
+
       return {
         success: true,
-        isLiked,
-        message: isLiked ? "Post has been liked" : "Post has been unliked",
+        isLiked: result.isLiked,
+        likeCount: result.newCount,
+        message: result.isLiked ? "Post has been liked" : "Post has been unliked",
       };
     } catch (error: any) {
-      console.error(error);
+      console.error("Error in LikePost:", error);
       throw new Error(error.message);
     }
   }
@@ -2324,13 +2328,13 @@ export default class PostService {
           attempts: 3,
         }),
         EmailService.PostGiftSentEmail(
-          GetSinglename(user?.fullname as string),
+          GetSinglename(user?.name as string),
           String(user?.email),
           String(receiver?.username),
           points,
         ),
         EmailService.PostGiftReceivedEmail(
-          GetSinglename(receiver?.fullname as string),
+          GetSinglename(receiver?.name as string),
           String(receiver?.email),
           String(user?.username),
           points,
@@ -2397,7 +2401,7 @@ export default class PostService {
           where: { id: postIdNum },
           include: {
             user: {
-              select: { id: true, fullname: true, email: true, username: true },
+              select: { id: true, email: true, username: true },
             },
           },
         }),

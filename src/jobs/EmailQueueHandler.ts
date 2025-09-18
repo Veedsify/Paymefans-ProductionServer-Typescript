@@ -33,7 +33,8 @@ const QueueWorker = new Worker(
       await transporter.sendMail(mailOptions);
       return { message: "Email sent successfully", error: false };
     } catch (error: any) {
-      throw new Error(error);
+      console.error("Error sending email:", error);
+      return
     }
   },
   {
@@ -42,9 +43,8 @@ const QueueWorker = new Worker(
 );
 
 QueueWorker.on("completed", async (job) => {
-  const logEntry = `${new Date().toISOString()} - Job ${
-    job.id
-  } completed - ${JSON.stringify(job.data)}`;
+  const logEntry = `${new Date().toISOString()} - Job ${job.id
+    } completed - ${JSON.stringify(job.data)}`;
   await query.batchProcessLogs.create({
     data: {
       job_id: job.id as string,
@@ -58,4 +58,4 @@ QueueWorker.on("failed", (job, err) => {
   console.error(`Job ${job?.id} failed with error:`, err);
 });
 
-export { EmailQueue,  };
+export { EmailQueue, };

@@ -42,7 +42,6 @@ export default class HookupService {
             select: {
               id: true,
               username: true,
-              fullname: true,
               profile_image: true,
               profile_banner: true,
               is_model: true,
@@ -150,7 +149,7 @@ export default class HookupService {
         const models = await query.$queryRaw(Prisma.sql`
                                           SELECT "User".id,
                                                 "User".username,
-                                                "User".fullname,
+                                                "User".name,
                                                 "User".profile_image,
                                                 "User".profile_banner,
                                                 "User".state,
@@ -262,9 +261,9 @@ export default class HookupService {
     const a =
       Math.sin(dLat / 2) * Math.sin(dLat / 2) +
       Math.cos(this.deg2rad(lat1)) *
-        Math.cos(this.deg2rad(lat2)) *
-        Math.sin(dLon / 2) *
-        Math.sin(dLon / 2);
+      Math.cos(this.deg2rad(lat2)) *
+      Math.sin(dLon / 2) *
+      Math.sin(dLon / 2);
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     const distance = R * c; // Distance in km
     return distance;
