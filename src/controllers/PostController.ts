@@ -221,9 +221,9 @@ export default class PostController {
       }
       const singlePost = await PostService.GetSinglePost(options);
       if (singlePost.error) {
-        return res.status(400).json({ ...singlePost });
+        return res.status(400).json(singlePost);
       }
-      return res.status(200).json({ ...singlePost });
+      return res.status(200).json(singlePost);
     } catch (err: any) {
       console.error(err.message);
       res

@@ -30,6 +30,6 @@ export default async function AuthPublic(
       next();
     }
   } catch (error) {
-    return res.status(403).json({ message: "Unauthorized", status: false });
+    return res.status(401).json({ message: "Unauthorized", status: false });
   }
 }

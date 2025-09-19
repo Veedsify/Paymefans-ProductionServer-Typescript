@@ -38,13 +38,12 @@ export const schedulePostLikeSync = async () => {
             } as PostLikeSyncJobData,
             {
                 repeat: {
-                    pattern: "*/1 * * * *", // Every 1 minute
+                    pattern: "*/5 * * * *", // Every 5 minutes
                 },
                 jobId: "sync-all-likes",
             }
         );
 
-        console.log("✅ Post like sync job scheduled to run every 1 minute");
     } catch (error) {
         console.error("❌ Error scheduling post like sync job:", error);
     }
@@ -54,17 +53,13 @@ export const schedulePostLikeSync = async () => {
 export const PostLikeSyncWorker = new Worker(
     "PostLikeSync",
     async (job: Job<PostLikeSyncJobData>) => {
-        const { type, postId, triggeredBy } = job.data;
+        const { type, postId } = job.data;
 
         try {
-            console.log(`🔄 Processing ${type} job (triggered by: ${triggeredBy})`);
 
             switch (type) {
                 case "sync_all_likes":
                     const result = await RedisPostService.syncAllPendingLikes();
-                    console.log(
-                        `✅ Synced ${result.synced} posts, ${result.errors} errors`
-                    );
 
                     // Update job progress and return result
                     await job.updateProgress(100);
@@ -81,7 +76,6 @@ export const PostLikeSyncWorker = new Worker(
                     }
 
                     await RedisPostService.syncPostLikes(postId);
-                    console.log(`✅ Synced post ${postId}`);
 
                     await job.updateProgress(100);
                     return {
@@ -138,7 +132,6 @@ export const triggerPostSync = async (postId: string, triggeredBy: string = "man
             }
         );
 
-        console.log(`🚀 Triggered sync for post ${postId}, job ID: ${job.id}`);
         return job;
     } catch (error) {
         console.error(`❌ Error triggering sync for post ${postId}:`, error);
@@ -170,10 +163,8 @@ export const getPostLikeSyncStats = async () => {
 // Graceful shutdown
 export const shutdownPostLikeSyncWorker = async () => {
     try {
-        console.log("🛑 Shutting down post like sync worker...");
         await PostLikeSyncWorker.close();
         await PostLikeSyncQueue.close();
-        console.log("✅ Post like sync worker shut down successfully");
     } catch (error) {
         console.error("❌ Error shutting down post like sync worker:", error);
     }

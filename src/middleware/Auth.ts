@@ -45,6 +45,6 @@ export default async function Auth(
     req.user = decoded;
     next();
   } catch (error) {
-    return res.status(403).json({ message: "Unauthorized", status: false });
+    return res.status(401).json({ message: "Unauthorized", status: false });
   }
 }

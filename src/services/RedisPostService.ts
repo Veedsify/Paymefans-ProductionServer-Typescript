@@ -4,8 +4,15 @@ import query from "@utils/prisma";
 export class RedisPostService {
     private static readonly LIKE_COUNT_PREFIX = "post:likes:count:";
     private static readonly LIKED_USERS_PREFIX = "post:likes:users:";
-    private static readonly USER_LIKED_POSTS_PREFIX = "user:likes:";
     private static readonly SYNC_PENDING_PREFIX = "sync:pending:likes:";
+    private static readonly SYNC_LOCK_PREFIX = "lock:sync:";
+
+    // Default like type ID (can be made configurable if needed)
+    private static readonly DEFAULT_LIKE_ID = 1;
+
+    // TTL for sync pending keys (7 days) - prevents accumulation of failed sync operations
+    // If syncing fails repeatedly, these keys will eventually expire and be cleaned up
+    private static readonly SYNC_PENDING_TTL = 604800;
 
     /**
      * Get the total like count for a post
@@ -16,15 +23,33 @@ export class RedisPostService {
             const count = await redis.get(key);
 
             if (count !== null) {
-                // Redis has the data, use it
+                // Redis has the data, use it and refresh TTL
+                await redis.expire(key, 7200);
                 return parseInt(count, 10);
             }
 
             // Check if there are pending operations (Redis was initialized but data expired)
             const pendingOps = await this.getPendingSyncOps(postId);
             if (pendingOps.length > 0) {
-                // Data expired but has pending operations, return 0 as fallback
-                return 0;
+                // Data expired but has pending operations, fetch from DB and apply pending ops
+                const post = await query.post.findFirst({
+                    where: { post_id: postId },
+                    select: { post_likes: true }
+                });
+
+                let currentCount = post?.post_likes || 0;
+
+                // Apply pending operations to get current count
+                for (const op of pendingOps) {
+                    const [action] = op.split(':');
+                    if (action === 'like') {
+                        currentCount++;
+                    } else if (action === 'unlike') {
+                        currentCount = Math.max(0, currentCount - 1);
+                    }
+                }
+
+                return currentCount;
             }
 
             // No Redis data and no pending operations, get from database but don't cache yet
@@ -61,6 +86,8 @@ export class RedisPostService {
             if (exists) {
                 // Redis has data for this post
                 const isLiked = await redis.sismember(key, userId.toString());
+                // Refresh TTL on access
+                await redis.expire(key, 7200);
                 return isLiked === 1;
             }
 
@@ -118,7 +145,7 @@ export class RedisPostService {
                 pipeline.decr(likeCountKey);
                 pipeline.sadd(syncPendingKey, `unlike:${userId}`);
                 pipeline.expire(likedUsersKey, 7200); // 2 hours
-                pipeline.expire(syncPendingKey, 7200);
+                pipeline.expire(syncPendingKey, this.SYNC_PENDING_TTL); // 7 days - cleanup failed syncs
 
                 const results = await pipeline.exec();
                 const newCount = Math.max(0, (results?.[1]?.[1] as number) || 0);
@@ -130,7 +157,7 @@ export class RedisPostService {
                 pipeline.incr(likeCountKey);
                 pipeline.sadd(syncPendingKey, `like:${userId}`);
                 pipeline.expire(likedUsersKey, 7200); // 2 hours
-                pipeline.expire(syncPendingKey, 7200);
+                pipeline.expire(syncPendingKey, this.SYNC_PENDING_TTL); // 7 days - cleanup failed syncs
 
                 const results = await pipeline.exec();
                 const newCount = (results?.[1]?.[1] as number) || 1;
@@ -199,23 +226,6 @@ export class RedisPostService {
     }
 
     /**
-   * Get posts that a user has liked
-   */
-    static async getUserLikedPosts(userId: number, page: number = 1, limit: number = 20): Promise<string[]> {
-        try {
-            const key = this.USER_LIKED_POSTS_PREFIX + userId;
-            const start = (page - 1) * limit;
-            const end = start + limit - 1;
-
-            const posts = await redis.lrange(key, start, end);
-            return posts;
-        } catch (error) {
-            console.error('Error getting user liked posts:', error);
-            return [];
-        }
-    }
-
-    /**
      * Get pending sync operations for a post
      */
     static async getPendingSyncOps(postId: string): Promise<string[]> {
@@ -246,7 +256,15 @@ export class RedisPostService {
     static async syncAllPendingLikes(): Promise<{ synced: number; errors: number }> {
         try {
             const pattern = this.SYNC_PENDING_PREFIX + "*";
-            const keys = await redis.keys(pattern);
+            const keys: string[] = [];
+
+            // Use SCAN instead of KEYS for better memory efficiency
+            let cursor = 0;
+            do {
+                const [nextCursor, scanKeys] = await redis.scan(cursor, 'MATCH', pattern, 'COUNT', 100);
+                cursor = parseInt(nextCursor, 10);
+                keys.push(...scanKeys);
+            } while (cursor !== 0);
 
             let synced = 0;
             let errors = 0;
@@ -273,15 +291,33 @@ export class RedisPostService {
      * Sync likes for a specific post from Redis to database
      */
     static async syncPostLikes(postId: string): Promise<void> {
+
         try {
+            // Try to acquire lock atomically using Lua script
+            const lockScript = `
+                if redis.call('setnx', KEYS[1], ARGV[1]) == 1 then
+                    redis.call('expire', KEYS[1], ARGV[2])
+                    return 1
+                else
+                    return 0
+                end
+            `;
+            const lockAcquired = await redis.eval(lockScript, 1, this.SYNC_LOCK_PREFIX + postId, '1', '30');
+
+            if (!lockAcquired) {
+                console.log(`🔒 Sync already in progress for post ${postId}, skipping`);
+                return;
+            }
+
             const pendingOps = await this.getPendingSyncOps(postId);
 
-            if (pendingOps.length === 0) return;
+            if (pendingOps.length === 0) {
+                await redis.del(this.SYNC_LOCK_PREFIX + postId); // Release lock
+                return;
+            }
 
-            // Get current Redis state
+            // Get current Redis state (trust this as ground truth)
             const currentLikeCount = await this.getLikeCount(postId);
-            const likedUsersKey = this.LIKED_USERS_PREFIX + postId;
-            const currentLikedUsers = await redis.smembers(likedUsersKey);
 
             // Find post in database
             const post = await query.post.findFirst({
@@ -292,22 +328,43 @@ export class RedisPostService {
             if (!post) {
                 console.warn(`Post ${postId} not found in database`);
                 await this.clearPendingSyncOps(postId);
+                await redis.del(this.SYNC_LOCK_PREFIX + postId); // Release lock
                 return;
             }
 
-            // Use transaction to ensure consistency
-            await query.$transaction(async (prisma) => {
-                // Delete all existing likes for this post
-                await prisma.postLike.deleteMany({
-                    where: { post_id: post.id }
-                });
+            // Parse pending operations to determine what to do
+            const usersToLike: number[] = [];
+            const usersToUnlike: number[] = [];
 
-                // Create new likes based on Redis state
-                if (currentLikedUsers.length > 0) {
-                    const likesToCreate = currentLikedUsers.map(userId => ({
+            for (const op of pendingOps) {
+                const [action, userIdStr] = op.split(':');
+                const userId = parseInt(userIdStr, 10);
+
+                if (action === 'like') {
+                    usersToLike.push(userId);
+                } else if (action === 'unlike') {
+                    usersToUnlike.push(userId);
+                }
+            }
+
+            // Batch database operations
+            await query.$transaction(async (prisma) => {
+                // Delete unlikes in batch
+                if (usersToUnlike.length > 0) {
+                    await prisma.postLike.deleteMany({
+                        where: {
+                            post_id: post.id,
+                            user_id: { in: usersToUnlike }
+                        }
+                    });
+                }
+
+                // Insert likes in batch (skip duplicates)
+                if (usersToLike.length > 0) {
+                    const likesToCreate = usersToLike.map(userId => ({
                         post_id: post.id,
-                        user_id: parseInt(userId, 10),
-                        like_id: 1 // This seems to be a constant in your schema
+                        user_id: userId,
+                        like_id: this.DEFAULT_LIKE_ID
                     }));
 
                     await prisma.postLike.createMany({
@@ -316,18 +373,23 @@ export class RedisPostService {
                     });
                 }
 
-                // Update post like count
+                // Update post like count to match Redis (ground truth)
                 await prisma.post.update({
                     where: { id: post.id },
                     data: { post_likes: currentLikeCount }
                 });
             });
 
-            // Clear pending operations after successful sync
+            // Clear pending operations only after successful sync
             await this.clearPendingSyncOps(postId);
+
+            console.log(`✅ Synced post ${postId}: ${usersToLike.length} likes, ${usersToUnlike.length} unlikes, final count: ${currentLikeCount}`);
         } catch (error) {
             console.error(`Error syncing post ${postId}:`, error);
             throw error;
+        } finally {
+            // Always release the lock
+            await redis.del(this.SYNC_LOCK_PREFIX + postId);
         }
     }
 
