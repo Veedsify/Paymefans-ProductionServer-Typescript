@@ -1,5 +1,5 @@
-import {redis} from "@libs/RedisStore";
-import {GenerateUniqueId} from "@utils/GenerateUniqueId";
+import { redis } from "@libs/RedisStore";
+import { GenerateUniqueId } from "@utils/GenerateUniqueId";
 import query from "@utils/prisma";
 import type {
     CreatePack,
@@ -8,13 +8,14 @@ import type {
     Tiers,
     UserSubscriptionsResponse
 } from "types/subscriptiontier";
+import ConfigService from "./ConfigService";
 
 export default class SubscriptionTierService {
     // Create Subscription Tier
     static async CreateSubscriptionTier({
-                                            tiers,
-                                            user
-                                        }: CreateSubscriptionTierProps): Promise<CreateSubscriptionTierResponse> {
+        tiers,
+        user
+    }: CreateSubscriptionTierProps): Promise<CreateSubscriptionTierResponse> {
         return query.$transaction(async (prisma) => {
             try {
                 const subscriptionId = `SUB${GenerateUniqueId()}`;
@@ -29,6 +30,24 @@ export default class SubscriptionTierService {
                         id: true,
                     },
                 });
+
+                const config = await ConfigService.Config()
+
+                if (!config.data?.point_conversion_rate_ngn) {
+                    return {
+                        error: true,
+                        message: 'Point conversion rate not set. Please contact support.',
+                    };
+                }
+
+                const priceIsLowerThanMinimum = tiers.some(tier => (parseFloat(tier.tier_price) * config.data!.point_conversion_rate_ngn) < 10_000);
+
+                if (priceIsLowerThanMinimum) {
+                    return {
+                        error: true,
+                        message: 'One or more tier prices are lower than the 10,000 NGN allowed.',
+                    };
+                }
 
                 // Function to create subscription tiers
                 async function createSubscriptionTiers(tiers: Tiers, createPack: CreatePack) {

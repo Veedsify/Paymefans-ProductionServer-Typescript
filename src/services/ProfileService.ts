@@ -101,8 +101,6 @@ class ProfileService {
         return [user, oldUser];
       });
 
-      console.log(getUser);
-
       let user = getUser ?? oldUser?.user;
 
       if (!user) {

@@ -5,6 +5,9 @@ import type { Request, Response } from "express";
 import type { StoryType } from "types/story";
 import type { AuthUser } from "types/user";
 import { v4 as uuid } from "uuid";
+import { PutObjectCommand } from "@aws-sdk/client-s3";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+import { s3 } from "@utils/aws";
 
 export default class StoryController {
   //Get Stories from the database
@@ -64,6 +67,146 @@ export default class StoryController {
       });
     }
   }
+  // Get Presigned URLs for direct S3 upload
+  static async GetPresignedUrls(req: Request, res: Response): Promise<any> {
+    try {
+      const { files } = req.body as {
+        files: Array<{
+          name: string;
+          type: string;
+          size: number;
+          media_id?: string;
+        }>;
+      };
+
+      if (!files || !Array.isArray(files)) {
+        return res.status(400).json({
+          message: "Files array is required",
+          status: false,
+        });
+      }
+
+      const urlPromises = files.map(async (file) => {
+        const fileExtension = file.name.split(".").pop();
+        const media_id = file.media_id || uuid(); // Use client-provided media_id if available
+        const isVideo = file.type.startsWith("video/");
+
+        let key: string;
+        if (isVideo) {
+          key = `process/${media_id}.${fileExtension}`;
+        } else {
+          key = `stories/${media_id}.${fileExtension}`;
+        }
+
+        const putObjectCommand = new PutObjectCommand({
+          Bucket: config.mainPaymefansBucket!,
+          Key: key,
+          ContentType: file.type,
+        });
+
+        const presignedUrl = await getSignedUrl(s3, putObjectCommand, {
+          expiresIn: 3600, // 1 hour
+        });
+
+        return {
+          media_id,
+          presignedUrl,
+          key,
+          fileName: file.name,
+          fileType: file.type,
+          fileSize: file.size,
+          isVideo,
+        };
+      });
+
+      const urls = await Promise.all(urlPromises);
+
+      res.status(200).json({
+        error: false,
+        data: urls,
+        status: true,
+      });
+    } catch (error: any) {
+      console.log(error);
+      res.status(500).json({
+        message: "An error occurred while generating presigned URLs",
+        error: error.message,
+        status: false,
+      });
+    }
+  }
+
+  // Complete Upload - Save uploaded file info to database
+  static async CompleteUpload(req: Request, res: Response): Promise<any> {
+    try {
+      const { uploadedFiles } = req.body as {
+        uploadedFiles: Array<{
+          media_id: string;
+          key: string;
+          fileName: string;
+          fileType: string;
+          fileSize: number;
+          isVideo: boolean;
+        }>;
+      };
+
+      if (!uploadedFiles || !Array.isArray(uploadedFiles)) {
+        return res.status(400).json({
+          message: "Uploaded files array is required",
+          status: false,
+        });
+      }
+
+      const transaction = await query.$transaction(async (tx) => {
+        const savedFiles = uploadedFiles.map(async (file) => {
+          const cloudfrontUrl = file.isVideo
+            ? `${config.processedCloudfrontUrl}/${file.key
+                .split(".")
+                .slice(0, -1)
+                .join(".")}.mp4`
+            : `${config.mainCloudfrontUrl}/${file.key}`;
+
+          await tx.uploadedMedia.create({
+            data: {
+              user_id: (req.user as AuthUser).id,
+              media_id: file.media_id,
+              name: file.fileName,
+              type: file.isVideo ? "video" : "image",
+              url: cloudfrontUrl,
+              size: file.fileSize,
+              extension: file.fileName.split(".").slice(-1)[0],
+              key: file.key,
+            },
+          });
+
+          return {
+            url: cloudfrontUrl,
+            mimetype: file.fileType,
+            filename: file.fileName,
+            media_state: file.isVideo ? "processing" : "completed",
+            media_id: file.media_id,
+            size: file.fileSize,
+          };
+        });
+
+        return Promise.all(savedFiles);
+      });
+
+      res.status(200).json({
+        error: false,
+        data: transaction,
+        status: true,
+      });
+    } catch (error: any) {
+      console.log("Transaction failed: ", error);
+      res.status(500).json({
+        message: "An error occurred while completing upload",
+        error: error.message,
+        status: false,
+      });
+    }
+  }
+
   // Upload Story
   static async UploadStory(req: Request, res: Response): Promise<any> {
     try {

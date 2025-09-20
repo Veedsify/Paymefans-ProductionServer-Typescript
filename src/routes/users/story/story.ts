@@ -46,6 +46,8 @@ const storyUpload = multer({
 story.get("/all", Auth, StoryController.GetStories);
 story.get("/media", Auth, StoryController.GetMyMedia);
 story.post("/save", Auth, StoryController.SaveStory);
+story.post("/presigned-urls", Auth, StoryController.GetPresignedUrls);
+story.post("/complete-upload", Auth, StoryController.CompleteUpload);
 story.post(
   "/upload",
   Auth,

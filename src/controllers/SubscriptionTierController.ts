@@ -6,10 +6,11 @@ import type { AuthUser } from "types/user";
 export default class SubscriptionTierController {
     static async CreateSubscriptionTier(req: Request, res: Response): Promise<any> {
         try {
-            const createSubscriptionTier = await SubscriptionTierService.CreateSubscriptionTier({
+            const options = {
                 tiers: req.body.tiers,
-                user: req.user as unknown as AuthUser
-            });
+                user: req.user as AuthUser
+            }
+            const createSubscriptionTier = await SubscriptionTierService.CreateSubscriptionTier(options);
             if (createSubscriptionTier.error) {
                 return res.status(400).json({ error: true, message: createSubscriptionTier.message });
             }

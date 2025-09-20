@@ -96,7 +96,7 @@ export default class RegisterService {
     if (welcomeAccount?.error) {
       return { message: welcomeAccount.message, error: true };
     }
-    const admin = await this.CheckForWelcomeAccount(user);
+    const admin = await this.CheckForAdmin(user);
     if (admin?.error) {
       return { message: admin.message, error: true };
     }
@@ -227,7 +227,7 @@ export default class RegisterService {
     return query.$transaction(async (tx) => {
       const user = await tx.user.create({
         data: {
-          name: data.name,
+          name: data.name.toLocaleLowerCase(),
           user_id: uniqueUserId,
           username: `@${data.username}`,
           email: data.email,
@@ -282,7 +282,7 @@ export default class RegisterService {
     user: RegisteredUser,
   ): Promise<CheckForAdminResponse> {
     const admin = await query.user.findFirst({
-      where: { username: "@welcome" },
+      where: { username: "@paymefans", admin: true },
       select: {
         user_id: true,
         id: true,

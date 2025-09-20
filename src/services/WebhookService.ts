@@ -256,40 +256,69 @@ export class WebhookService {
     }
   }
 
-  // Handle Complete Media processing
+  // Handle Complete Media processing for uploaded media (stories)
   static async HandleMediaProcessingComplete(
     response: HandleCompleteMediaParams,
   ): Promise<void> {
-    const jobId = response.detail.jobId;
-    const command = new GetJobCommand({
-      Id: jobId,
-    });
-    const data = await mediaConvert.send(command);
-    const mediaRecord = await query.uploadedMedia.findFirst({
-      where: {
-        key: {
-          contains: data?.Job?.UserMetadata?.video_id as string,
+    try {
+      const jobId = response.detail.jobId;
+      const command = new GetJobCommand({
+        Id: jobId,
+      });
+      const data = await mediaConvert.send(command);
+
+      // Extract video_id from UserMetadata
+      const videoId = data?.Job?.UserMetadata?.video_id as string;
+
+      if (!videoId) {
+        console.warn(`No video_id found in job metadata for job ${jobId}`);
+        return;
+      }
+
+      // Find media record in uploadedMedia table
+      const mediaRecord = await query.uploadedMedia.findFirst({
+        where: {
+          key: {
+            contains: videoId,
+          },
         },
-      },
-    });
+      });
 
-    if (!mediaRecord) {
-      console.warn(`Uploaded media not found`);
-      return;
+      if (!mediaRecord) {
+        console.warn(`Uploaded media not found for video_id: ${videoId}`);
+        return;
+      }
+
+      // Update media state to completed
+      await query.uploadedMedia.update({
+        where: { id: mediaRecord.id },
+        data: {
+          media_state: "completed",
+        },
+      });
+
+      // Publish to Redis for SSE notification
+      await redis.publish(
+        `media:processed:${mediaRecord.user_id}`,
+        mediaRecord.media_id,
+      );
+
+      console.log(
+        `Media processing completed for media_id: ${mediaRecord.media_id}`,
+      );
+    } catch (error) {
+      console.error("Error in HandleMediaProcessingComplete:", error);
     }
-
-    await query.uploadedMedia.update({
-      where: { id: mediaRecord.id },
-      data: {
-        media_state: "completed",
-      },
-    });
-
-    await redis.publish(
-      `media:processed:${mediaRecord.user_id}`,
-      mediaRecord.media_id,
-    );
   }
 }
+
+// Interface for media processing webhook
+interface HandleCompleteMediaParams {
+  detail: {
+    jobId: string;
+    status: string;
+  };
+}
+
 // Run processRetries every minute.
 setInterval(WebhookService.processRetries, 60000);

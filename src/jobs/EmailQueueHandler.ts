@@ -12,7 +12,7 @@ const EmailQueue = new Queue("emailQueues", {
     removeOnComplete: true,
     attempts: 3,
     backoff: 5000,
-  }
+  },
 });
 
 const QueueWorker = new Worker(
@@ -25,7 +25,7 @@ const QueueWorker = new Worker(
     // Send Email
     try {
       const mailOptions = {
-        from: `${APP_NAME} <noreply@paymefans.com>`,
+        from: `${APP_NAME} <admin@dikewisdom.space>`,
         to: emailData.email,
         subject: emailData.subject,
         html: html, // Name of the Handlebars template
@@ -34,17 +34,18 @@ const QueueWorker = new Worker(
       return { message: "Email sent successfully", error: false };
     } catch (error: any) {
       console.error("Error sending email:", error);
-      return
+      return;
     }
   },
   {
     connection: redis,
-  }
+  },
 );
 
 QueueWorker.on("completed", async (job) => {
-  const logEntry = `${new Date().toISOString()} - Job ${job.id
-    } completed - ${JSON.stringify(job.data)}`;
+  const logEntry = `${new Date().toISOString()} - Job ${
+    job.id
+  } completed - ${JSON.stringify(job.data)}`;
   await query.batchProcessLogs.create({
     data: {
       job_id: job.id as string,
@@ -58,4 +59,4 @@ QueueWorker.on("failed", (job, err) => {
   console.error(`Job ${job?.id} failed with error:`, err);
 });
 
-export { EmailQueue, };
+export { EmailQueue };
