@@ -20,7 +20,6 @@ const UpdateAvatarWorker = new Worker("updateAvatarQueue", async (job) => {
     }, {
         profile_image: avatarUrl
     })
-
 }, {
     connection: redis,
 })
@@ -37,7 +36,7 @@ UpdateAvatarWorker.on("completed", async (job) => {
     });
 });
 UpdateAvatarWorker.on("failed", (error: any) => {
-    console.error(`Job failed with error: ${error}`);
+    console.error(`Job failed with error: ${JSON.stringify(error)}`);
 })
 
-export { UpdateAvatarQueue,  }
+export { UpdateAvatarQueue, }

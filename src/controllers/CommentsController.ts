@@ -79,6 +79,7 @@ export default class CommentsController {
       }
 
       const viewComment = await CommentsService.ViewComment(commentId, user);
+
       if (viewComment.error) {
         return res.status(400).json({ ...viewComment });
       }

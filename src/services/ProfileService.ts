@@ -257,7 +257,7 @@ class ProfileService {
       await UpdateAvatarQueue.add(
         "UpdateAvatarQueue",
         {
-          userId: user.user_id,
+          userId: user.id,
           avatarUrl: AvatarUrl,
         },
         {
