@@ -34,8 +34,12 @@ async function Authenticate(data: {
       expiresIn: REFRESH_TOKEN_EXPIRATION,
     } as SignOptions,
   );
-  const key = `refresh_token_${data.id}`;
-  redis.set(key, refreshToken, "EX", durationInSeconds(REFRESH_TOKEN_EXPIRATION),);
+  redis.set(
+    `refresh_token_${data.id}`,
+    refreshToken,
+    "EX",
+    durationInSeconds(REFRESH_TOKEN_EXPIRATION),
+  );
   return { accessToken, refreshToken };
 }
 export { Authenticate };

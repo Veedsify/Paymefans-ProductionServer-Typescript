@@ -80,9 +80,8 @@ export default class AuthController {
       }
 
       if (LoginAccount.token) {
-        res.setHeader(
-          "Set-Cookie",
-          [serialize("token", LoginAccount.token as string, {
+        res.setHeader("Set-Cookie", [
+          serialize("token", LoginAccount.token as string, {
             httpOnly: process.env.NODE_ENV === "production",
             secure: process.env.NODE_ENV === "production",
             sameSite: "lax",
@@ -94,8 +93,8 @@ export default class AuthController {
             secure: process.env.NODE_ENV === "production",
             sameSite: "lax",
             path: "/",
-          })]
-        );
+          }),
+        ]);
       }
 
       res.status(200).json(LoginAccount);
@@ -181,9 +180,8 @@ export default class AuthController {
       }
 
       if (user.token) {
-        res.setHeader(
-          "Set-Cookie",
-          [serialize("token", user.token.accessToken as string, {
+        res.setHeader("Set-Cookie", [
+          serialize("token", user.token.accessToken as string, {
             httpOnly: process.env.NODE_ENV === "production",
             secure: process.env.NODE_ENV === "production",
             sameSite: "lax",
@@ -195,8 +193,8 @@ export default class AuthController {
             secure: process.env.NODE_ENV === "production",
             sameSite: "lax",
             path: "/",
-          })]
-        );
+          }),
+        ]);
       }
 
       return res.status(200).json(user);
@@ -220,19 +218,23 @@ export default class AuthController {
 
       const decoded = jwt.verify(
         client_refresh_token,
-        process.env.JWT_REFRESH_SECRET as string) as {
-          user_id: string;
-          id: number;
-          email: string;
-        }
+        process.env.JWT_REFRESH_SECRET as string,
+      ) as {
+        user_id: string;
+        id: number;
+        email: string;
+      };
 
       if (!decoded || (decoded && !decoded?.email)) {
         return res
           .status(401)
-          .json({ message: "Invalid request, please login again", status: false });
+          .json({
+            message: "Invalid request, please login again",
+            status: false,
+          });
       }
 
-      const user = await UserService.GetUserJwtPayload(decoded?.email)
+      const user = await UserService.GetUserJwtPayload(decoded?.email);
 
       if (!user) {
         return res
@@ -246,7 +248,10 @@ export default class AuthController {
       if (!token || token !== client_refresh_token) {
         return res
           .status(401)
-          .json({ message: "Invalid token, please login again", status: false });
+          .json({
+            message: "Invalid token, please login again",
+            status: false,
+          });
       }
 
       const { accessToken, refreshToken } = await Authenticate(user);
@@ -254,27 +259,32 @@ export default class AuthController {
       if (!accessToken || !refreshToken) {
         return res
           .status(401)
-          .json({ message: "Invalid token, please login again", status: false });
+          .json({
+            message: "Invalid token, please login again",
+            status: false,
+          });
       }
 
-      redis.set(key, refreshToken, "EX", durationInSeconds(REFRESH_TOKEN_EXPIRATION));
-      res.setHeader(
-        "Set-Cookie",
-        [
-          serialize("token", accessToken as string, {
-            httpOnly: process.env.NODE_ENV === "production",
-            secure: process.env.NODE_ENV === "production",
-            sameSite: "lax",
-            path: "/",
-          }),
-          serialize("refresh_token", refreshToken as string, {
-            httpOnly: process.env.NODE_ENV === "production",
-            secure: process.env.NODE_ENV === "production",
-            sameSite: "lax",
-            path: "/",
-          }),
-        ]
+      redis.set(
+        key,
+        refreshToken,
+        "EX",
+        durationInSeconds(REFRESH_TOKEN_EXPIRATION),
       );
+      res.setHeader("Set-Cookie", [
+        serialize("token", accessToken as string, {
+          httpOnly: process.env.NODE_ENV === "production",
+          secure: process.env.NODE_ENV === "production",
+          sameSite: "lax",
+          path: "/",
+        }),
+        serialize("refresh_token", refreshToken as string, {
+          httpOnly: process.env.NODE_ENV === "production",
+          secure: process.env.NODE_ENV === "production",
+          sameSite: "lax",
+          path: "/",
+        }),
+      ]);
 
       return res.status(200).json({
         token: accessToken,
