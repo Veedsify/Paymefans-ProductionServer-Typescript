@@ -78,21 +78,24 @@ export default class AuthController {
       if (LoginAccount.error) {
         return res.status(400).json(LoginAccount);
       }
+      const cookieOptions = {
+        httpOnly: false, // Keep false so client can read it
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "lax" as const,
+        path: "/",
+        domain: process.env.NODE_ENV === "production" ? ".paymefans.shop" : undefined, // Allow subdomain access
+      };
+
 
       if (LoginAccount.token) {
         res.setHeader("Set-Cookie", [
           serialize("token", LoginAccount.token as string, {
-            httpOnly: false,
-            secure: process.env.NODE_ENV === "production",
-            sameSite: "lax",
-            path: "/",
+            ...cookieOptions,
             maxAge: 3600,
           }),
           serialize("refresh_token", LoginAccount.refresh as string, {
-            httpOnly: false,
-            secure: process.env.NODE_ENV === "production",
-            sameSite: "lax",
-            path: "/",
+            ...cookieOptions,
+            maxAge: durationInSeconds(REFRESH_TOKEN_EXPIRATION),
           }),
         ]);
       }
@@ -179,20 +182,23 @@ export default class AuthController {
         return res.status(400).json(user);
       }
 
+      const cookieOptions = {
+        httpOnly: false, // Keep false so client can read it
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "lax" as const,
+        path: "/",
+        domain: process.env.NODE_ENV === "production" ? ".paymefans.shop" : undefined, // Allow subdomain access
+      };
+
       if (user.token) {
         res.setHeader("Set-Cookie", [
           serialize("token", user.token.accessToken as string, {
-            httpOnly: false,
-            secure: process.env.NODE_ENV === "production",
-            sameSite: "lax",
-            path: "/",
+            ...cookieOptions,
             maxAge: 3600,
           }),
           serialize("refresh_token", user.token.refreshToken as string, {
-            httpOnly: false,
-            secure: process.env.NODE_ENV === "production",
-            sameSite: "lax",
-            path: "/",
+            ...cookieOptions,
+            maxAge: durationInSeconds(REFRESH_TOKEN_EXPIRATION),
           }),
         ]);
       }
