@@ -83,11 +83,11 @@ export default class AuthController {
         secure: process.env.NODE_ENV === "production",
         sameSite: "lax" as const,
         path: "/",
-        domain: process.env.NODE_ENV === "production" ? ".paymefans.shop" : undefined, // Allow subdomain access
+        domain:
+          process.env.NODE_ENV === "production" ? ".paymefans.shop" : undefined, // Allow subdomain access
       };
 
-
-      if (LoginAccount.token) {
+      if (LoginAccount.token && !LoginAccount.tfa) {
         res.setHeader("Set-Cookie", [
           serialize("token", LoginAccount.token as string, {
             ...cookieOptions,
@@ -187,7 +187,8 @@ export default class AuthController {
         secure: process.env.NODE_ENV === "production",
         sameSite: "lax" as const,
         path: "/",
-        domain: process.env.NODE_ENV === "production" ? ".paymefans.shop" : undefined, // Allow subdomain access
+        domain:
+          process.env.NODE_ENV === "production" ? ".paymefans.shop" : undefined, // Allow subdomain access
       };
 
       if (user.token) {
@@ -232,12 +233,10 @@ export default class AuthController {
       };
 
       if (!decoded || (decoded && !decoded?.email)) {
-        return res
-          .status(401)
-          .json({
-            message: "Invalid request, please login again",
-            status: false,
-          });
+        return res.status(401).json({
+          message: "Invalid request, please login again",
+          status: false,
+        });
       }
 
       const user = await UserService.GetUserJwtPayload(decoded?.email);
@@ -252,23 +251,19 @@ export default class AuthController {
       const token = await redis.get(key);
 
       if (!token || token !== client_refresh_token) {
-        return res
-          .status(401)
-          .json({
-            message: "Invalid token, please login again",
-            status: false,
-          });
+        return res.status(401).json({
+          message: "Invalid token, please login again",
+          status: false,
+        });
       }
 
       const { accessToken, refreshToken } = await Authenticate(user);
 
       if (!accessToken || !refreshToken) {
-        return res
-          .status(401)
-          .json({
-            message: "Invalid token, please login again",
-            status: false,
-          });
+        return res.status(401).json({
+          message: "Invalid token, please login again",
+          status: false,
+        });
       }
 
       redis.set(
