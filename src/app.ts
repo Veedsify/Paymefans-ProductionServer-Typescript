@@ -35,7 +35,6 @@ server.maxConnections = 10000; // Maximum concurrent connections
 
 /**
  * HTTP request logging
- * Use 'dev' format for non-production, 'combined' for production.
  */
 if (process.env.NODE_ENV === "production") {
   app.use(logger("combined"));
