@@ -17,6 +17,7 @@ export default async function Auth(
     if (!token && req.cookies?.token) {
       token = req.cookies.token;
     }
+    console.log("Auth middleware - token: After Check", token);
     if (!token) {
       return res
         .setHeader("Set-Cookie", [
