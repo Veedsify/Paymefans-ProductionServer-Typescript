@@ -82,14 +82,14 @@ export default class AuthController {
       if (LoginAccount.token) {
         res.setHeader("Set-Cookie", [
           serialize("token", LoginAccount.token as string, {
-            httpOnly: process.env.NODE_ENV === "production",
+            httpOnly: false,
             secure: process.env.NODE_ENV === "production",
             sameSite: "lax",
             path: "/",
             maxAge: 3600,
           }),
           serialize("refresh_token", LoginAccount.refresh as string, {
-            httpOnly: process.env.NODE_ENV === "production",
+            httpOnly: false,
             secure: process.env.NODE_ENV === "production",
             sameSite: "lax",
             path: "/",
@@ -182,14 +182,14 @@ export default class AuthController {
       if (user.token) {
         res.setHeader("Set-Cookie", [
           serialize("token", user.token.accessToken as string, {
-            httpOnly: process.env.NODE_ENV === "production",
+            httpOnly: false,
             secure: process.env.NODE_ENV === "production",
             sameSite: "lax",
             path: "/",
             maxAge: 3600,
           }),
           serialize("refresh_token", user.token.refreshToken as string, {
-            httpOnly: process.env.NODE_ENV === "production",
+            httpOnly: false,
             secure: process.env.NODE_ENV === "production",
             sameSite: "lax",
             path: "/",
