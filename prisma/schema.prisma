@@ -131,6 +131,8 @@ model User {
   Referrals                 Referrals[]                 @relation("UserReferrals")
   Referrer                  Referrals[]                 @relation("Referrer")
   UploadedMedia             UploadedMedia[]
+  StoryMentionsReceived     StoryMention[]              @relation("StoryMentions")
+  StoryMentionsGiven        StoryMention[]              @relation("StoryMentioner")
 }
 
 model Participants {
@@ -274,20 +276,21 @@ model UserStory {
 }
 
 model StoryMedia {
-  id              Int         @id @default(autoincrement())
-  media_id        String      @unique
+  id              Int            @id @default(autoincrement())
+  media_id        String         @unique
   media_type      String
   filename        String
   story_content   String?
   duration        Int?
-  user_id         Int
-  media_state     MediaState  @default(processing)
-  created_at      DateTime    @default(now())
-  updated_at      DateTime    @updatedAt
+  user_story_id   Int
+  media_state     MediaState     @default(processing)
+  created_at      DateTime       @default(now())
+  updated_at      DateTime       @updatedAt
   captionElements Json?
   media_url       String?
-  story           UserStory   @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  story           UserStory      @relation(fields: [user_story_id], references: [id], onDelete: Cascade)
   StoryView       StoryView[]
+  StoryMention    StoryMention[]
 }
 
 model StoryView {
@@ -303,6 +306,22 @@ model StoryView {
   @@unique([story_media_id, viewer_id])
   @@index([story_media_id])
   @@index([viewer_id])
+}
+
+model StoryMention {
+  id                Int        @id @default(autoincrement())
+  story_media_id    String
+  mentioned_user_id Int
+  mentioner_id      Int
+  created_at        DateTime   @default(now())
+  story_media       StoryMedia @relation(fields: [story_media_id], references: [media_id], onDelete: Cascade)
+  mentioned_user    User       @relation("StoryMentions", fields: [mentioned_user_id], references: [id], onDelete: Cascade)
+  mentioner         User       @relation("StoryMentioner", fields: [mentioner_id], references: [id], onDelete: Cascade)
+
+  @@unique([story_media_id, mentioned_user_id])
+  @@index([story_media_id])
+  @@index([mentioned_user_id])
+  @@index([mentioner_id])
 }
 
 model Post {

@@ -453,4 +453,162 @@ export default class StoryService {
       throw new Error("An error occurred while fetching story views");
     }
   }
+
+  // Get Story Mentions
+  static async GetStoryMentions({
+    storyMediaId,
+    userId,
+  }: {
+    storyMediaId: string;
+    userId: number;
+  }) {
+    try {
+      // First verify the user owns the story or has permission to view mentions
+      const storyMedia = await query.storyMedia.findUnique({
+        where: { media_id: storyMediaId },
+        include: {
+          story: {
+            include: {
+              user: true,
+            },
+          },
+        },
+      });
+
+      if (!storyMedia) {
+        return {
+          error: true,
+          message: "Story not found",
+        };
+      }
+
+      // Check if user owns the story
+      if (storyMedia.story.user.id !== userId) {
+        return {
+          error: true,
+          message: "You don't have permission to view mentions for this story",
+        };
+      }
+
+      const mentions = await query.storyMention.findMany({
+        where: { story_media_id: storyMediaId },
+        include: {
+          mentioned_user: {
+            select: {
+              id: true,
+              user_id: true,
+              username: true,
+              name: true,
+              profile_image: true,
+            },
+          },
+        },
+        orderBy: { created_at: "desc" },
+      });
+
+      return {
+        error: false,
+        message: "Story mentions fetched successfully",
+        data: {
+          mentions,
+          storyMediaId,
+        },
+      };
+    } catch (error) {
+      console.error(error);
+      throw new Error("An error occurred while fetching story mentions");
+    }
+  }
+
+  // Add Story Mentions
+  static async AddStoryMentions({
+    storyMediaId,
+    mentionedUserIds,
+    mentionerId,
+  }: {
+    storyMediaId: string;
+    mentionedUserIds: number[];
+    mentionerId: number;
+  }) {
+    try {
+      // First verify the story exists and belongs to the mentioner
+      const storyMedia = await query.storyMedia.findUnique({
+        where: { media_id: storyMediaId },
+        include: {
+          story: {
+            include: {
+              user: true,
+            },
+          },
+        },
+      });
+
+      if (!storyMedia) {
+        return {
+          error: true,
+          message: "Story not found",
+        };
+      }
+
+      if (storyMedia.story.user.id !== mentionerId) {
+        return {
+          error: true,
+          message: "You don't have permission to add mentions to this story",
+        };
+      }
+
+      // Remove duplicates and filter out invalid user IDs
+      const uniqueUserIds = [...new Set(mentionedUserIds)];
+
+      // Verify all mentioned users exist
+      const validUsers = await query.user.findMany({
+        where: {
+          id: {
+            in: uniqueUserIds,
+          },
+        },
+        select: {
+          id: true,
+          username: true,
+        },
+      });
+
+      if (validUsers.length !== uniqueUserIds.length) {
+        return {
+          error: true,
+          message: "Some mentioned users were not found",
+        };
+      }
+
+      // Create mentions (use createMany with skipDuplicates to handle existing mentions)
+      await query.storyMention.createMany({
+        data: uniqueUserIds.map((userId) => ({
+          story_media_id: storyMediaId,
+          mentioned_user_id: userId,
+          mentioner_id: mentionerId,
+        })),
+        skipDuplicates: true,
+      });
+
+      // Send notifications to mentioned users
+      const { MentionService } = await import("./MentionService");
+      await MentionService.SendStoryMentionNotifications({
+        storyMediaId,
+        mentionedUserIds: uniqueUserIds,
+        mentionerId,
+      });
+
+      return {
+        error: false,
+        message: "Story mentions added successfully",
+        data: {
+          storyMediaId,
+          mentionedUserIds: uniqueUserIds,
+        },
+      };
+    } catch (error) {
+      console.error(error);
+      throw new Error("An error occurred while adding story mentions");
+    }
+  }
 }

@@ -137,4 +137,67 @@ export class MentionService {
       return [];
     }
   }
+
+  static async SendStoryMentionNotifications({
+    storyMediaId,
+    mentionedUserIds,
+    mentionerId,
+  }: {
+    storyMediaId: string;
+    mentionedUserIds: number[];
+    mentionerId: number;
+  }): Promise<void> {
+    try {
+      // Get mentioner details
+      const mentioner = await query.user.findUnique({
+        where: { id: mentionerId },
+        select: {
+          id: true,
+          username: true,
+          name: true,
+        },
+      });
+
+      if (!mentioner) {
+        return;
+      }
+
+      // Validate mentions to ensure no blocking relationships exist
+      const validatedMentions = await this.validateMentions(
+        mentionedUserIds.map((id) => ({ id, username: "", name: "" })),
+        mentionerId,
+      );
+
+      // Filter out the mentioner from mentions (don't notify yourself)
+      const validMentions = validatedMentions.filter(
+        (mention) => mention.id !== mentionerId,
+      );
+
+      if (validMentions.length === 0) {
+        return;
+      }
+
+      // Create notifications for each mentioned user
+      const notificationPromises = validMentions.map(async (mention) => {
+        const notificationId = `NOT${GenerateUniqueId()}`;
+        const message = `<strong>${mentioner.username}</strong> mentioned you in their story`;
+        const url = `${process.env.APP_URL}/stories/${storyMediaId}`;
+
+        return query.notifications.create({
+          data: {
+            notification_id: notificationId,
+            message,
+            user_id: mention.id,
+            action: "sparkle",
+            read: false,
+            url: url,
+          },
+        });
+      });
+
+      await Promise.all(notificationPromises);
+    } catch (error) {
+      console.error("Error sending story mention notifications:", error);
+    }
+  }
 }

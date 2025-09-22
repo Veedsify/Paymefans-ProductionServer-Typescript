@@ -56,4 +56,6 @@ story.post(
 );
 story.post("/view", Auth, StoryController.ViewStory);
 story.get("/views/:storyMediaId", Auth, StoryController.GetStoryViews);
+story.get("/mentions/:storyMediaId", Auth, StoryController.GetStoryMentions);
+story.post("/mentions", Auth, StoryController.AddStoryMentions);
 export default story;
