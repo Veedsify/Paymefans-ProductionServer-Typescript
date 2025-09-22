@@ -74,6 +74,7 @@ export default class UserService {
           currency: true,
           active_status: true,
           watermarkEnabled: true,
+          admin: true,
           total_followers: true,
           total_following: true,
           total_subscribers: true,

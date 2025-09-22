@@ -90,7 +90,7 @@ const CommentViewSchema = new mongoose.Schema({
 });
 
 // Create compound index for userId and commentId to ensure uniqueness
-CommentViewSchema.index({ userId: 1, commentId: 1 }, { unique: true });
+CommentViewSchema.index({ userId: 1, commentId: 1 });
 
 const wishlistSchema = new mongoose.Schema({
   userId: {

@@ -23,6 +23,41 @@ import EmitActiveUsers from "@jobs/EmitActiveUsers";
 // import SupportReview from "../models/SupportReview";
 
 export default class SocketService {
+  // Redis-based user state management utilities
+  static async getUserFromSocket(socketId: string): Promise<SocketUser | null> {
+    const userData = await redis.get(`socket:${socketId}:user`);
+    return userData ? JSON.parse(userData) : null;
+  }
+
+  static async setUserForSocket(socketId: string, user: SocketUser): Promise<void> {
+    await redis.setex(`socket:${socketId}:user`, 3600, JSON.stringify(user));
+    if (user.userId) {
+      await redis.sadd(`user:${user.userId}:sockets`, socketId);
+      await redis.expire(`user:${user.userId}:sockets`, 3600);
+    }
+  }
+
+  static async getUserRoom(socketId: string): Promise<string | null> {
+    return await redis.get(`socket:${socketId}:room`);
+  }
+
+  static async setUserRoom(socketId: string, roomId: string): Promise<void> {
+    await redis.setex(`socket:${socketId}:room`, 3600, roomId);
+  }
+
+  static async removeSocketState(socketId: string): Promise<void> {
+    const user = await this.getUserFromSocket(socketId);
+    if (user?.userId) {
+      await redis.srem(`user:${user.userId}:sockets`, socketId);
+    }
+    await redis.del(`socket:${socketId}:user`);
+    await redis.del(`socket:${socketId}:room`);
+  }
+
+  static async getUserSockets(userId: string): Promise<string[]> {
+    return await redis.smembers(`user:${userId}:sockets`);
+  }
+
   // Emit active users to a specific socket
 
   // Handle join room
@@ -350,15 +385,16 @@ export default class SocketService {
   // Handle user connected
   static async HandleUserConnected(
     socket: Socket,
-    user: SocketUser,
+    _: SocketUser,
     data: any,
   ) {
-    user = {
+    const updatedUser = {
       socketId: socket.id,
       username: data.username,
       userId: data.userId,
     };
-    return user;
+    await this.setUserForSocket(socket.id, updatedUser);
+    return updatedUser;
   }
 
   // Handle Reconnect To Rooms
@@ -366,11 +402,19 @@ export default class SocketService {
     const roomId = await redis.get(`user:${userId}:room`);
     if (roomId) {
       socket.join(roomId);
-      const user = {
-        socketId: socket.id,
-        userId,
-        username: "", // Optional: can pull from redis if needed
-      };
+      // Set the user room in socket state
+      await this.setUserRoom(socket.id, roomId);
+
+      // Try to get existing user data or create basic user
+      let user = await this.getUserFromSocket(socket.id);
+      if (!user) {
+        user = {
+          socketId: socket.id,
+          userId,
+          username: "", // Optional: can pull from database if needed
+        };
+        await this.setUserForSocket(socket.id, user);
+      }
       await redis.hset(`room:${roomId}`, userId, JSON.stringify(user));
     }
   }

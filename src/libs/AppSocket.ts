@@ -25,25 +25,38 @@ async function AppSocket(io: any) {
   process.on("SIGINT", () => {
     clearInterval(cleanupInterval);
   });
-  io.on("connection", (socket: any) => {
+  io.use((socket: any, next: (err?: Error) => void) => {
     const username = socket.handshake.query.username as string;
-    if (!username || username === null || typeof username !== "string") {
-      console.error("No username provided in socket connection");
-      return;
+    if (!username || typeof username !== "string") {
+      console.error("❌ Missing or invalid username:", socket.id);
+      return next(new Error("Username is required"));
     }
+    // Optional: Attach to socket for later use
+    socket.username = username;
+    next(); // ✅ allow connection
+  });
+  io.on("connection", (socket: any) => {
+    const username = socket.username; // ← already validated and attached
 
-    let userRoom = "";
-    let user: SocketUser = {
-      socketId: socket.id,
-      userId: "",
-      username: username,
+    // Initialize user object with Redis storage
+    const initializeUser = async (): Promise<SocketUser> => {
+      const user: SocketUser = {
+        socketId: socket.id,
+        userId: "",
+        username: username,
+      };
+      await SocketService.setUserForSocket(socket.id, user);
+      return user;
     };
 
     const AddToUserRoom = async (data: any) => {
-      userRoom = data;
-      // Store mapping in Redis
-      await redis.hset(`room:${data}`, user.userId, JSON.stringify(user));
-      await redis.set(`user:${user.userId}:room`, data);
+      await SocketService.setUserRoom(socket.id, data);
+      const user = await SocketService.getUserFromSocket(socket.id);
+      if (user && user.userId) {
+        // Store mapping in Redis
+        await redis.hset(`room:${data}`, user.userId, JSON.stringify(user));
+        await redis.set(`user:${user.userId}:room`, data);
+      }
     };
 
     console.log(
@@ -56,17 +69,24 @@ async function AppSocket(io: any) {
     );
 
     // Initialize user object and immediately emit active users
+    initializeUser();
     SocketService.HandleUserActive(username, socket);
 
     socket.on("join", (data: string) =>
       SocketService.HandleJoinRoom(AddToUserRoom, socket, data),
     );
-    socket.on("message-seen", (data: any) =>
-      SocketService.HandleMessageSeen(data, socket, userRoom, io),
-    );
-    socket.on("typing", (data: any) =>
-      SocketService.HandleTyping(data, socket, userRoom),
-    );
+    socket.on("message-seen", async (data: any) => {
+      const userRoom = await SocketService.getUserRoom(socket.id);
+      if (userRoom) {
+        SocketService.HandleMessageSeen(data, socket, userRoom, io);
+      }
+    });
+    socket.on("typing", async (data: any) => {
+      const userRoom = await SocketService.getUserRoom(socket.id);
+      if (userRoom) {
+        SocketService.HandleTyping(data, socket, userRoom);
+      }
+    });
     socket.on("checkUserIsFollowing", (data: any) =>
       SocketService.HandleCheckUserIsFollowing(data, socket),
     );
@@ -93,15 +113,23 @@ async function AppSocket(io: any) {
       }),
     );
     socket.on("get-active-users", () => EmitActiveUsers(io));
-    socket.on("user-connected", (data: any) => {
-      user = {
-        ...user,
-        userId: data.userId.toString(),
-      };
-      return SocketService.HandleUserConnected(socket, user, data);
+    socket.on("user-connected", async (data: any) => {
+      const user = await SocketService.getUserFromSocket(socket.id);
+      if (user) {
+        const updatedUser = {
+          ...user,
+          userId: data.userId.toString(),
+        };
+        await SocketService.setUserForSocket(socket.id, updatedUser);
+        SocketService.HandleUserConnected(socket, updatedUser, data);
+      }
     });
-    socket.on("new-message", (data: any) => {
-      SocketService.HandleMessage(data, socket, userRoom, user, io);
+    socket.on("new-message", async (data: any) => {
+      const userRoom = await SocketService.getUserRoom(socket.id);
+      const user = await SocketService.getUserFromSocket(socket.id);
+      if (userRoom && user) {
+        SocketService.HandleMessage(data, socket, userRoom, user, io);
+      }
     });
     socket.on("restoreRoom", (data: { userId: string }) => {
       SocketService.HandleReconnectToRooms(socket, data.userId);
@@ -111,29 +139,40 @@ async function AppSocket(io: any) {
     });
 
     // Group chat event handlers
-    socket.on("group-user-connected", (data: any) => {
-      user = {
-        ...user,
-        userId: data.userId.toString(),
-      };
+    socket.on("group-user-connected", async (data: any) => {
+      const user = await SocketService.getUserFromSocket(socket.id);
+      if (user) {
+        const updatedUser = {
+          ...user,
+          userId: data.userId.toString(),
+        };
+        await SocketService.setUserForSocket(socket.id, updatedUser);
+      }
     });
 
     socket.on(
       "join-group-room",
-      (data: { groupId: string; userId: string }) => {
-        GroupChatHandler.handleJoinGroupRoom(socket, user, data);
+      async (data: { groupId: string; userId: string }) => {
+        const user = await SocketService.getUserFromSocket(socket.id);
+        if (user) {
+          GroupChatHandler.handleJoinGroupRoom(socket, user, data);
+        }
       },
     );
 
     socket.on(
       "leave-group-room",
-      (data: { groupId: string; userId: string }) => {
-        GroupChatHandler.handleLeaveGroupRoom(socket, user, data, io);
+      async (data: { groupId: string; userId: string }) => {
+        const user = await SocketService.getUserFromSocket(socket.id);
+        if (user) {
+          GroupChatHandler.handleLeaveGroupRoom(socket, user, data, io);
+        }
       },
     );
 
-    socket.on("send-group-message", (data: any) => {
-      if (!user.userId) {
+    socket.on("send-group-message", async (data: any) => {
+      const user = await SocketService.getUserFromSocket(socket.id);
+      if (!user?.userId) {
         console.error("User ID not set for group message");
         socket.emit("group-error", { message: "User not properly connected" });
         return;
@@ -143,15 +182,21 @@ async function AppSocket(io: any) {
 
     socket.on(
       "group-typing",
-      (data: { groupId: string; isTyping: boolean }) => {
-        GroupChatHandler.handleGroupTyping(socket, user, data, io);
+      async (data: { groupId: string; isTyping: boolean }) => {
+        const user = await SocketService.getUserFromSocket(socket.id);
+        if (user) {
+          GroupChatHandler.handleGroupTyping(socket, user, data, io);
+        }
       },
     );
 
     socket.on(
       "group-message-seen",
-      (data: { groupId: string; messageId: number }) => {
-        GroupChatHandler.handleGroupMessageSeen(socket, user, data);
+      async (data: { groupId: string; messageId: number }) => {
+        const user = await SocketService.getUserFromSocket(socket.id);
+        if (user) {
+          GroupChatHandler.handleGroupMessageSeen(socket, user, data);
+        }
       },
     );
 
@@ -245,13 +290,17 @@ async function AppSocket(io: any) {
       },
     );
 
-    socket.on("disconnect", async (_: any) => {
+    socket.on("disconnect", async (reason: any) => {
+      // Get user data before cleanup
+      const user = await SocketService.getUserFromSocket(socket.id);
+      console.log(`🔌 Client disconnected: ${socket.id} | Reason: ${reason}`);
+
       // Remove user from Redis active users
-      const userKey = `user:${user.username}`;
+      const userKey = `user:${user?.username || username}`;
       await redis.hdel("activeUsers", userKey);
 
       // Clean up user from all group rooms
-      if (user.userId) {
+      if (user?.userId) {
         try {
           // Get all group rooms the user was in
           const userGroupKeys = await redis.keys(`group-rooms:${user.userId}`);
@@ -286,10 +335,13 @@ async function AppSocket(io: any) {
         }
       }
 
+      // Clean up socket state from Redis
+      await SocketService.removeSocketState(socket.id);
+
       // Handle user inactive status
       try {
         await SocketService.HandleUserInactive(
-          username || (socket.handshake.query.username as string),
+          user?.username || username || (socket.handshake.query.username as string),
         );
         EmitActiveUsers(io);
       } catch (error) {

@@ -49,6 +49,7 @@ import { MentionNotificationQueue } from "@jobs/MentionNotificationJob";
 import { GenerateBatchSignedUrls } from "@libs/GenerateSignedUrls";
 import WatermarkService from "./WatermarkService";
 import { RedisPostService } from "./RedisPostService";
+import UserService from "./UserService";
 
 export default class PostService {
   // Helper method to process UserMedia with signed URLs
@@ -1593,6 +1594,26 @@ export default class PostService {
     userId,
   }: EditPostProps): Promise<EditPostResponse> {
     try {
+
+      const user = await UserService.RetrieveUser(userId)
+
+      if (!user) {
+        return {
+          status: false,
+          data: null,
+          message: "User not found",
+        };
+      }
+
+      if (user && !user.user?.is_model && !user.user?.admin) {
+        {
+          return {
+            status: false,
+            data: null,
+            message: "Sorry you are not authorized to edit posts",
+          };
+        }
+      }
       const post = await query.post.findFirst({
         where: { post_id: postId, user_id: userId },
         select: {

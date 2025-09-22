@@ -14,6 +14,7 @@ export default class PostController {
         options,
         req.user?.id!,
       );
+      console.log(SavePost);
       if ("error" in SavePost && SavePost.error) {
         return res.status(400).json({ message: SavePost.error });
       }
