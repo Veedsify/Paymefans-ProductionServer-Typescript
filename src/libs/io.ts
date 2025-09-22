@@ -67,9 +67,7 @@ export default {
       ]);
 
       // ✅ Now create adapter — clients are guaranteed ready
-      adapter = createAdapter(redis, redisSub, {
-        key: "socket.io",
-      });
+      adapter = createAdapter(redis, redisSub);
     } catch (error) {
       console.warn("⚠️ Redis adapter failed, falling back to in-memory:", error);
     }
