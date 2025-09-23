@@ -164,7 +164,7 @@ export default class StoryController {
               .split(".")
               .slice(0, -1)
               .join(".")}.mp4`
-            : `${config.mainCloudfrontUrl}/processed-stories/${file.key}`;
+            : `${config.mainCloudfrontUrl}/stories/${file.key}`;
 
           await tx.uploadedMedia.create({
             data: {
