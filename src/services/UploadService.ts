@@ -47,6 +47,7 @@ export default class UploadService {
         const allowedOrigins = [
           "paymefans.com",
           "*.paymefans.com",
+          "*.paymefans.shop",
           "localhost:3000",
         ];
         const uplaodMetadata = {
