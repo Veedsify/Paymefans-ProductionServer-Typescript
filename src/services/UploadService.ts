@@ -49,6 +49,8 @@ export default class UploadService {
           "*.paymefans.com",
           "*.paymefans.shop",
           "localhost:3000",
+          "0.0.0.0:3000",
+          "192.168.0.175:3000",
         ];
         const uplaodMetadata = {
           maxDurationSeconds: maxDuration,

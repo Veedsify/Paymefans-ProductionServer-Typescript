@@ -11,7 +11,7 @@
     "bun-build": "bun build",
     "start": "node -r tsconfig-paths/register ./dist/app.js",
     "dev2": "nodemon --exec tsx -r tsconfig-paths/register src/app.ts",
-    "dev": "bun --watch ./src/app.ts --ext .ts",
+    "dev": "bun --watch ./src/app.ts --ext .ts -- --host 0.0.0.0",
     "ngrok": "ngrok http --url=current-early-hippo.ngrok-free.app 3009",
     "cleanup-checkouts": "tsx -r tsconfig-paths/register src/scripts/cleanup-expired-checkouts.ts",
     "queue-manager": "tsx -r tsconfig-paths/register src/scripts/queue-manager.ts"
