@@ -59,7 +59,7 @@ export default class UploadService {
           allowedorigins: btoa(allowedOrigins.join(",")),
           watermark: isWatermarkEnabled && btoa(watermarkUid!),
           ...(data.shouldUseSignedUrls && {
-            // requiresignedurls: btoa(true.toString()),
+            requiresignedurls: btoa(true.toString()),
           }),
         };
 
