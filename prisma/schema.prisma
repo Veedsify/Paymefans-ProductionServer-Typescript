@@ -36,6 +36,7 @@ model User {
   zip                       String?
   currency                  String?                     @default("NGN")
   post_watermark            String?
+  delete_date               DateTime?
   total_followers           Int                         @default(0)
   total_following           Int                         @default(0)
   total_subscribers         Int                         @default(0)
@@ -46,7 +47,6 @@ model User {
   updated_at                DateTime                    @updatedAt
   show_active               Boolean                     @default(true)
   watermarkEnabled          Boolean                     @default(true)
-  delete_date               DateTime?
   should_delete             Boolean                     @default(false)
   flags                     Json?                       @default("[]")
   ActivityLog               ActivityLog[]

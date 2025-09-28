@@ -5,3 +5,5 @@ node_modules
 public/uploads
 dist/
 prisma/generated/*
+.DS_Store
+server/.DS_Store

@@ -80,7 +80,7 @@ export default class WatermarkService {
     opacity: "1.0",
     padding: "0.02",
     scale: "0.8",
-    position: "lowerLeft",
+    position: "lowerRight",
   };
 
   private static readonly defaultWatermarkStyle: WatermarkStyle = {
