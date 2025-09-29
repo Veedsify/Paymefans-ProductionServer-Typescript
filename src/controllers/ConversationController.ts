@@ -32,9 +32,9 @@ export default class ConversationController {
                 profileId,
             });
             if (conversation.error) {
-                res.status(400).json({ ...conversation });
+                res.status(400).json(conversation);
             }
-            res.status(200).json({ ...conversation });
+            res.status(200).json(conversation);
         } catch (error) {
             console.log(error);
             res.status(500).json({ message: `Internal Server Error: ${error}` });
