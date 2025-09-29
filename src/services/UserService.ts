@@ -79,6 +79,7 @@ export default class UserService {
           total_following: true,
           total_subscribers: true,
           show_active: true,
+          created_at: true,
           UserPoints: {
             select: {
               id: true,
