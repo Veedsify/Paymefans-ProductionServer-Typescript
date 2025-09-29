@@ -205,7 +205,7 @@ export default class PostService {
 
         const userMediaDataCount = userMediaData.length || 0;
 
-        if (Number(userMediaCount + userMediaDataCount) >= 6) {
+        if (Number(userMediaCount + userMediaDataCount) > 6) {
           // Remove the Media From Cloudflare
           await RemoveCloudflareMedia(
             media.map((file) => ({ id: file.id, type: file.type })),
