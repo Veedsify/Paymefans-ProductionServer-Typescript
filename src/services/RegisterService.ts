@@ -14,6 +14,7 @@ import { countries } from "@libs/countries";
 import LoginService from "./LoginService";
 import { RBAC } from "@utils/FlagsConfig";
 import { customAlphabet } from "nanoid";
+import FormatName from "@utils/FormatName";
 
 export default class RegisterService {
   // Register New User
@@ -227,7 +228,7 @@ export default class RegisterService {
     return query.$transaction(async (tx) => {
       const user = await tx.user.create({
         data: {
-          name: data.name.toLocaleLowerCase(),
+          name: FormatName(data.name.toLocaleLowerCase()),
           user_id: uniqueUserId,
           username: `@${data.username}`,
           email: data.email,
