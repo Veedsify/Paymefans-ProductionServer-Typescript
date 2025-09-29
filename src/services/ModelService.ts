@@ -337,13 +337,6 @@ export default class ModelService {
         "referrer",
       );
 
-      await ReferralService.addReferralEarnings(
-        user?.id as number,
-        10,
-        `Referral bonus for signing up as a model`,
-        "model",
-      );
-
       if (!signUpUserAsModel) {
         return {
           error: true,

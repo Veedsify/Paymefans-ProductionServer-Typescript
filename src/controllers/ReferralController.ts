@@ -130,7 +130,7 @@ export default class ReferralController {
       // Add referral earnings (example: 50 points for a successful referral)
       const earningsResult = await ReferralService.addReferralEarnings(
         validation.referrerId,
-        50,
+        10,
         `Referral bonus for @${referredUserId}`,
         "referrer",
       );
