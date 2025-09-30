@@ -7,6 +7,7 @@ export type RegisterServiceProp = {
   email: string;
   phone: string;
   password: string;
+  ip: string | undefined;
   location: string;
 };
 
@@ -26,7 +27,7 @@ export type FindUserNameResponse = {
 
 export type LoginUserProps = {
   email: string;
-  ip: string;
+  ip: string | undefined;
   password: string;
 };
 

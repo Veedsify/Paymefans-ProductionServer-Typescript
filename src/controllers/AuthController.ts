@@ -16,7 +16,10 @@ export default class AuthController {
   // Register Service
   static async Register(req: Request, res: Response): Promise<any> {
     try {
-      const CreateAccount = await RegisterService.RegisterNewUser(req.body);
+      const CreateAccount = await RegisterService.RegisterNewUser({
+        ...req.body,
+        ip: req.ip,
+      });
 
       if (CreateAccount.error) {
         console.log(CreateAccount.message);

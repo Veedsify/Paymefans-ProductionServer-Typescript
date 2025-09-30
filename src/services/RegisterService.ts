@@ -123,6 +123,7 @@ export default class RegisterService {
 
     const authenticateUser = await LoginService.LoginUser({
       email: data.email,
+      ip: data.ip,
       password: data.password,
     });
 
