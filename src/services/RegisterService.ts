@@ -203,7 +203,7 @@ export default class RegisterService {
 
   // Create The User
   static async CreateUser(data: RegisterServiceProp): Promise<RegisteredUser> {
-    let uniqueUserId: string;
+    let uniqueUserId: string = "";
     let exists = true;
     const nanoid = customAlphabet("0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ", 6);
     while (exists) {
@@ -213,6 +213,11 @@ export default class RegisterService {
       });
       if (!existingUser) exists = false;
     }
+
+    if (!uniqueUserId || uniqueUserId.length === 0) {
+      throw new Error("Could not generate a unique user ID");
+    }
+
     const hashPass = await CreateHashedPassword(data.password);
     const walletId = `WL${GenerateUniqueId()}`;
     const subscriptionId = `SUB${GenerateUniqueId()}`;
@@ -225,16 +230,27 @@ export default class RegisterService {
     if (!userCountry) {
       throw new Error("Invalid country");
     }
+
+    const registrationDetails = {
+      name: FormatName(data.name.toLocaleLowerCase()),
+      user_id: uniqueUserId,
+      username: String(`@${data.username}`).toLocaleLowerCase(),
+      email: String(data.email).toLocaleLowerCase(),
+      phone: data.phone,
+      profile_banner: `${process.env.SERVER_ORIGINAL_URL}/site/banner.png`,
+      profile_image: `${process.env.SERVER_ORIGINAL_URL}/site/avatar.png`,
+    };
+
     return query.$transaction(async (tx) => {
       const user = await tx.user.create({
         data: {
-          name: FormatName(data.name.toLocaleLowerCase()),
-          user_id: uniqueUserId,
-          username: `@${data.username}`,
-          email: data.email,
-          phone: data.phone,
-          profile_banner: `${process.env.SERVER_ORIGINAL_URL}/site/banner.png`,
-          profile_image: `${process.env.SERVER_ORIGINAL_URL}/site/avatar.png`,
+          name: registrationDetails.name,
+          user_id: registrationDetails.user_id,
+          username: registrationDetails.username,
+          email: registrationDetails.email,
+          phone: registrationDetails.phone,
+          profile_banner: registrationDetails.profile_banner,
+          profile_image: registrationDetails.profile_image,
           location: userCountry,
           currency: "NGN",
           password: hashPass,
