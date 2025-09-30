@@ -125,9 +125,9 @@ async function AppSocket(io: any) {
       }
     });
     socket.on("new-message", async (data: any) => {
-      const userRoom = await SocketService.getUserRoom(socket.id);
+      const userRoom = data.conversationId || (await SocketService.getUserRoom(socket.id));
       const user = await SocketService.getUserFromSocket(socket.id);
-      if (userRoom && user) {
+      if (user && userRoom) {
         SocketService.HandleMessage(data, socket, userRoom, user, io);
       }
     });
