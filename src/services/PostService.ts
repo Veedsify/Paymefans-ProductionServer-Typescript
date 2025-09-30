@@ -365,7 +365,10 @@ export default class PostService {
 
       const resolvedPosts = await Promise.all(
         posts.map(async (post) => {
-          const likeInfo = likeData.get(post.post_id) || { count: post.post_likes, isLiked: false };
+          const likeInfo = likeData.get(post.post_id) || {
+            count: post.post_likes,
+            isLiked: false,
+          };
           return {
             ...post,
             UserMedia: await this.processUserMediaSignedUrls(
@@ -488,7 +491,10 @@ export default class PostService {
 
       const resolvedPosts = await Promise.all(
         posts.map(async (post) => {
-          const likeInfo = likeData.get(post.post_id) || { count: post.post_likes, isLiked: false };
+          const likeInfo = likeData.get(post.post_id) || {
+            count: post.post_likes,
+            isLiked: false,
+          };
           return {
             ...post,
             UserMedia: await this.processUserMediaSignedUrls(
@@ -616,7 +622,10 @@ export default class PostService {
 
       const resolvedPosts = await Promise.all(
         reposts.map(async (post) => {
-          const likeInfo = likeData.get(post.post_id) || { count: post.post_likes, isLiked: false };
+          const likeInfo = likeData.get(post.post_id) || {
+            count: post.post_likes,
+            isLiked: false,
+          };
           return {
             ...post,
             UserMedia: await this.processUserMediaSignedUrls(
@@ -740,7 +749,10 @@ export default class PostService {
 
       const resolvedPosts = await Promise.all(
         reposts.map(async (post) => {
-          const likeInfo = likeData.get(post.post_id) || { count: post.post_likes, isLiked: false };
+          const likeInfo = likeData.get(post.post_id) || {
+            count: post.post_likes,
+            isLiked: false,
+          };
           return {
             ...post,
             UserMedia: await this.processUserMediaSignedUrls(
@@ -1283,7 +1295,10 @@ export default class PostService {
 
       const resolvedPosts = await Promise.all(
         posts.map(async (post) => {
-          const likeInfo = likeData.get(post.post_id) || { count: post.post_likes, isLiked: false };
+          const likeInfo = likeData.get(post.post_id) || {
+            count: post.post_likes,
+            isLiked: false,
+          };
           return {
             ...post,
             UserMedia: await this.processUserMediaSignedUrls(
@@ -1424,7 +1439,10 @@ export default class PostService {
 
       const resolvedPosts = await Promise.all(
         posts.map(async (post) => {
-          const likeInfo = likeData.get(post.post_id) || { count: post.post_likes, isLiked: false };
+          const likeInfo = likeData.get(post.post_id) || {
+            count: post.post_likes,
+            isLiked: false,
+          };
           return {
             ...post,
             UserMedia: await this.processUserMediaSignedUrls(
@@ -1528,26 +1546,31 @@ export default class PostService {
         };
       }
       // Batch queries including Redis-based like check
-      const [isLikedByUser, isSubscribed, isReposted, isPaid] = await Promise.all([
-        // Use Redis for like data
-        authUserId ? RedisPostService.hasUserLiked(post.post_id, authUserId) : Promise.resolve(false),
-        query.subscribers.findFirst({
-          where: {
-            user_id: post.user_id,
-            status: "active",
-            subscriber_id: authUserId,
-          },
-        }),
-        query.userRepost.findFirst({
-          where: { post_id: post.id, user_id: authUserId },
-        }),
-        query.purchasedPosts.findMany({
-          where: { post_id: post.id, user_id: authUserId },
-        }),
-      ]);
+      const [isLikedByUser, isSubscribed, isReposted, isPaid] =
+        await Promise.all([
+          // Use Redis for like data
+          authUserId
+            ? RedisPostService.hasUserLiked(post.post_id, authUserId)
+            : Promise.resolve(false),
+          query.subscribers.findFirst({
+            where: {
+              user_id: post.user_id,
+              status: "active",
+              subscriber_id: authUserId,
+            },
+          }),
+          query.userRepost.findFirst({
+            where: { post_id: post.id, user_id: authUserId },
+          }),
+          query.purchasedPosts.findMany({
+            where: { post_id: post.id, user_id: authUserId },
+          }),
+        ]);
 
       // Also get the current like count from Redis
-      const currentLikeCount = await RedisPostService.getLikeCount(post.post_id);
+      const currentLikeCount = await RedisPostService.getLikeCount(
+        post.post_id,
+      );
 
       const checkIfUserCanViewPaidPost =
         (user &&
@@ -1594,8 +1617,7 @@ export default class PostService {
     userId,
   }: EditPostProps): Promise<EditPostResponse> {
     try {
-
-      const user = await UserService.RetrieveUser(userId)
+      const user = await UserService.RetrieveUser(userId);
 
       if (!user) {
         return {
@@ -2218,7 +2240,9 @@ export default class PostService {
         success: true,
         isLiked: result.isLiked,
         likeCount: result.newCount,
-        message: result.isLiked ? "Post has been liked" : "Post has been unliked",
+        message: result.isLiked
+          ? "Post has been liked"
+          : "Post has been unliked",
       };
     } catch (error: any) {
       console.error("Error in LikePost:", error);
@@ -2241,10 +2265,6 @@ export default class PostService {
       if (!post) {
         return { status: false, message: "Post not found" };
       }
-      const postMedia = await query.userMedia.findMany({
-        where: { post_id: post.id },
-        select: { media_id: true, media_type: true },
-      });
 
       // Use transaction to delete post+media
       await query.$transaction(async (tx) => {
@@ -2255,14 +2275,23 @@ export default class PostService {
         await tx.post.delete({ where: { id: post.id } });
       });
 
-      if (postMedia.length > 0) {
+      const postMedia = await query.userMedia.findMany({
+        where: { post_id: post.id },
+        select: { media_id: true, media_type: true },
+      });
+
+      if (!postMedia) {
+        return { status: false, message: "No media found for this post" };
+      }
+
+      if (postMedia && postMedia.length > 0) {
         const removeMedia = await RemoveCloudflareMedia(
           postMedia.map((m) => ({ id: m.media_id, type: m.media_type })),
         );
         if (removeMedia.error) {
           return {
             status: false,
-            message: "An error occurred while deleting media",
+            message: removeMedia.message || "Error deleting media",
             error: removeMedia,
           };
         }

@@ -9,11 +9,8 @@ export default class PostController {
       const options = {
         user: req.user,
         ...req.body,
-      }
-      const SavePost = await PostService.CreatePost(
-        options,
-        req.user?.id!,
-      );
+      };
+      const SavePost = await PostService.CreatePost(options, req.user?.id!);
       console.log(SavePost);
       if ("error" in SavePost && SavePost.error) {
         return res.status(400).json({ message: SavePost.error });
@@ -30,7 +27,7 @@ export default class PostController {
         userId: req.user?.id!,
         page: req.query.page as string,
         limit: req.query.limit as string,
-      }
+      };
       const MyPosts = await PostService.GetMyPosts(options);
       return res.status(200).json(MyPosts);
     } catch (err: any) {
@@ -47,7 +44,7 @@ export default class PostController {
         userId: req.user?.id!,
         page: req.query.page as string,
         limit: req.query.limit as string,
-      }
+      };
       const PrivatePosts = await PostService.GetMyPrivatePosts(options);
       return res.status(200).json(PrivatePosts);
     } catch (err: any) {
@@ -64,7 +61,7 @@ export default class PostController {
         userId: req.user?.id!,
         page: req.query.page as string,
         limit: req.query.limit as string,
-      }
+      };
       const MyReposts = await PostService.MyReposts(options);
       return res.status(200).json(MyReposts);
     } catch (err: any) {
@@ -82,7 +79,7 @@ export default class PostController {
         page: req.query.page as string,
         limit: req.query.limit as string,
         authUserId: req.user?.id!,
-      }
+      };
       const Reposts = await PostService.Reposts(options);
       return res.status(200).json(Reposts);
     } catch (err: any) {
@@ -99,7 +96,7 @@ export default class PostController {
         userId: req.user?.id!,
         page: req.query.page as string,
         limit: req.query.limit as string,
-      }
+      };
       const media = await PostService.GetMedia(options);
       return res.status(200).json({
         status: true,
@@ -122,7 +119,7 @@ export default class PostController {
         page: req.query.page as string,
         limit: req.query.limit as string,
         authUserId: req.user?.id!,
-      }
+      };
       const media = await PostService.GetOtherMedia(options);
       return res.status(200).json(media);
     } catch (err: any) {
@@ -139,7 +136,7 @@ export default class PostController {
         userId: req.user?.id!,
         page: req.query.page as string,
         limit: req.query.limit as string,
-      }
+      };
       const media = await PostService.GetPrivateMedia(options);
       return res.status(200).json({
         status: true,
@@ -162,7 +159,7 @@ export default class PostController {
         page: req.query.page as string,
         limit: req.query.limit as string,
         authUserId: req.user?.id!,
-      }
+      };
       const media = await PostService.GetOtherPrivateMedia(options);
       return res.status(200).json(media);
     } catch (err: any) {
@@ -180,7 +177,7 @@ export default class PostController {
         page: req.query.page as string,
         limit: req.query.limit as string,
         authUserId: req.user?.id || undefined,
-      }
+      };
       const UserPost = await PostService.GetUserPostByID(options);
 
       if (UserPost?.error) {
@@ -203,7 +200,7 @@ export default class PostController {
         page: req.query.page as string,
         limit: req.query.limit as string,
         authUserId: req.user?.id!,
-      }
+      };
       const UserPost = await PostService.GetUserPrivatePostByID(options);
       return res.status(200).json({ ...UserPost });
     } catch (err: any) {
@@ -219,7 +216,7 @@ export default class PostController {
       const options = {
         postId: req.params.postId as string,
         authUserId: req.user?.id || undefined,
-      }
+      };
       const singlePost = await PostService.GetSinglePost(options);
       if (singlePost.error) {
         return res.status(400).json(singlePost);
@@ -239,7 +236,7 @@ export default class PostController {
         postId: req.params.postId,
         userId: req.user?.id!,
         ...req.body,
-      }
+      };
       const EditPost = await PostService.EditPost(options);
       if (!EditPost.status) {
         return res.status(400).json(EditPost);
@@ -259,7 +256,7 @@ export default class PostController {
         postId: req.params.postId,
         userId: req.user?.id!,
         ...req.body,
-      }
+      };
       const updatePost = await PostService.UpdatePost(options);
       if (updatePost.error) {
         return res.status(400).json({ ...updatePost });
@@ -283,7 +280,7 @@ export default class PostController {
         visibility: req.body.visibility,
         postId: req.params.postId as string,
         userId: req.user?.id!,
-      }
+      };
       const updateAudience = await PostService.UpdatePostAudience(options);
       return res.status(200).json(updateAudience);
     } catch (error: any) {
@@ -300,7 +297,7 @@ export default class PostController {
       const options = {
         postId: req.params.postId as string,
         userId: req.user?.id!,
-      }
+      };
       const repost = await PostService.CreateRepost(options);
       return res.status(200).json(repost);
     } catch (error: any) {
@@ -359,7 +356,9 @@ export default class PostController {
 
       // Get like count and user's like status
       const likeCount = await RedisPostService.getLikeCount(postId);
-      const isLiked = userId ? await RedisPostService.hasUserLiked(postId, userId) : false;
+      const isLiked = userId
+        ? await RedisPostService.hasUserLiked(postId, userId)
+        : false;
 
       return res.status(200).json({
         success: true,
@@ -379,7 +378,10 @@ export default class PostController {
   }
 
   // Get Multiple Posts Like Data
-  static async GetMultiplePostsLikeData(req: Request, res: Response): Promise<any> {
+  static async GetMultiplePostsLikeData(
+    req: Request,
+    res: Response,
+  ): Promise<any> {
     try {
       const { postIds } = req.body; // Array of post IDs
       const userId = req.user?.id;
@@ -391,7 +393,10 @@ export default class PostController {
         });
       }
 
-      const likeData = await RedisPostService.getMultiplePostsLikeData(postIds, userId);
+      const likeData = await RedisPostService.getMultiplePostsLikeData(
+        postIds,
+        userId,
+      );
 
       // Convert Map to object for JSON response
       const result: Record<string, { count: number; isLiked: boolean }> = {};
@@ -437,6 +442,9 @@ export default class PostController {
         userId: req.user?.id!,
       };
       const deletePost = await PostService.DeletePost(options);
+      if (deletePost.error) {
+        return res.status(400).json(deletePost);
+      }
       return res.status(200).json(deletePost);
     } catch (error: any) {
       console.log(error.message);
