@@ -1,11 +1,6 @@
 import express from "express";
 import Auth from "@middleware/Auth";
 import StoryController from "@controllers/StoryController";
-import multer from "multer";
-import multerS3 from "multer-s3";
-import { s3 } from "@utils/aws";
-import { config } from "@configs/config";
-import { v4 as uuid } from "uuid";
 
 const story = express();
 
