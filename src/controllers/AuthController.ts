@@ -91,8 +91,8 @@ export default class AuthController {
         secure: process.env.NODE_ENV === "production",
         sameSite: "lax" as const,
         path: "/",
-        // domain:
-        //   process.env.NODE_ENV === "production" ? ".paymefans.shop" : undefined, // Allow subdomain access
+        domain:
+          process.env.NODE_ENV === "production" ? "paymefans.shop" : undefined, // Allow subdomain access
       };
 
       if (LoginAccount.token && !LoginAccount.tfa) {
@@ -195,8 +195,8 @@ export default class AuthController {
         secure: process.env.NODE_ENV === "production",
         sameSite: "lax" as const,
         path: "/",
-        // domain:
-        //   process.env.NODE_ENV === "production" ? ".paymefans.shop" : undefined, // Allow subdomain access
+        domain:
+          process.env.NODE_ENV === "production" ? "paymefans.shop" : undefined, // Allow subdomain access
       };
 
       if (user.token) {
