@@ -611,4 +611,67 @@ export default class StoryService {
       throw new Error("An error occurred while adding story mentions");
     }
   }
+
+  // Delete Story
+  static async DeleteStory({
+    storyMediaId,
+    userId,
+  }: {
+    storyMediaId: string;
+    userId: number;
+  }) {
+    try {
+      // Check if story media exists and belongs to the user
+      const storyMedia = await query.storyMedia.findUnique({
+        where: { media_id: storyMediaId },
+        include: {
+          story: {
+            include: { user: true },
+          },
+        },
+      });
+
+      if (!storyMedia) {
+        return {
+          error: true,
+          message: "Story not found",
+        };
+      }
+
+      // Only allow story owner to delete
+      if (storyMedia.story.user_id !== userId) {
+        return {
+          error: true,
+          message: "You can only delete your own stories",
+        };
+      }
+
+      // Save user_story_id before deleting
+      const storyId = storyMedia.story.id;
+
+      // Delete story media (this will cascade delete views and mentions)
+      await query.storyMedia.delete({
+        where: { media_id: storyMediaId },
+      });
+
+      // Check if story has any other media, if not, delete the story
+      const remainingMedia = await query.storyMedia.count({
+        where: { user_story_id: storyId },
+      });
+
+      if (remainingMedia === 0) {
+        await query.userStory.delete({
+          where: { id: storyId },
+        });
+      }
+
+      return {
+        error: false,
+        message: "Story deleted successfully",
+      };
+    } catch (error) {
+      console.error(error);
+      throw new Error("An error occurred while deleting the story");
+    }
+  }
 }

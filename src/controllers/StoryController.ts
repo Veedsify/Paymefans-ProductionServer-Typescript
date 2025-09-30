@@ -161,9 +161,9 @@ export default class StoryController {
         const savedFiles = uploadedFiles.map(async (file) => {
           const cloudfrontUrl = file.isVideo
             ? `${config.processedCloudfrontUrl}/${file.key
-              .split(".")
-              .slice(0, -1)
-              .join(".")}.mp4`
+                .split(".")
+                .slice(0, -1)
+                .join(".")}.mp4`
             : `${config.mainCloudfrontUrl}/${file.key}`;
 
           await tx.uploadedMedia.create({
@@ -217,9 +217,9 @@ export default class StoryController {
           const media_id = uuid();
           const cloudfrontUrl = isVideo
             ? `${config.processedCloudfrontUrl}/${file.key
-              .split(".")
-              .slice(0, -1)
-              .join(".")}.mp4`
+                .split(".")
+                .slice(0, -1)
+                .join(".")}.mp4`
             : `${config.mainCloudfrontUrl}/${file.key}`;
           await tx.uploadedMedia.create({
             data: {
@@ -399,7 +399,11 @@ export default class StoryController {
       const { storyMediaId, mentionedUserIds } = req.body;
       const userId = req.user?.id!;
 
-      if (!storyMediaId || !mentionedUserIds || !Array.isArray(mentionedUserIds)) {
+      if (
+        !storyMediaId ||
+        !mentionedUserIds ||
+        !Array.isArray(mentionedUserIds)
+      ) {
         return res.status(400).json({
           message: "Story Media ID and mentioned user IDs are required",
           status: false,
@@ -421,6 +425,39 @@ export default class StoryController {
       console.log(error);
       res.status(500).json({
         message: "An error occurred while adding story mentions",
+        error: error.message,
+        status: false,
+      });
+    }
+  }
+
+  // Delete Story
+  static async DeleteStory(req: Request, res: Response): Promise<any> {
+    try {
+      const { storyMediaId } = req.params;
+      const userId = req.user?.id!;
+
+      if (!storyMediaId) {
+        return res.status(400).json({
+          message: "Story Media ID is required",
+          status: false,
+        });
+      }
+
+      const result = await StoryService.DeleteStory({
+        storyMediaId,
+        userId,
+      });
+
+      if (result.error) {
+        return res.status(400).json(result);
+      }
+
+      res.status(200).json(result);
+    } catch (error: any) {
+      console.log(error);
+      res.status(500).json({
+        message: "An error occurred while deleting the story",
         error: error.message,
         status: false,
       });
