@@ -26,6 +26,7 @@ export type FindUserNameResponse = {
 
 export type LoginUserProps = {
   email: string;
+  ip: string;
   password: string;
 };
 

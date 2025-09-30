@@ -17,7 +17,10 @@ export default class UserService {
     try {
       const user = await query.user.findFirst({
         where: {
-          email: email,
+          email: {
+            equals: email,
+            mode: "insensitive",
+          },
         },
         select: {
           id: true,

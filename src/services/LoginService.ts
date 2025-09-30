@@ -3,9 +3,10 @@ import ComparePasswordHash from "@libs/ComparePassordHash";
 import { Authenticate } from "@libs/jwt";
 import query from "@utils/prisma";
 import LoginHistoryService from "@services/LoginHistory";
-import _ from "lodash";
+import { random } from "lodash";
 import EmailService from "./EmailService";
 import UserService from "./UserService";
+import FormatName from "@utils/FormatName";
 
 export default class LoginService {
   // Login User
@@ -19,15 +20,15 @@ export default class LoginService {
 
       const user = await UserService.GetUserJwtPayload(email);
 
+      if (!user) {
+        return { error: true, message: "Invalid email or password" };
+      }
+
       if (user && !user?.active_status) {
         return {
           error: true,
           message: "Sorry, your account has been deactivated, contact support.",
         };
-      }
-
-      if (!user) {
-        return { error: true, message: "Invalid email or password" };
       }
 
       if (user.should_delete) {
@@ -41,24 +42,27 @@ export default class LoginService {
       }
 
       const match = await ComparePasswordHash(pass, user.password);
+
       if (!match) {
         return { error: true, message: "Invalid email or password" };
       }
+
       const { password, ...rest } = user;
 
       if (user?.Settings && user.Settings.two_factor_auth) {
-        const code = _.random(100000, 999999);
+        const code = random(100000, 999999);
         await query.twoFactorAuth.create({
           data: {
             user_id: user.id,
             code: code,
           },
         });
+
         const sendAuthEmail = await EmailService.SendTwoFactorAuthEmail({
           email: user.email,
           code: code,
           subject: "Two Factor Authentication",
-          name: user.name.split(" ")[0] ?? user.name,
+          name: FormatName(user.name.split(" ")[0] ?? user.name),
         });
 
         if (sendAuthEmail.error) {
@@ -77,7 +81,7 @@ export default class LoginService {
       const { accessToken, refreshToken } = await Authenticate(rest);
       // Save Login History
       try {
-        const ip = "192.168.0.1";
+        const ip = data.ip || "0.0.0.0";
         await LoginHistoryService.SaveLoginHistory(user.id, ip);
       } catch (error) {
         console.error("Error saving login history:", error);
