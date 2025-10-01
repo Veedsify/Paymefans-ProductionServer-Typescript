@@ -31,25 +31,47 @@ export class RedisPostService {
             // Check if there are pending operations (Redis was initialized but data expired)
             const pendingOps = await this.getPendingSyncOps(postId);
             if (pendingOps.length > 0) {
-                // Data expired but has pending operations, fetch from DB and apply pending ops
+                // Data expired but has pending operations
+                // Need to reconstruct the true count by getting DB state and applying pending ops
                 const post = await query.post.findFirst({
                     where: { post_id: postId },
-                    select: { post_likes: true }
+                    select: {
+                        id: true,
+                        PostLike: {
+                            select: { user_id: true }
+                        }
+                    }
                 });
 
-                let currentCount = post?.post_likes || 0;
+                if (!post) return 0;
 
-                // Apply pending operations to get current count
+                // Get current DB liked users
+                const dbLikedUsers = new Set(post.PostLike.map(like => like.user_id));
+
+                // Parse pending operations - track final state per user
+                const userFinalState = new Map<number, 'like' | 'unlike'>();
+                
                 for (const op of pendingOps) {
-                    const [action] = op.split(':');
-                    if (action === 'like') {
-                        currentCount++;
-                    } else if (action === 'unlike') {
-                        currentCount = Math.max(0, currentCount - 1);
+                    const [action, userIdStr] = op.split(':');
+                    const userId = parseInt(userIdStr, 10);
+                    
+                    if (action === 'like' || action === 'unlike') {
+                        userFinalState.set(userId, action as 'like' | 'unlike');
                     }
                 }
 
-                return currentCount;
+                // Apply pending operations to DB state to get final user set
+                const finalLikedUsers = new Set(dbLikedUsers);
+                
+                for (const [userId, finalAction] of userFinalState) {
+                    if (finalAction === 'like') {
+                        finalLikedUsers.add(userId);
+                    } else if (finalAction === 'unlike') {
+                        finalLikedUsers.delete(userId);
+                    }
+                }
+
+                return finalLikedUsers.size;
             }
 
             // No Redis data and no pending operations, get from database but don't cache yet
@@ -316,8 +338,16 @@ export class RedisPostService {
                 return;
             }
 
-            // Get current Redis state (trust this as ground truth)
-            const currentLikeCount = await this.getLikeCount(postId);
+            // Get current Redis liked users set to calculate the actual count
+            const likedUsersKey = this.LIKED_USERS_PREFIX + postId;
+            const redisUserIds = await redis.smembers(likedUsersKey);
+            
+            // Filter out the __INIT__ marker if it exists
+            const actualRedisLikedUsers = new Set(
+                redisUserIds
+                    .filter(id => id !== '__INIT__')
+                    .map(id => parseInt(id, 10))
+            );
 
             // Find post in database
             const post = await query.post.findFirst({
@@ -333,18 +363,57 @@ export class RedisPostService {
             }
 
             // Parse pending operations to determine what to do
-            const usersToLike: number[] = [];
-            const usersToUnlike: number[] = [];
+            // Use a Map to track the FINAL state of each user (last action wins)
+            const userActions = new Map<number, 'like' | 'unlike'>();
 
             for (const op of pendingOps) {
                 const [action, userIdStr] = op.split(':');
                 const userId = parseInt(userIdStr, 10);
 
-                if (action === 'like') {
+                if (action === 'like' || action === 'unlike') {
+                    userActions.set(userId, action as 'like' | 'unlike');
+                }
+            }
+
+            // Calculate the actual current count from Redis state + pending operations
+            let currentLikeCount = actualRedisLikedUsers.size;
+            
+            // Apply pending operations to the Redis set to get final count
+            for (const [userId, action] of userActions) {
+                const wasInRedis = actualRedisLikedUsers.has(userId);
+                
+                if (action === 'like' && !wasInRedis) {
+                    currentLikeCount++;
+                } else if (action === 'unlike' && wasInRedis) {
+                    currentLikeCount = Math.max(0, currentLikeCount - 1);
+                }
+            }
+
+            // Get current database state for these users
+            const userIds = Array.from(userActions.keys());
+            const existingLikes = await query.postLike.findMany({
+                where: {
+                    post_id: post.id,
+                    user_id: { in: userIds }
+                },
+                select: { user_id: true }
+            });
+
+            const existingLikeSet = new Set(existingLikes.map(like => like.user_id));
+
+            // Determine what operations are actually needed
+            const usersToLike: number[] = [];
+            const usersToUnlike: number[] = [];
+
+            for (const [userId, finalAction] of userActions) {
+                const currentlyLiked = existingLikeSet.has(userId);
+
+                if (finalAction === 'like' && !currentlyLiked) {
                     usersToLike.push(userId);
-                } else if (action === 'unlike') {
+                } else if (finalAction === 'unlike' && currentlyLiked) {
                     usersToUnlike.push(userId);
                 }
+                // If finalAction matches current state, no operation needed
             }
 
             // Batch database operations

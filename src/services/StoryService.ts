@@ -36,7 +36,7 @@ export default class StoryService {
       let userIdsToFetch = [];
 
       // Step 2: Check following count
-      if (following.length > 30) {
+      if (following.length > 15) {
         userIdsToFetch = following.slice(0, 30).map((u) => u.follower_id);
       } else {
         userIdsToFetch = [
@@ -44,7 +44,7 @@ export default class StoryService {
           ...subscribers.map((u) => u.subscriber_id),
         ];
         // Remove duplicates and ensure we have up to 15 users
-        userIdsToFetch = Array.from(new Set(userIdsToFetch)).slice(0, 30);
+        userIdsToFetch = Array.from(new Set(userIdsToFetch)).slice(0, 15);
       }
 
       userIdsToFetch.unshift(userId);
