@@ -3,6 +3,7 @@ import Auth from "@middleware/Auth";
 import express from "express";
 const settings = express.Router();
 
+settings.get("/", Auth, SettingsController.GetUserSettings);
 settings.post("/update", Auth, SettingsController.SettingsProfileChange);
 settings.post(
   "/update/hookup-status",

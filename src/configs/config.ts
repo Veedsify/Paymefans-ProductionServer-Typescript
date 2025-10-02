@@ -9,6 +9,10 @@ const config = {
   // AWS CLOUDFRONTS
   mainCloudfrontUrl: process.env.AWS_CLOUDFRONT_URL,
   processedCloudfrontUrl: process.env.AWS_PROCESSED_CLOUDFRONT_URL,
+
+  // Subscription Minimum Price in Naira
+  minimumSubscriptionPriceNgn: 10_000,
+  minmumTipAmountNgn: 1_000,
 };
 
 export { config };

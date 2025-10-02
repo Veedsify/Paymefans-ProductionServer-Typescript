@@ -781,7 +781,7 @@ model ModelSubscriptionTier {
   subscription_id         Int
   tier_name               String
   tier_price              Float
-  tier_description        String
+  tier_description        String?
   tier_duration           String
   created_at              DateTime              @default(now())
   updated_at              DateTime              @updatedAt

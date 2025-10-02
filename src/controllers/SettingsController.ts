@@ -2,6 +2,28 @@ import type { Request, Response } from "express";
 import SettingsService from "@services/SettingsService";
 import type { AuthUser } from "types/user";
 export default class SettingsController {
+  static async GetUserSettings(req: Request, res: Response): Promise<any> {
+    try {
+      const user = req.user as AuthUser;
+      if (!user) {
+        res.status(401).json({ message: "Unauthorized" });
+        return;
+      }
+      const settings = await SettingsService.GetUserSettings(user.id);
+      if (settings.error) {
+        res
+          .status(201)
+          .json({ status: false, error: true, message: settings.message });
+        return;
+      }
+      return res
+        .status(200)
+        .json({ status: true, error: false, settings: settings.settings });
+    } catch (error: any) {
+      console.log(error.message);
+      res.status(500).json({ message: "Internal Server error" });
+    }
+  }
   static async SettingsProfileChange(
     req: Request,
     res: Response,
@@ -54,13 +76,11 @@ export default class SettingsController {
         req.user!,
       );
       if (changePassword.error) {
-        res
-          .status(201)
-          .json({
-            message: changePassword.message,
-            error: true,
-            status: false,
-          });
+        res.status(201).json({
+          message: changePassword.message,
+          error: true,
+          status: false,
+        });
         return;
       }
       return res

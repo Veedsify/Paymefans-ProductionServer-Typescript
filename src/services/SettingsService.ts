@@ -55,8 +55,8 @@ export default class SettingsService {
           data: {
             user_id: userId,
             old_username: userName || "",
-          }
-        })
+          },
+        });
 
         return {
           error: false,
@@ -291,17 +291,10 @@ export default class SettingsService {
     }
   }
 
-
   static async GetUserSettings(userId: number) {
     try {
       const settings = await query.settings.findUnique({
         where: { user_id: userId },
-        select: {
-          price_per_message: true,
-          enable_free_message: true,
-          subscription_price: true,
-          watermark_uid: true,
-        },
       });
 
       if (!settings) {
