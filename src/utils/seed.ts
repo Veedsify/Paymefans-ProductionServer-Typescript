@@ -27,6 +27,7 @@ async function main() {
       profile_image: SERVER_ORIGINAL_URL + "/site/avatar.png",
       user_id: "paymefans",
       username: "@paymefans",
+      watermarkEnabled: true,
       flags: [
         "view_profile",
         "edit_profile",
@@ -93,6 +94,18 @@ async function main() {
         "view_paid_posts",
         "view_paid_media",
       ],
+      Model: {
+        create: {
+          verification_status: true,
+          verification_state: "approved",
+          country: "Nigeria",
+          dob: new Date("01-10-1990"),
+          gender: "Male",
+          firstname: "Paymefans",
+          lastname: "Admin",
+          hookup: false,
+        }
+      },
       UserWallet: {
         create: {
           wallet_id: uniqueUserId,
