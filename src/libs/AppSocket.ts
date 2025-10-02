@@ -125,7 +125,8 @@ async function AppSocket(io: any) {
       }
     });
     socket.on("new-message", async (data: any) => {
-      const userRoom = data.conversationId || (await SocketService.getUserRoom(socket.id));
+      const userRoom =
+        data.conversationId || (await SocketService.getUserRoom(socket.id));
       const user = await SocketService.getUserFromSocket(socket.id);
       if (user && userRoom) {
         SocketService.HandleMessage(data, socket, userRoom, user, io);
@@ -341,7 +342,9 @@ async function AppSocket(io: any) {
       // Handle user inactive status
       try {
         await SocketService.HandleUserInactive(
-          user?.username || username || (socket.handshake.query.username as string),
+          user?.username ||
+            username ||
+            (socket.handshake.query.username as string),
         );
         EmitActiveUsers(io);
       } catch (error) {

@@ -29,7 +29,10 @@ export default class SocketService {
     return userData ? JSON.parse(userData) : null;
   }
 
-  static async setUserForSocket(socketId: string, user: SocketUser): Promise<void> {
+  static async setUserForSocket(
+    socketId: string,
+    user: SocketUser,
+  ): Promise<void> {
     await redis.setex(`socket:${socketId}:user`, 3600, JSON.stringify(user));
     if (user.userId) {
       await redis.sadd(`user:${user.userId}:sockets`, socketId);
@@ -383,11 +386,7 @@ export default class SocketService {
   }
 
   // Handle user connected
-  static async HandleUserConnected(
-    socket: Socket,
-    _: SocketUser,
-    data: any,
-  ) {
+  static async HandleUserConnected(socket: Socket, _: SocketUser, data: any) {
     const updatedUser = {
       socketId: socket.id,
       username: data.username,
