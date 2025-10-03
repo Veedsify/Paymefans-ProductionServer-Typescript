@@ -590,7 +590,7 @@ model LiveStreamView {
 model Settings {
   id                    Int      @id @default(autoincrement())
   user_id               Int      @unique
-  price_per_message     Float
+  price_per_message     Float    @default(0)
   subscription_active   Boolean  @default(false)
   enable_free_message   Boolean
   subscription_price    Float
