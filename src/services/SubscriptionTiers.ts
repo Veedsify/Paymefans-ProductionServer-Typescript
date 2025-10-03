@@ -52,7 +52,7 @@ export default class SubscriptionTierService {
             error: true,
             message:
               "Minimum subscription price is ₦" +
-              cfg.minimumSubscriptionPriceNgn,
+              cfg.minimumSubscriptionPriceNgn.toLocaleString(),
           };
         }
 
