@@ -26,7 +26,7 @@ export type UserSubscriptionsResponse = {
             tier_name: string;
             tier_price: number;
             tier_duration: string;
-            tier_description: string;
+            tier_description?: string;
             subscription_id: number;
       }[]
 }
