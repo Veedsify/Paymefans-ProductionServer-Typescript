@@ -23,6 +23,6 @@ export const SPECIAL_USERNAMES = [
     '@technicalsupport',
     '@technicalhelp',
     '@technical',
-    '@dikewisdom',
+    // '@dikewisdom',
     '@wisdom',
 ]

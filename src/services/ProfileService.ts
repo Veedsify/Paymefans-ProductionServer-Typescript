@@ -625,6 +625,15 @@ class ProfileService {
         : [];
 
       const followingSet = new Set(followingRelations.map((f) => f.user_id));
+      const followsMeSet = new Set(
+        (
+          await query.follow.findMany({
+            where: { user_id: user.id, follower_id: { in: otherUserIds } },
+            select: { follower_id: true },
+          })
+        ).map((f) => f.follower_id),
+      );
+
       const enrichedData = data.map((item) => {
         const targetUser =
           type === "followers"
@@ -632,7 +641,9 @@ class ProfileService {
             : type === "following"
               ? item.users
               : item.subscriber;
-        return { ...targetUser, is_following: followingSet.has(targetUser.id) };
+        return { ...targetUser, is_following: followingSet.has(targetUser.id), 
+          followsMe: followsMeSet.has(targetUser.id)
+         };
       });
 
       return {
