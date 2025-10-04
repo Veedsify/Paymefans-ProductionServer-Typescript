@@ -45,7 +45,7 @@ export default class SettingsService {
             name,
             location,
             bio,
-            username,
+            username: username.trim().toLowerCase(),
             email,
             website,
           },
