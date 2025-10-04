@@ -50,6 +50,7 @@ import { GenerateBatchSignedUrls } from "@libs/GenerateSignedUrls";
 import WatermarkService from "./WatermarkService";
 import { RedisPostService } from "./RedisPostService";
 import UserService from "./UserService";
+import FormatName from "@utils/FormatName";
 
 export default class PostService {
   // Helper method to process UserMedia with signed URLs
@@ -2451,7 +2452,7 @@ export default class PostService {
           where: { id: postIdNum },
           include: {
             user: {
-              select: { id: true, email: true, username: true },
+              select: { id: true, email: true, username: true, name:true },
             },
           },
         }),
@@ -2536,7 +2537,7 @@ export default class PostService {
         query.notifications.create({
           data: {
             notification_id: `NOT${GenerateUniqueId()}`,
-            message: `You have purchased post <strong>${post.post_id}</strong> for <strong>${postPrice} points</strong>`,
+            message: `You have purchased post <strong>${FormatName(post.user.name)}</strong> post for <strong>${postPrice} points</strong>`,
             user_id: user.id,
             action: "purchase",
             url: `${process.env.APP_URL}/posts/${post.post_id}`,
@@ -2545,7 +2546,7 @@ export default class PostService {
         query.notifications.create({
           data: {
             notification_id: `NOT${GenerateUniqueId()}`,
-            message: `Your post <strong>${post.post_id}</strong> has been purchased for <strong>${postPrice} points</strong>`,
+            message: `Hi ${FormatName(post.user.name)}, your post has been purchased by <strong><a href="/${user.username}">${FormatName(user.name)}</a></strong> for <strong>${postPrice} points</strong>`,
             user_id: post.user_id,
             action: "purchase",
             url: `${process.env.APP_URL}/posts/${post.post_id}`,
