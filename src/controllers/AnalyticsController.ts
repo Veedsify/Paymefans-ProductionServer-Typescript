@@ -75,7 +75,6 @@ class AnalyticsController {
     try {
       const user = req.user as AuthUser;
       const timeRange = req.params.timeRange as TimeRangeKey;
-
       const data = await AnalyticsService.GetRecentPostsData(
         user.id,
         timeRange,

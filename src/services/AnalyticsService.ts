@@ -40,6 +40,9 @@ interface RecentPostData {
   shares: number;
   engagement: number;
   date: string;
+  content: string | null;
+  type: string;
+  hasMoreMedia: boolean;
   timestamp: number;
 }
 
@@ -607,11 +610,13 @@ class AnalyticsService {
           post_comments: true,
           post_impressions: true,
           post_reposts: true,
+          content: true,
           created_at: true,
           UserMedia: {
             select: {
               url: true,
               media_type: true,
+              poster: true,
             },
             take: 1,
           },
@@ -636,11 +641,14 @@ class AnalyticsService {
 
         return {
           id: post.id,
-          thumbnail: post.UserMedia[0]?.url || "/site/banner.png",
+          thumbnail: post.UserMedia[0]?.poster || "/site/banner.png",
           likes: post.post_likes,
           comments: post.post_comments,
+          type: post.UserMedia[0]?.media_type || "image",
+          hasMoreMedia: post.UserMedia.length > 1,
           views: realViews,
           shares: post.post_reposts,
+          content: post.content,
           engagement: Math.round(engagementRate * 10) / 10,
           date: this.getRelativeTime(post.created_at),
           timestamp: post.created_at.getTime(),
