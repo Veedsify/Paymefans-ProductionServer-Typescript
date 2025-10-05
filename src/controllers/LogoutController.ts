@@ -18,6 +18,8 @@ export default class LogOutController {
           secure: process.env.NODE_ENV === "production",
           sameSite: "lax",
           path: "/",
+          domain:
+          process.env.NODE_ENV === "production" ? "paymefans.shop" : undefined, // Allow subdomain access
           expires: new Date(0),
         }),
         serialize("refresh_token", "", {
@@ -25,6 +27,8 @@ export default class LogOutController {
           secure: process.env.NODE_ENV === "production",
           sameSite: "lax",
           path: "/",
+          domain:
+          process.env.NODE_ENV === "production" ? "paymefans.shop" : undefined, // Allow subdomain access
           expires: new Date(0),
         })
       ])
