@@ -2506,11 +2506,11 @@ export default class PostService {
       ];
       const senderOptions = {
         transactionId: trx1,
-        transaction: `Purchased a post from ${post.user.username} for ${postPrice} points`,
+        transaction: `Purchased a post from ${post.user.username} for ${postPrice.toLocaleString()} points`,
         userId: user.id,
         amount: postPrice,
         transactionType: "debit",
-        transactionMessage: `You purchased ${FormatName(post.user.name)} for ${postPrice} points`,
+        transactionMessage: `You purchased ${FormatName(post.user.name)} for ${postPrice.toLocaleString()} points`,
         walletId: buyerWallet?.id,
       };
 
@@ -2537,7 +2537,7 @@ export default class PostService {
         query.notifications.create({
           data: {
             notification_id: `NOT${GenerateUniqueId()}`,
-            message: `You have purchased post <strong>${FormatName(post.user.name)}</strong> post for <strong>${postPrice} points</strong>`,
+            message: `You have purchased <strong>${FormatName(post.user.name)}</strong> post for <strong>${postPrice.toLocaleString()} points</strong>`,
             user_id: user.id,
             action: "purchase",
             url: `${process.env.APP_URL}/posts/${post.post_id}`,
