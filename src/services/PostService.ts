@@ -1563,7 +1563,7 @@ export default class PostService {
           query.userRepost.findFirst({
             where: { post_id: post.id, user_id: authUserId },
           }),
-          query.purchasedPosts.findMany({
+          query.purchasedPosts.findFirst({
             where: { post_id: post.id, user_id: authUserId },
           }),
         ]);
