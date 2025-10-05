@@ -286,12 +286,16 @@ export default class AuthController {
           secure: process.env.NODE_ENV === "production",
           sameSite: "lax",
           path: "/",
+          domain:
+          process.env.NODE_ENV === "production" ? "paymefans.shop" : undefined, // Allow subdomain access
         }),
         serialize("refresh_token", refreshToken as string, {
           httpOnly: process.env.NODE_ENV === "production",
           secure: process.env.NODE_ENV === "production",
           sameSite: "lax",
           path: "/",
+          domain:
+          process.env.NODE_ENV === "production" ? "paymefans.shop" : undefined, // Allow subdomain access
         }),
       ]);
 
