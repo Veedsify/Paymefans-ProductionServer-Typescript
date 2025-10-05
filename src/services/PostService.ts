@@ -2537,7 +2537,7 @@ export default class PostService {
         query.notifications.create({
           data: {
             notification_id: `NOT${GenerateUniqueId()}`,
-            message: `You have purchased <strong>${FormatName(post.user.name)}</strong> post for <strong>${postPrice.toLocaleString()} points</strong>`,
+            message: `You have purchased <strong>${post.user.username}</strong> post for <strong>${postPrice.toLocaleString()} points</strong>`,
             user_id: user.id,
             action: "purchase",
             url: `${process.env.APP_URL}/posts/${post.post_id}`,
@@ -2546,7 +2546,7 @@ export default class PostService {
         query.notifications.create({
           data: {
             notification_id: `NOT${GenerateUniqueId()}`,
-            message: `Hi ${FormatName(post.user.name)}, your post has been purchased by <strong><a href="/${user.username}">${FormatName(user.username)}</a></strong> for <strong>${postPrice} points</strong>`,
+            message: `Hi ${FormatName(post.user.name)}, your post has been purchased by <strong><a href="/${user.username}">${user.username}</a></strong> for <strong>${postPrice.toLocaleString()} points</strong>`,
             user_id: post.user_id,
             action: "purchase",
             url: `${process.env.APP_URL}/posts/${post.post_id}`,
