@@ -2520,7 +2520,7 @@ export default class PostService {
         userId: post.user_id,
         amount: postPrice,
         transactionType: "credit",
-        transactionMessage: `${postPrice} points has been credited to your account! ${FormatName(user.name)} purchased your post.`,
+        transactionMessage: `${postPrice} points has been credited to your account! ${FormatName(user.username)} purchased your post.`,
         walletId: sellerWallet?.id,
       };
 
@@ -2546,7 +2546,7 @@ export default class PostService {
         query.notifications.create({
           data: {
             notification_id: `NOT${GenerateUniqueId()}`,
-            message: `Hi ${FormatName(post.user.name)}, your post has been purchased by <strong><a href="/${user.username}">${FormatName(user.name)}</a></strong> for <strong>${postPrice} points</strong>`,
+            message: `Hi ${FormatName(post.user.name)}, your post has been purchased by <strong><a href="/${user.username}">${FormatName(user.username)}</a></strong> for <strong>${postPrice} points</strong>`,
             user_id: post.user_id,
             action: "purchase",
             url: `${process.env.APP_URL}/posts/${post.post_id}`,
