@@ -2510,7 +2510,7 @@ export default class PostService {
         userId: user.id,
         amount: postPrice,
         transactionType: "debit",
-        transactionMessage: `You purchased post ${post.post_id} for ${postPrice} points`,
+        transactionMessage: `You purchased ${FormatName(post.user.name)} for ${postPrice} points`,
         walletId: buyerWallet?.id,
       };
 
@@ -2520,7 +2520,7 @@ export default class PostService {
         userId: post.user_id,
         amount: postPrice,
         transactionType: "credit",
-        transactionMessage: `You received ${postPrice} points for post ${post.post_id}`,
+        transactionMessage: `${postPrice} points has been credited to your account! ${FormatName(user.name)} purchased your post.`,
         walletId: sellerWallet?.id,
       };
 
