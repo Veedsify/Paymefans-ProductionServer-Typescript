@@ -27,7 +27,7 @@ class ProfileService {
   // Get Profile
   static async Profile(
     username: string,
-    authUserId: number,
+    authUserId: number
   ): Promise<ProfileServiceResponse> {
     try {
       if (!username) {
@@ -87,11 +87,21 @@ class ProfileService {
       // Run both lookups in one transaction
       const [getUser, oldUser] = await query.$transaction(async (tx) => {
         const user = await tx.user.findFirst({
-          where: { username: user_name },
+          where: {
+            username: {
+              contains: user_name,
+              mode: "insensitive",
+            },
+          },
           select: userSelect,
         });
         const oldUser = await tx.oldUsername.findFirst({
-          where: { old_username: user_name },
+          where: {
+            old_username: {
+              contains: user_name,
+              mode: "insensitive",
+            },
+          },
           select: {
             id: true,
             old_username: true,
@@ -264,7 +274,7 @@ class ProfileService {
           attempts: 3,
           backoff: { type: "fixed", delay: 5000 },
           removeOnComplete: true,
-        },
+        }
       );
 
       return {
@@ -282,7 +292,7 @@ class ProfileService {
   // Update Profile Info
   static async ProfileUpdateInfo(
     data: ProfileUpdateInfo,
-    user: AuthUser,
+    user: AuthUser
   ): Promise<{ error: boolean; message: string }> {
     const {
       name,
@@ -376,7 +386,7 @@ class ProfileService {
       const queries = [];
       if (Object.keys(userUpdateData).length > 0) {
         queries.push(
-          query.user.update({ where: { id: user.id }, data: userUpdateData }),
+          query.user.update({ where: { id: user.id }, data: userUpdateData })
         );
       }
       if (Object.keys(settingsUpdateData).length > 0) {
@@ -384,7 +394,7 @@ class ProfileService {
           query.settings.update({
             where: { id: user.id },
             data: settingsUpdateData,
-          }),
+          })
         );
       }
 
@@ -395,7 +405,7 @@ class ProfileService {
               user_id: user.id,
               old_username: user.username || "",
             },
-          }),
+          })
         );
       }
 
@@ -573,8 +583,8 @@ class ProfileService {
       type === "followers"
         ? authUser.total_followers
         : type === "following"
-          ? authUser.total_following
-          : authUser.total_subscribers;
+        ? authUser.total_following
+        : authUser.total_subscribers;
 
     if (!user?.id) {
       return {
@@ -614,8 +624,8 @@ class ProfileService {
         type === "followers"
           ? item.followers.id
           : type === "following"
-            ? item.users.id
-            : item.subscriber.id,
+          ? item.users.id
+          : item.subscriber.id
       );
       const followingRelations = otherUserIds.length
         ? await query.follow.findMany({
@@ -631,7 +641,7 @@ class ProfileService {
             where: { user_id: user.id, follower_id: { in: otherUserIds } },
             select: { follower_id: true },
           })
-        ).map((f) => f.follower_id),
+        ).map((f) => f.follower_id)
       );
 
       const enrichedData = data.map((item) => {
@@ -639,11 +649,13 @@ class ProfileService {
           type === "followers"
             ? item.followers
             : type === "following"
-              ? item.users
-              : item.subscriber;
-        return { ...targetUser, is_following: followingSet.has(targetUser.id), 
-          followsMe: followsMeSet.has(targetUser.id)
-         };
+            ? item.users
+            : item.subscriber;
+        return {
+          ...targetUser,
+          is_following: followingSet.has(targetUser.id),
+          followsMe: followsMeSet.has(targetUser.id),
+        };
       });
 
       return {
@@ -664,7 +676,7 @@ class ProfileService {
   static async FollowUnfollowUser(
     authUser: AuthUser,
     inputAction: "follow" | "unfollow",
-    userId: number,
+    userId: number
   ): Promise<{ message: string; status: boolean }> {
     try {
       const action = inputAction.toLowerCase() as "follow" | "unfollow";
@@ -684,7 +696,9 @@ class ProfileService {
           await UserNotificationQueue.add("new-follow-notification", {
             user_id: userId,
             url: `/${authUser?.username}`,
-            message: `Hi ${getSingleName(user.name)}, <strong><a href="/${authUser?.username}">${authUser?.username}</a> </strong> has just followed you`,
+            message: `Hi ${getSingleName(user.name)}, <strong><a href="/${
+              authUser?.username
+            }">${authUser?.username}</a> </strong> has just followed you`,
             action: "follow",
             notification_id: `NTF${GenerateUniqueId()}`,
             read: false,
@@ -710,12 +724,14 @@ class ProfileService {
         ]);
         await AutomatedMessageTriggerService.sendFollowerMessage(
           userId,
-          authUser.id,
+          authUser.id
         );
         await UserNotificationQueue.add("new-follow-notification", {
           user_id: userId,
           url: `/${authUser?.username}`,
-          message: `Hi ${getSingleName(user.name)}, <strong><a href="/${authUser?.username}">${authUser?.username}</a> </strong> has just followed you`,
+          message: `Hi ${getSingleName(user.name)}, <strong><a href="/${
+            authUser?.username
+          }">${authUser?.username}</a> </strong> has just followed you`,
           action: "follow",
           notification_id: `NTF${GenerateUniqueId()}`,
           read: false,
@@ -850,7 +866,11 @@ class ProfileService {
         walletId: model.UserWallet?.id,
       };
 
-      const notificationMsg = `Hi ${getSingleName(model.name)}, <strong><a href="/${user.username}">${user.username}</a></strong> has just tipped you ${pointsAmount} points`;
+      const notificationMsg = `Hi ${getSingleName(
+        model.name
+      )}, <strong><a href="/${user.username}">${
+        user.username
+      }</a></strong> has just tipped you ${pointsAmount} points`;
 
       // 5. Background jobs and notifications in parallel
       await Promise.all([
@@ -872,7 +892,7 @@ class ProfileService {
             notification_id: `NOT${GenerateUniqueId()}`,
             read: false,
           },
-          { removeOnComplete: true, attempts: 3 },
+          { removeOnComplete: true, attempts: 3 }
         ),
         UserNotificationQueue.add(
           "new-tip-notification",
@@ -884,7 +904,7 @@ class ProfileService {
             notification_id: `NOT${GenerateUniqueId()}`,
             read: false,
           },
-          { removeOnComplete: true, attempts: 3 },
+          { removeOnComplete: true, attempts: 3 }
         ),
       ]);
 
@@ -901,7 +921,7 @@ class ProfileService {
   // Delete User Accounts and Media
   static async DeleteAccount(
     userId: number,
-    password: string,
+    password: string
   ): Promise<{ message: string; error: boolean }> {
     try {
       if (!userId || isNaN(userId)) {
@@ -955,7 +975,7 @@ class ProfileService {
 
   // Creator Dashboard Data
   static async CreatorDashboardData(
-    userId: number,
+    userId: number
   ): Promise<CreatorDashboardData> {
     try {
       if (!userId || isNaN(userId)) {
