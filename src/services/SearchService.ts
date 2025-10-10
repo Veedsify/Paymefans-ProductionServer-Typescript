@@ -9,7 +9,7 @@ import { RedisPostService } from "./RedisPostService";
 export default class SearchService {
   private static async searchInPosts(
     searchQuery: string,
-    authUserid: number,
+    authUserid: number
   ): Promise<any> {
     const cacheKey = `search:posts:${searchQuery}`;
     const cachedResult = await redis.get(cacheKey);
@@ -25,7 +25,7 @@ export default class SearchService {
 
     const checkIfUserCanViewPaidPosts = RBAC.checkUserFlag(
       user?.flags,
-      Permissions.VIEW_PAID_POSTS,
+      Permissions.VIEW_PAID_POSTS
     );
 
     const results = await query.post.findMany({
@@ -35,13 +35,13 @@ export default class SearchService {
           { post_id: { contains: searchQuery, mode: "insensitive" } },
           {
             user: {
-              username:
-                { contains: searchQuery, mode: "insensitive" },
+              username: { contains: searchQuery, mode: "insensitive" },
               name: {
-                contains: searchQuery, mode: "insensitive"
-              }
+                contains: searchQuery,
+                mode: "insensitive",
+              },
             },
-          }
+          },
         ],
       },
       select: {
@@ -107,7 +107,7 @@ export default class SearchService {
       RedisPostService.getMultiplePostsLikeData(postIdStrings, authUserid),
       query.subscribers.findMany({
         where: {
-          user_id: { in: results.map(post => post.user.id) },
+          user_id: { in: results.map((post) => post.user.id) },
           subscriber_id: authUserid,
         },
       }),
@@ -123,21 +123,26 @@ export default class SearchService {
     const repostMap = new Map(reposts.map((r) => [r.post_id, r]));
 
     const postsChecked = results.map(async (post) => {
-      const likeInfo = likeData.get(post.post_id) || { count: post.post_likes, isLiked: false };
+      const likeInfo = likeData.get(post.post_id) || {
+        count: post.post_likes,
+        isLiked: false,
+      };
       const isSubscribed = subscriptionMap.get(post.user.id);
       const isReposted = repostMap.get(post.id);
 
       return {
         ...post,
-        UserMedia: post.watermark_enabled ? await GenerateBatchSignedUrls(
-          (post.UserMedia || []).map(media => ({
-            media_id: media.media_id,
-            media_type: media.media_type,
-            url: media.url,
-            poster: media.poster,
-            blur: media.blur
-          }))
-        ) : post.UserMedia,
+        UserMedia: post.watermark_enabled
+          ? await GenerateBatchSignedUrls(
+              (post.UserMedia || []).map((media) => ({
+                media_id: media.media_id,
+                media_type: media.media_type,
+                url: media.url,
+                poster: media.poster,
+                blur: media.blur,
+              }))
+            )
+          : post.UserMedia,
         likedByme: likeInfo.isLiked,
         post_likes: likeInfo.count, // Update with Redis count
         wasReposted: !!isReposted,
@@ -156,7 +161,7 @@ export default class SearchService {
   }
   private static async searchInUsers(
     searchQuery: string,
-    authUserId: number,
+    authUserId: number
   ): Promise<any> {
     const results = await query.user.findMany({
       where: {
@@ -222,19 +227,33 @@ export default class SearchService {
           ...result,
           following: !!following,
         };
-      }),
+      })
     );
 
     // Cache the results
     // await redis.set(cacheKey, JSON.stringify(usersWithFollowing), "EX", 5); // Cache for 5 seconds
     return usersWithFollowing;
   }
-  private static async searchInMedia(searchQuery: string): Promise<any> {
-    const cacheKey = `search:media:${searchQuery}`;
+  private static async searchInMedia(
+    searchQuery: string,
+    authUserId: number
+  ): Promise<any> {
+    const cacheKey = `search:media:${searchQuery}:${authUserId}`;
     const cachedResult = await redis.get(cacheKey);
     if (cachedResult) {
       return JSON.parse(cachedResult);
     }
+
+    const user = await query.user.findUnique({
+      where: {
+        id: authUserId,
+      },
+    });
+
+    const checkIfUserCanViewPaidPosts = RBAC.checkUserFlag(
+      user?.flags,
+      Permissions.VIEW_PAID_POSTS
+    );
 
     const results = await query.userMedia.findMany({
       where: {
@@ -262,6 +281,8 @@ export default class SearchService {
             created_at: true,
             user_id: true,
             post_id: true,
+            post_price: true,
+            post_audience: true,
             watermark_enabled: true,
             user: {
               select: {
@@ -286,23 +307,67 @@ export default class SearchService {
       return [];
     }
 
-    // Process media with conditional signed URLs
+    // Get post IDs for checking subscriptions and payments
+    const postIds = results.map((media) => media.post_id);
+    const userIds = results.map((media) => media.post.user.id);
+
+    // Batch fetch subscriptions and purchased posts
+    const [subscriptions, purchasedPosts] = await Promise.all([
+      query.subscribers.findMany({
+        where: {
+          user_id: { in: userIds },
+          subscriber_id: authUserId,
+          status: "active",
+        },
+      }),
+      query.purchasedPosts.findMany({
+        where: {
+          post_id: { in: postIds },
+          user_id: authUserId,
+        },
+      }),
+    ]);
+
+    const subscriptionMap = new Map(subscriptions.map((s) => [s.user_id, s]));
+    const purchasedPostsMap = new Map(
+      purchasedPosts.map((p) => [p.post_id, p])
+    );
+
+    // Process media with conditional signed URLs and access checks
     const processedResults = await Promise.all(
       results.map(async (media) => {
+        const isSubscribed =
+          checkIfUserCanViewPaidPosts ||
+          media.post.user.id === authUserId ||
+          !!subscriptionMap.get(media.post.user.id);
+
+        const hasPaid =
+          checkIfUserCanViewPaidPosts ||
+          !!purchasedPostsMap.get(media.post_id) ||
+          media.accessible_to !== "price";
+
         if (media.post?.watermark_enabled) {
-          const signedMedia = await GenerateBatchSignedUrls([{
-            media_id: media.media_id,
-            media_type: media.media_type,
-            url: media.url,
-            poster: media.poster,
-            blur: media.blur
-          }]);
+          const signedMedia = await GenerateBatchSignedUrls([
+            {
+              media_id: media.media_id,
+              media_type: media.media_type,
+              url: media.url,
+              poster: media.poster,
+              blur: media.blur,
+            },
+          ]);
           return {
             ...media,
-            ...signedMedia[0]
+            ...signedMedia[0],
+            isSubscribed,
+            hasPaid,
           };
         }
-        return media;
+        return {
+          ...media,
+          isSubscribed,
+          hasPaid,
+        };
       })
     );
 
@@ -314,7 +379,7 @@ export default class SearchService {
   static async SearchPlatform(
     query: string,
     category: string,
-    authUser: AuthUser,
+    authUser: AuthUser
   ): Promise<SearchPlatformResponse> {
     try {
       let results: any;
@@ -323,7 +388,7 @@ export default class SearchService {
       } else if (category === "users") {
         results = await this.searchInUsers(query, authUser.id);
       } else if (category === "media") {
-        results = await this.searchInMedia(query);
+        results = await this.searchInMedia(query, authUser.id);
       } else {
         results = { message: "Invalid category" + category, error: true };
       }
