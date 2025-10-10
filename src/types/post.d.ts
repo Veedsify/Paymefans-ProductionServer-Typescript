@@ -77,7 +77,12 @@ export type GetOtherMediaResponse = {
     locked: boolean;
     accessible_to: string;
     isSubscribed: boolean;
+    hasPaid: boolean;
     post: {
+      id: number;
+      post_price: number | null;
+      post_audience: string;
+      watermark_enabled: boolean;
       user: {
         id: number;
       };
@@ -153,6 +158,10 @@ export type GetOtherPrivateMediaResponse = {
     isSubscribed: boolean;
     hasPaid: boolean;
     post: {
+      id: number;
+      post_price: number | null;
+      post_audience: string;
+      watermark_enabled: boolean;
       user: {
         id: number;
       };

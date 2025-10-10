@@ -56,7 +56,7 @@ export default class PostService {
   // Helper method to process UserMedia with signed URLs
   private static async processUserMediaSignedUrls(
     userMedia: any[],
-    watermarkEnabled: boolean,
+    watermarkEnabled: boolean
   ): Promise<any[]> {
     if (!watermarkEnabled || !userMedia || userMedia.length === 0) {
       return userMedia;
@@ -69,7 +69,7 @@ export default class PostService {
         url: media.url,
         poster: media.poster,
         blur: media.blur,
-      })),
+      }))
     );
 
     return userMedia.map((media, index) => ({
@@ -82,7 +82,7 @@ export default class PostService {
 
   // Helper method to process individual media file with signed URLs
   private static async processMediaFileSignedUrls(
-    mediaFile: any,
+    mediaFile: any
   ): Promise<any> {
     if (!mediaFile.post?.watermark_enabled) {
       return { ...mediaFile, isSubscribed: true };
@@ -110,7 +110,7 @@ export default class PostService {
   // Create Post
   static async CreatePost(
     data: CreatePostProps,
-    authUserId: number,
+    authUserId: number
   ): Promise<CreatePostResponse> {
     try {
       const postId = uuid();
@@ -209,17 +209,17 @@ export default class PostService {
         if (Number(userMediaCount + userMediaDataCount) > 6) {
           // Remove the Media From Cloudflare
           await RemoveCloudflareMedia(
-            media.map((file) => ({ id: file.id, type: file.type })),
+            media.map((file) => ({ id: file.id, type: file.type }))
           );
           throw new Error(
-            "Sorry You have reached the maximum media limit of 6, as a fan user. Upgrade to a model/creator account to unlock unlimited uploads and access all features as a content creator.",
+            "Sorry You have reached the maximum media limit of 6, as a fan user. Upgrade to a model/creator account to unlock unlimited uploads and access all features as a content creator."
           );
         }
       }
 
       const formattedContent = ParseContentToHtml(content, mentions || []);
       const isWaterMarkEnabled = WatermarkService.isUserWatermarkEnabled(
-        user.id,
+        user.id
       );
 
       const post = await query.post.create({
@@ -244,7 +244,7 @@ export default class PostService {
       if (mentions && mentions.length > 0) {
         const validMentions = await MentionService.validateMentions(
           mentions,
-          authUserId,
+          authUserId
         );
 
         if (validMentions.length > 0) {
@@ -264,7 +264,7 @@ export default class PostService {
             {
               removeOnComplete: true,
               attempts: 3,
-            },
+            }
           );
         }
       }
@@ -374,7 +374,7 @@ export default class PostService {
             ...post,
             UserMedia: await this.processUserMediaSignedUrls(
               post.UserMedia,
-              post.watermark_enabled,
+              post.watermark_enabled
             ),
             isSubscribed: true,
             wasReposted: postRepostSet.has(post.id),
@@ -383,7 +383,7 @@ export default class PostService {
             // Update the like count with Redis data if available
             post_likes: likeInfo.count,
           };
-        }),
+        })
       );
 
       return {
@@ -500,7 +500,7 @@ export default class PostService {
             ...post,
             UserMedia: await this.processUserMediaSignedUrls(
               post.UserMedia,
-              post.watermark_enabled,
+              post.watermark_enabled
             ),
             likedByme: likeInfo.isLiked,
             post_likes: likeInfo.count, // Update with Redis count
@@ -508,7 +508,7 @@ export default class PostService {
             isSubscribed: true,
             hasPaid: true,
           };
-        }),
+        })
       );
 
       return {
@@ -631,7 +631,7 @@ export default class PostService {
             ...post,
             UserMedia: await this.processUserMediaSignedUrls(
               post.UserMedia,
-              post.watermark_enabled,
+              post.watermark_enabled
             ),
             likedByme: likeInfo.isLiked,
             post_likes: likeInfo.count, // Update with Redis count
@@ -639,7 +639,7 @@ export default class PostService {
             hasPaid: purchasedPostsSet.has(post.id),
             isSubscribed: true,
           };
-        }),
+        })
       );
 
       return {
@@ -758,7 +758,7 @@ export default class PostService {
             ...post,
             UserMedia: await this.processUserMediaSignedUrls(
               post.UserMedia,
-              post.watermark_enabled,
+              post.watermark_enabled
             ),
             likedByme: likeInfo.isLiked,
             post_likes: likeInfo.count, // Update with Redis count
@@ -767,7 +767,7 @@ export default class PostService {
               purchasedPostsSet.has(post.id) || post.post_audience !== "price",
             isSubscribed: true,
           };
-        }),
+        })
       );
 
       return {
@@ -834,14 +834,15 @@ export default class PostService {
       // isSubscribed: true can be done without map over async
       const mediaChecked = await Promise.all(
         media.map(async (mediaFile) => {
-          const processedMedia =
-            await this.processMediaFileSignedUrls(mediaFile);
+          const processedMedia = await this.processMediaFileSignedUrls(
+            mediaFile
+          );
           return {
             ...processedMedia,
             hasPaid:
               hasViewPaidMediaFlag || mediaFile.accessible_to !== "price",
           };
-        }),
+        })
       );
       return {
         status: true,
@@ -910,6 +911,8 @@ export default class PostService {
             post: {
               select: {
                 id: true,
+                post_price: true,
+                post_audience: true,
                 watermark_enabled: true,
                 user: { select: { id: true } },
               },
@@ -939,8 +942,9 @@ export default class PostService {
       const purchasedPostsSet = new Set(payedPosts.map((l) => l.post_id));
       const resolvedMedia = await Promise.all(
         media.map(async (mediaFile) => {
-          const processedMedia =
-            await this.processMediaFileSignedUrls(mediaFile);
+          const processedMedia = await this.processMediaFileSignedUrls(
+            mediaFile
+          );
           return {
             ...processedMedia,
             hasPaid:
@@ -952,7 +956,7 @@ export default class PostService {
               mediaFile.post.user.id === Number(authUserId) ||
               !!isSubscribed,
           };
-        }),
+        })
       );
 
       return {
@@ -1031,14 +1035,15 @@ export default class PostService {
       // isSubscribed: true can be done without map over async
       const mediaChecked = await Promise.all(
         media.map(async (mediaFile) => {
-          const processedMedia =
-            await this.processMediaFileSignedUrls(mediaFile);
+          const processedMedia = await this.processMediaFileSignedUrls(
+            mediaFile
+          );
           return {
             ...processedMedia,
             hasPaid:
               hasViewPaidMediaFlag || mediaFile.accessible_to !== "price",
           };
-        }),
+        })
       );
 
       return {
@@ -1112,6 +1117,8 @@ export default class PostService {
             post: {
               select: {
                 id: true,
+                post_price: true,
+                post_audience: true,
                 watermark_enabled: true,
                 user: { select: { id: true } },
               },
@@ -1141,8 +1148,9 @@ export default class PostService {
       const purchasedPostsSet = new Set(payedPosts.map((l) => l.post_id));
       const resolvedMedia = await Promise.all(
         media.map(async (mediaFile) => {
-          const processedMedia =
-            await this.processMediaFileSignedUrls(mediaFile);
+          const processedMedia = await this.processMediaFileSignedUrls(
+            mediaFile
+          );
           return {
             ...processedMedia,
             hasPaid:
@@ -1154,7 +1162,7 @@ export default class PostService {
               mediaFile.post.user.id === Number(authUserId) ||
               !!isSubscribed,
           };
-        }),
+        })
       );
 
       return {
@@ -1304,7 +1312,7 @@ export default class PostService {
             ...post,
             UserMedia: await this.processUserMediaSignedUrls(
               post.UserMedia,
-              post.watermark_enabled,
+              post.watermark_enabled
             ),
             likedByme: likeInfo.isLiked,
             post_likes: likeInfo.count, // Update like count with Redis data
@@ -1315,7 +1323,7 @@ export default class PostService {
             wasReposted: postRepostSet.has(post.id),
             isSubscribed: checkIfUserCanViewPaidPosts || !!subs,
           };
-        }),
+        })
       );
       return {
         error: false,
@@ -1448,7 +1456,7 @@ export default class PostService {
             ...post,
             UserMedia: await this.processUserMediaSignedUrls(
               post.UserMedia,
-              post.watermark_enabled,
+              post.watermark_enabled
             ),
             likedByme: likeInfo.isLiked,
             post_likes: likeInfo.count, // Update with Redis count
@@ -1457,7 +1465,7 @@ export default class PostService {
               purchasedPostsSet.has(post.id) || post.post_audience !== "price",
             isSubscribed: !!subs || post.user.id === authUserId,
           };
-        }),
+        })
       );
 
       return {
@@ -1570,7 +1578,7 @@ export default class PostService {
 
       // Also get the current like count from Redis
       const currentLikeCount = await RedisPostService.getLikeCount(
-        post.post_id,
+        post.post_id
       );
 
       const checkIfUserCanViewPaidPost =
@@ -1583,7 +1591,7 @@ export default class PostService {
         ...post,
         UserMedia: await this.processUserMediaSignedUrls(
           post.UserMedia,
-          post.watermark_enabled,
+          post.watermark_enabled
         ),
       };
 
@@ -1792,7 +1800,7 @@ export default class PostService {
       const currentMediaImages =
         existingPost.UserMedia?.filter((m) => m.media_type === "image") || [];
       const newMediaImages = userMediaData.filter(
-        (m) => m.media_type === "image",
+        (m) => m.media_type === "image"
       );
       const hasOnlyImages =
         currentMediaImages.length > 0 || newMediaImages.length > 0
@@ -1813,8 +1821,8 @@ export default class PostService {
               visibility === "price"
                 ? price
                 : visibility === "public" || visibility === "subscribers"
-                  ? null
-                  : existingPost.post_price,
+                ? null
+                : existingPost.post_price,
           },
         });
 
@@ -1843,7 +1851,7 @@ export default class PostService {
       if (mentions && mentions.length > 0) {
         const validMentions = await MentionService.validateMentions(
           mentions,
-          userId,
+          userId
         );
 
         if (validMentions.length > 0) {
@@ -1866,7 +1874,7 @@ export default class PostService {
             {
               removeOnComplete: true,
               attempts: 3,
-            },
+            }
           );
         }
       }
@@ -2104,16 +2112,13 @@ export default class PostService {
       .limit(commentIds.length * 3); // Max 3 child comments per parent initially
 
     // Group child comments by parent
-    const childCommentsMap = childComments.reduce(
-      (acc, child) => {
-        if (!acc[child.parentId]) {
-          acc[child.parentId] = [];
-        }
-        acc[child.parentId].push(child);
-        return acc;
-      },
-      {} as Record<string, any[]>,
-    );
+    const childCommentsMap = childComments.reduce((acc, child) => {
+      if (!acc[child.parentId]) {
+        acc[child.parentId] = [];
+      }
+      acc[child.parentId].push(child);
+      return acc;
+    }, {} as Record<string, any[]>);
 
     // Get total child comment counts
     const childCounts = await Comments.aggregate([
@@ -2130,13 +2135,10 @@ export default class PostService {
       },
     ]);
 
-    const childCountsMap = childCounts.reduce(
-      (acc, item) => {
-        acc[item._id] = item.totalReplies;
-        return acc;
-      },
-      {} as Record<string, number>,
-    );
+    const childCountsMap = childCounts.reduce((acc, item) => {
+      acc[item._id] = item.totalReplies;
+      return acc;
+    }, {} as Record<string, number>);
 
     const checkedComments = comments.map((comment) => ({
       ...comment,
@@ -2287,7 +2289,7 @@ export default class PostService {
 
       if (postMedia && postMedia.length > 0) {
         const removeMedia = await RemoveCloudflareMedia(
-          postMedia.map((m) => ({ id: m.media_id, type: m.media_type })),
+          postMedia.map((m) => ({ id: m.media_id, type: m.media_type }))
         );
         if (removeMedia.error) {
           return {
@@ -2308,7 +2310,7 @@ export default class PostService {
 
   // Gift Points
   static async GiftPoints(
-    options: GiftPointsProps,
+    options: GiftPointsProps
   ): Promise<{ message: string; error: boolean }> {
     try {
       if (!options.points || !options.userId || !options.postId) {
@@ -2382,13 +2384,13 @@ export default class PostService {
           GetSinglename(user?.name as string),
           String(user?.email),
           String(receiver?.username),
-          points,
+          points
         ),
         EmailService.PostGiftReceivedEmail(
           GetSinglename(receiver?.name as string),
           String(receiver?.email),
           String(user?.username),
-          points,
+          points
         ),
         query.notifications.create({
           data: {
@@ -2434,7 +2436,7 @@ export default class PostService {
 
   // PayFor Post
   static async PayForPost(
-    options: PayForPostProps,
+    options: PayForPostProps
   ): Promise<PayForPostResponse> {
     const { user, postId } = options;
 
@@ -2452,7 +2454,7 @@ export default class PostService {
           where: { id: postIdNum },
           include: {
             user: {
-              select: { id: true, email: true, username: true, name:true },
+              select: { id: true, email: true, username: true, name: true },
             },
           },
         }),
@@ -2506,11 +2508,15 @@ export default class PostService {
       ];
       const senderOptions = {
         transactionId: trx1,
-        transaction: `Purchased a post from ${post.user.username} for ${postPrice.toLocaleString()} points`,
+        transaction: `Purchased a post from ${
+          post.user.username
+        } for ${postPrice.toLocaleString()} points`,
         userId: user.id,
         amount: postPrice,
         transactionType: "debit",
-        transactionMessage: `You purchased ${FormatName(post.user.name)} for ${postPrice.toLocaleString()} points`,
+        transactionMessage: `You purchased ${FormatName(
+          post.user.name
+        )} for ${postPrice.toLocaleString()} points`,
         walletId: buyerWallet?.id,
       };
 
@@ -2520,7 +2526,9 @@ export default class PostService {
         userId: post.user_id,
         amount: postPrice,
         transactionType: "credit",
-        transactionMessage: `${postPrice} points has been credited to your account! ${FormatName(user.username)} purchased your post.`,
+        transactionMessage: `${postPrice} points has been credited to your account! ${FormatName(
+          user.username
+        )} purchased your post.`,
         walletId: sellerWallet?.id,
       };
 
@@ -2537,7 +2545,9 @@ export default class PostService {
         query.notifications.create({
           data: {
             notification_id: `NOT${GenerateUniqueId()}`,
-            message: `You have purchased <strong>${post.user.username}</strong> post for <strong>${postPrice.toLocaleString()} points</strong>`,
+            message: `You have purchased <strong>${
+              post.user.username
+            }</strong> post for <strong>${postPrice.toLocaleString()} points</strong>`,
             user_id: user.id,
             action: "purchase",
             url: `${process.env.APP_URL}/posts/${post.post_id}`,
@@ -2546,7 +2556,13 @@ export default class PostService {
         query.notifications.create({
           data: {
             notification_id: `NOT${GenerateUniqueId()}`,
-            message: `Hi ${FormatName(post.user.name)}, your post has been purchased by <strong><a href="/${user.username}">${user.username}</a></strong> for <strong>${postPrice.toLocaleString()} points</strong>`,
+            message: `Hi ${FormatName(
+              post.user.name
+            )}, your post has been purchased by <strong><a href="/${
+              user.username
+            }">${
+              user.username
+            }</a></strong> for <strong>${postPrice.toLocaleString()} points</strong>`,
             user_id: post.user_id,
             action: "purchase",
             url: `${process.env.APP_URL}/posts/${post.post_id}`,
@@ -2555,12 +2571,12 @@ export default class PostService {
       ]);
 
       return this.successResponse(
-        `Post purchased successfully for ${postPrice} points`,
+        `Post purchased successfully for ${postPrice} points`
       );
     } catch (error: any) {
       console.error("Error in PayForPost:", error);
       return this.errorResponse(
-        "An unexpected error occurred during the post purchase",
+        "An unexpected error occurred during the post purchase"
       );
     }
   }
