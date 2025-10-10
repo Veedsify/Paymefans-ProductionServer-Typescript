@@ -21,7 +21,7 @@ RUN npm install -g typescript
 
 # Copy package files and install all dependencies (including dev dependencies)
 COPY package*.json ./
-RUN npm install
+RUN npm ci
 
 # Copy source code
 COPY . .
@@ -43,7 +43,7 @@ RUN apk add --no-cache libc-dev openssl-dev
 COPY package*.json ./
 
 # Install only production dependencies
-RUN npm install
+RUN npm ci
 
 # Copy built application and Prisma client from build stage
 COPY --from=build /app/dist ./dist
