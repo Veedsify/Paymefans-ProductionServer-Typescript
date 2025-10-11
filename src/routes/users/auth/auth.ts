@@ -16,6 +16,10 @@ auth.post(Paths.API.Auth.SignUpUsername, AuthController.Username)
 auth.post(Paths.API.Auth.Login, AuthController.Login);
 auth.post(Paths.API.Auth.TwoFactorAuthentication, Auth, AuthController.TwoFactorAuth);
 auth.post(Paths.API.Auth.VerifyTwoFactorAuth, AuthController.VerifyTwoFactorAuth);
+auth.post(
+  Paths.API.Auth.ResendTwoFactorCode,
+  AuthController.ResendTwoFactorCode
+);
 auth.post(Paths.API.Auth.Logout, LogOutController.Logout)
 auth.post(Paths.API.Auth.TokenRefresh, AuthController.RefreshToken);
 

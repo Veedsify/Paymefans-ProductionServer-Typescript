@@ -226,149 +226,203 @@ export class RecommendationService {
       ]);
 
       // Fetch candidates from multiple sources
-      const [creatorPosts, trendingPosts, diversePosts] = await Promise.all([
-        // 1. Posts from preferred creators (60% of candidates)
-        preferredCreatorIds.size > 0
-          ? query.post.findMany({
-              where: {
-                user_id: {
-                  in: Array.from(preferredCreatorIds),
-                  notIn: blockedByUserIds,
+      const [creatorPosts, trendingPosts, diversePosts, repostedPosts] =
+        await Promise.all([
+          // 1. Posts from preferred creators (60% of candidates)
+          preferredCreatorIds.size > 0
+            ? query.post.findMany({
+                where: {
+                  user_id: {
+                    in: Array.from(preferredCreatorIds),
+                    notIn: blockedByUserIds,
+                  },
+                  post_is_visible: true,
+                  post_status: "approved",
+                  id: { notIn: recentPostIds },
+                  user: { active_status: true },
+                  OR: [
+                    { post_audience: "public" },
+                    { post_audience: "followers" },
+                    { post_audience: "subscribers" },
+                    { post_audience: "price" },
+                    { user_id: userId },
+                  ],
                 },
-                post_is_visible: true,
-                post_status: "approved",
-                id: { notIn: recentPostIds },
-                user: { active_status: true },
-                OR: [
-                  { post_audience: "public" },
-                  { post_audience: "followers" },
-                  { post_audience: "subscribers" },
-                  { post_audience: "price" },
-                  { user_id: userId },
-                ],
-              },
-              select: {
-                id: true,
-                content: true,
-                post_id: true,
-                post_audience: true,
-                media: true,
-                created_at: true,
-                updated_at: true,
-                post_status: true,
-                post_impressions: true,
-                post_likes: true,
-                post_comments: true,
-                post_reposts: true,
-                user_id: true,
-                user: {
-                  select: {
-                    is_model: true,
-                    total_followers: true,
+                select: {
+                  id: true,
+                  content: true,
+                  post_id: true,
+                  post_audience: true,
+                  media: true,
+                  created_at: true,
+                  updated_at: true,
+                  post_status: true,
+                  post_impressions: true,
+                  post_likes: true,
+                  post_comments: true,
+                  post_reposts: true,
+                  user_id: true,
+                  user: {
+                    select: {
+                      is_model: true,
+                      total_followers: true,
+                    },
                   },
                 },
-              },
-              take: Math.floor(this.CANDIDATE_POOL_SIZE * 0.6),
-              orderBy: { created_at: "desc" },
-            })
-          : [],
+                take: Math.floor(this.CANDIDATE_POOL_SIZE * 0.6),
+                orderBy: { created_at: "desc" },
+              })
+            : [],
 
-        // 2. Trending posts (high engagement) (25% of candidates)
-        query.post.findMany({
-          where: {
-            post_is_visible: true,
-            post_status: "approved",
-            id: { notIn: recentPostIds },
-            user: { active_status: true },
-            user_id: { notIn: blockedByUserIds },
-            created_at: {
-              gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000), // Last 7 days
+          // 2. Trending posts (high engagement) (25% of candidates)
+          query.post.findMany({
+            where: {
+              post_is_visible: true,
+              post_status: "approved",
+              id: { notIn: recentPostIds },
+              user: { active_status: true },
+              user_id: { notIn: blockedByUserIds },
+              created_at: {
+                gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000), // Last 7 days
+              },
+              OR: [
+                { post_audience: "public" },
+                { post_audience: "followers" },
+                { post_audience: "subscribers" },
+                { post_audience: "price" },
+              ],
             },
-            OR: [
-              { post_audience: "public" },
-              { post_audience: "followers" },
-              { post_audience: "subscribers" },
-              { post_audience: "price" },
-            ],
-          },
-          select: {
-            id: true,
-            content: true,
-            post_id: true,
-            post_audience: true,
-            media: true,
-            created_at: true,
-            updated_at: true,
-            post_status: true,
-            post_impressions: true,
-            post_likes: true,
-            post_comments: true,
-            post_reposts: true,
-            user_id: true,
-            user: {
-              select: {
-                is_model: true,
-                total_followers: true,
+            select: {
+              id: true,
+              content: true,
+              post_id: true,
+              post_audience: true,
+              media: true,
+              created_at: true,
+              updated_at: true,
+              post_status: true,
+              post_impressions: true,
+              post_likes: true,
+              post_comments: true,
+              post_reposts: true,
+              user_id: true,
+              user: {
+                select: {
+                  is_model: true,
+                  total_followers: true,
+                },
               },
             },
-          },
-          take: Math.floor(this.CANDIDATE_POOL_SIZE * 0.25),
-          orderBy: [
-            { post_likes: "desc" },
-            { post_comments: "desc" },
-            { created_at: "desc" },
-          ],
-        }),
+            take: Math.floor(this.CANDIDATE_POOL_SIZE * 0.25),
+            orderBy: [
+              { post_likes: "desc" },
+              { post_comments: "desc" },
+              { created_at: "desc" },
+            ],
+          }),
 
-        // 3. Diverse posts (discovery) (15% of candidates)
-        query.post.findMany({
-          where: {
-            post_is_visible: true,
-            post_status: "approved",
-            id: { notIn: recentPostIds },
-            user: { active_status: true },
-            user_id: { notIn: blockedByUserIds },
-            created_at: {
-              gte: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000), // Last 3 days
+          // 3. Diverse posts (discovery) (15% of candidates)
+          query.post.findMany({
+            where: {
+              post_is_visible: true,
+              post_status: "approved",
+              id: { notIn: recentPostIds },
+              user: { active_status: true },
+              user_id: { notIn: blockedByUserIds },
+              created_at: {
+                gte: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000), // Last 3 days
+              },
+              OR: [
+                { post_audience: "public" },
+                { post_audience: "followers" },
+                { post_audience: "subscribers" },
+                { post_audience: "price" },
+              ],
             },
-            OR: [
-              { post_audience: "public" },
-              { post_audience: "followers" },
-              { post_audience: "subscribers" },
-              { post_audience: "price" },
-            ],
-          },
-          select: {
-            id: true,
-            content: true,
-            post_id: true,
-            post_audience: true,
-            media: true,
-            created_at: true,
-            updated_at: true,
-            post_status: true,
-            post_impressions: true,
-            post_likes: true,
-            post_comments: true,
-            post_reposts: true,
-            user_id: true,
-            user: {
-              select: {
-                is_model: true,
-                total_followers: true,
+            select: {
+              id: true,
+              content: true,
+              post_id: true,
+              post_audience: true,
+              media: true,
+              created_at: true,
+              updated_at: true,
+              post_status: true,
+              post_impressions: true,
+              post_likes: true,
+              post_comments: true,
+              post_reposts: true,
+              user_id: true,
+              user: {
+                select: {
+                  is_model: true,
+                  total_followers: true,
+                },
               },
             },
-          },
-          take: Math.floor(this.CANDIDATE_POOL_SIZE * 0.15),
-          orderBy: { created_at: "desc" },
-        }),
-      ]);
+            take: Math.floor(this.CANDIDATE_POOL_SIZE * 0.15),
+            orderBy: { created_at: "desc" },
+          }),
+
+          // 4. Reposts from followed/subscribed creators (10% of candidates)
+          preferredCreatorIds.size > 0
+            ? query.userRepost
+                .findMany({
+                  where: {
+                    user_id: {
+                      in: Array.from(preferredCreatorIds),
+                      notIn: blockedByUserIds,
+                    },
+                  },
+                  select: {
+                    post: {
+                      select: {
+                        id: true,
+                        content: true,
+                        post_id: true,
+                        post_audience: true,
+                        media: true,
+                        created_at: true,
+                        updated_at: true,
+                        post_status: true,
+                        post_impressions: true,
+                        post_likes: true,
+                        post_comments: true,
+                        post_reposts: true,
+                        user_id: true,
+                        post_is_visible: true,
+                        user: {
+                          select: {
+                            is_model: true,
+                            total_followers: true,
+                          },
+                        },
+                      },
+                    },
+                  },
+                  take: Math.floor(this.CANDIDATE_POOL_SIZE * 0.1),
+                  orderBy: { created_at: "desc" },
+                })
+                .then((reposts) =>
+                  reposts
+                    .map((r) => r.post)
+                    .filter(
+                      (post) =>
+                        post.post_is_visible &&
+                        post.post_status === "approved" &&
+                        !recentPostIds.includes(post.id) &&
+                        !blockedByUserIds.includes(post.user_id)
+                    )
+                )
+            : Promise.resolve([]),
+        ]);
 
       // Combine and deduplicate
       const allCandidates = [
         ...creatorPosts,
         ...trendingPosts,
         ...diversePosts,
+        ...repostedPosts,
       ];
       const uniquePosts = new Map();
 
@@ -385,7 +439,7 @@ export class RecommendationService {
         sourceBreakdown: {
           preferredCreators: creatorPosts.length,
           trending: trendingPosts.length,
-          discovery: diversePosts.length,
+          discovery: diversePosts.length + repostedPosts.length,
         },
       };
     } catch (error) {

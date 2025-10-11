@@ -1,4 +1,4 @@
-import type { Post } from "@prisma/client";
+import type { Post, UserMedia } from "@prisma/client";
 import query from "@utils/prisma";
 import type { PostWithLike } from "../types/feed";
 import { Permissions, RBAC } from "@utils/FlagsConfig";
@@ -74,20 +74,24 @@ class FeedService {
 
       const blockedByUserIds = blockedByUsers.map((b) => b.blocker_id);
 
+      // Get followed users to include their reposts
+      const followedUsers = await query.follow.findMany({
+        where: { follower_id: authUserid },
+        select: { user_id: true },
+      });
+      const followedUserIds = followedUsers.map((f) => f.user_id);
+
       // 🚀 TRY RECOMMENDATION SERVICE FIRST (for first page only, cursor-less requests)
       let recommendedPostIds: number[] = [];
       if (!cursor) {
         try {
-          const startTime = Date.now();
+          // const startTime = Date.now();
           recommendedPostIds = await RecommendationService.getRecommendedFeed(
             authUserid,
             FeedService.POSTS_PER_HOME_PAGE *
               FeedService.FETCH_WINDOW_MULTIPLIER
           );
-          const fetchTime = Date.now() - startTime;
-          console.log(
-            `✅ Fetched ${recommendedPostIds.length} recommendations in ${fetchTime}ms`
-          );
+          // const fetchTime = Date.now() - startTime;
         } catch (error) {
           console.error(
             "⚠️ Failed to get recommendations, falling back to traditional feed:",
@@ -182,9 +186,130 @@ class FeedService {
             : { id: "desc" },
       });
 
-      const postIds = posts.map((p) => p.id);
-      const postIdStrings = posts.map((p) => p.post_id); // Redis uses string post_id
-      const userIds = [...new Set(posts.map((p) => p.user_id))];
+      // 📌 FETCH REPOSTS from followed users (only for non-recommendation queries)
+      let repostedPosts: typeof posts = [];
+      if (recommendedPostIds.length === 0 && followedUserIds.length > 0) {
+        const repostWhereClause: any = {
+          user_id: { in: followedUserIds, notIn: blockedByUserIds },
+        };
+
+        if (cursorInfo) {
+          repostWhereClause.id = { lt: cursorInfo };
+        }
+
+        const userReposts = await query.userRepost.findMany({
+          where: repostWhereClause,
+          select: {
+            created_at: true,
+            user_id: true,
+            user: {
+              select: {
+                username: true,
+              },
+            },
+            post: {
+              select: {
+                id: true,
+                content: true,
+                post_id: true,
+                post_audience: true,
+                media: true,
+                created_at: true,
+                updated_at: true,
+                post_status: true,
+                post_impressions: true,
+                post_likes: true,
+                post_comments: true,
+                watermark_enabled: true,
+                post_reposts: true,
+                was_repost: true,
+                repost_id: true,
+                repost_username: true,
+                user_id: true,
+                post_is_visible: true,
+                post_price: true,
+                user: {
+                  select: {
+                    id: true,
+                    name: true,
+                    user_id: true,
+                    username: true,
+                    profile_image: true,
+                    is_model: true,
+                    total_followers: true,
+                  },
+                },
+                UserMedia: {
+                  select: {
+                    id: true,
+                    media_id: true,
+                    user_id: true,
+                    post_id: true,
+                    duration: true,
+                    media_state: true,
+                    poster: true,
+                    url: true,
+                    blur: true,
+                    media_type: true,
+                    locked: true,
+                    accessible_to: true,
+                    created_at: true,
+                    updated_at: true,
+                  },
+                },
+              },
+            },
+          },
+          take:
+            FeedService.POSTS_PER_HOME_PAGE *
+            FeedService.FETCH_WINDOW_MULTIPLIER,
+          orderBy: { id: "desc" },
+        });
+
+        // Filter valid reposts and mark them with reposter info
+        repostedPosts = userReposts
+          .filter(
+            (repost) =>
+              repost.post.post_is_visible &&
+              repost.post.post_status === "approved" &&
+              !blockedByUserIds.includes(repost.post.user_id)
+          )
+          .map((repost) => ({
+            ...repost.post,
+            // Mark as repost with info about who reposted it
+            was_repost: true,
+            repost_id: repost.post.post_id,
+            repost_username: repost.user.username,
+          }));
+      }
+
+      // Merge regular posts and reposts, remove duplicates
+      // Prioritize reposts over regular posts to show "reposted by" info
+      const uniquePostsMap = new Map();
+
+      // Add regular posts first
+      for (const post of posts) {
+        if (!uniquePostsMap.has(post.id)) {
+          uniquePostsMap.set(post.id, post);
+        }
+      }
+
+      // Add reposted posts - these will overwrite regular posts if duplicates
+      for (const repost of repostedPosts) {
+        uniquePostsMap.set(repost.id, repost); // Overwrite with repost info
+      }
+
+      const mergedPosts = Array.from(uniquePostsMap.values());
+
+      // Debug logging
+      const repostsInMerged = mergedPosts.filter((p) => p.was_repost);
+
+      if (repostsInMerged.length > 0) {
+      }
+
+      const postIds = mergedPosts.map((p) => p.id);
+      const postIdStrings = mergedPosts.map((p) => p.post_id); // Redis uses string post_id
+      const userIds = [...new Set(mergedPosts.map((p) => p.user_id))];
 
       // Batch fetch related data
       const [
@@ -238,7 +363,7 @@ class FeedService {
         Permissions.VIEW_PAID_POSTS
       );
 
-      const processedPostsWithoutMedia = posts.map((post) => {
+      const processedPostsWithoutMedia = mergedPosts.map((post) => {
         const isSubscribed =
           authUserid === post.user.id ||
           hasViewPaidPermission ||
@@ -263,6 +388,10 @@ class FeedService {
           wasReposted,
           hasPaid,
           isSubscribed,
+          // Explicitly preserve repost information
+          was_repost: post.was_repost || false,
+          repost_id: post.repost_id || null,
+          repost_username: post.repost_username || null,
         };
       });
 
@@ -278,7 +407,7 @@ class FeedService {
       }> = [];
       processedPostsWithoutMedia.forEach((post) => {
         if (post.watermark_enabled) {
-          (post.UserMedia || []).forEach((media) => {
+          (post.UserMedia || []).forEach((media: UserMedia) => {
             if (post.hasPaid || !media.locked) {
               mediaToSign.push({
                 media_id: media.media_id,
@@ -309,7 +438,7 @@ class FeedService {
         ...post,
         UserMedia: post.watermark_enabled
           ? (post.UserMedia || []).map(
-              (media) => signedMediaMap.get(media.media_id) || media
+              (media: UserMedia) => signedMediaMap.get(media.media_id) || media
             )
           : post.UserMedia,
       }));
@@ -331,10 +460,6 @@ class FeedService {
             return { ...post, score: recommendationScore };
           })
           .filter((post): post is NonNullable<typeof post> => post !== null);
-
-        console.log(
-          `✅ Using ${scoredPosts.length} recommended posts (ordered by ML algorithm)`
-        );
       } else {
         // Traditional scoring for non-recommendation feeds (pagination, fallback)
         scoredPosts = processedPosts.map((post) => {
@@ -357,15 +482,12 @@ class FeedService {
         });
 
         scoredPosts.sort((a, b) => b.score - a.score);
-        console.log(
-          `ℹ️ Using traditional scoring for ${scoredPosts.length} posts`
-        );
       }
 
       const hasMore =
         recommendedPostIds.length > 0
           ? scoredPosts.length > FeedService.POSTS_PER_HOME_PAGE // For recommendations
-          : posts.length >
+          : mergedPosts.length >
             FeedService.POSTS_PER_HOME_PAGE *
               FeedService.FETCH_WINDOW_MULTIPLIER; // For traditional
 
@@ -373,6 +495,9 @@ class FeedService {
         0,
         FeedService.POSTS_PER_HOME_PAGE
       );
+
+      // Debug: Check if reposts are in final output
+      // const repostsInOutput = postsToReturn.filter((p) => p.was_repost);
 
       let nextCursor: string | undefined;
       if (hasMore && postsToReturn.length > 0) {

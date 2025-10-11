@@ -12,7 +12,7 @@ import LoginHistoryService from "./LoginHistory";
 
 export default class UserService {
   static async GetUserJwtPayload(
-    email: string,
+    email: string
   ): Promise<UserJwtPayloadResponse | null> {
     try {
       const user = await query.user.findFirst({
@@ -148,7 +148,7 @@ export default class UserService {
   // Update User Two Factor Authentication
   static async UpdateTwoFactorAuth(
     userId: number,
-    twofactorauth: boolean,
+    twofactorauth: boolean
   ): Promise<UpdateTwoFactorAuthResponse> {
     try {
       const user = await query.user.update({
@@ -181,7 +181,7 @@ export default class UserService {
 
   // Verify Two Factor Authentication
   static async VerifyTwoFactorAuth(
-    code: number,
+    code: number
   ): Promise<VerificationControllerResponse> {
     try {
       const verify = await query.twoFactorAuth.findFirst({
@@ -246,6 +246,103 @@ export default class UserService {
     } catch (error) {
       console.log(error);
       return { success: false, message: "Internal server error", error: true };
+    }
+  }
+
+  // Resend Two Factor Authentication Code
+  static async ResendTwoFactorCode(
+    email: string
+  ): Promise<{ message: string; error: boolean; status: boolean }> {
+    try {
+      // Find the user with a pending 2FA code
+      const pendingAuth = await query.twoFactorAuth.findFirst({
+        where: {
+          user: {
+            email: {
+              equals: email,
+              mode: "insensitive",
+            },
+          },
+        },
+        include: {
+          user: {
+            select: {
+              id: true,
+              email: true,
+              name: true,
+              Settings: {
+                select: {
+                  two_factor_auth: true,
+                },
+              },
+            },
+          },
+        },
+      });
+
+      if (!pendingAuth) {
+        return {
+          message: "No pending verification found. Please login again.",
+          error: true,
+          status: false,
+        };
+      }
+
+      const user = pendingAuth.user;
+
+      if (!user.Settings?.two_factor_auth) {
+        return {
+          message: "Two factor authentication is not enabled for this account",
+          error: true,
+          status: false,
+        };
+      }
+
+      // Generate new code
+      const { random } = await import("lodash");
+      const code = random(100000, 999999);
+
+      // Update existing code
+      await query.twoFactorAuth.update({
+        where: {
+          id: pendingAuth.id,
+        },
+        data: {
+          code: code,
+        },
+      });
+
+      // Send email
+      const EmailService = (await import("./EmailService")).default;
+      const FormatName = (await import("@utils/FormatName")).default;
+
+      const sendAuthEmail = await EmailService.SendTwoFactorAuthEmail({
+        email: user.email,
+        code: code,
+        subject: "Two Factor Authentication",
+        name: FormatName(user.name.split(" ")[0] ?? user.name),
+      });
+
+      if (sendAuthEmail.error) {
+        return {
+          message: sendAuthEmail.message,
+          error: true,
+          status: false,
+        };
+      }
+
+      return {
+        message: "Verification code resent successfully",
+        error: false,
+        status: true,
+      };
+    } catch (error) {
+      console.log(error);
+      return {
+        message: "Internal server error",
+        error: true,
+        status: false,
+      };
     }
   }
 }

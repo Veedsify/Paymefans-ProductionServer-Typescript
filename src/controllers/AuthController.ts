@@ -133,7 +133,7 @@ export default class AuthController {
   static async Wallet(req: Request, res: Response): Promise<any> {
     try {
       const UserWallet = await WalletService.RetrieveWallet(
-        req?.user?.id as number,
+        req?.user?.id as number
       );
       return res.status(200).json({ balance: UserWallet.wallet, status: true });
     } catch (error) {
@@ -165,7 +165,7 @@ export default class AuthController {
       const { two_factor_auth } = req.body;
       const user = await UserService.UpdateTwoFactorAuth(
         req?.user?.id as number,
-        two_factor_auth,
+        two_factor_auth
       );
 
       if (user.error) {
@@ -220,6 +220,34 @@ export default class AuthController {
     }
   }
 
+  // Resend Two Factor Authentication Code
+  static async ResendTwoFactorCode(req: Request, res: Response): Promise<any> {
+    try {
+      const { email } = req.body;
+
+      if (!email) {
+        return res.status(400).json({
+          message: "Email is required",
+          status: false,
+          error: true,
+        });
+      }
+
+      const result = await UserService.ResendTwoFactorCode(email);
+
+      if (result.error) {
+        return res.status(400).json(result);
+      }
+
+      return res.status(200).json(result);
+    } catch (error) {
+      console.log(error);
+      return res
+        .status(500)
+        .json({ message: "Internal server error", status: false, error: true });
+    }
+  }
+
   // Refresh Token
   static async RefreshToken(req: Request, res: Response): Promise<any> {
     try {
@@ -233,7 +261,7 @@ export default class AuthController {
 
       const decoded = jwt.verify(
         client_refresh_token,
-        process.env.JWT_REFRESH_SECRET as string,
+        process.env.JWT_REFRESH_SECRET as string
       ) as {
         user_id: string;
         id: number;
@@ -278,7 +306,7 @@ export default class AuthController {
         key,
         refreshToken,
         "EX",
-        durationInSeconds(REFRESH_TOKEN_EXPIRATION),
+        durationInSeconds(REFRESH_TOKEN_EXPIRATION)
       );
       res.setHeader("Set-Cookie", [
         serialize("token", accessToken as string, {
@@ -287,7 +315,9 @@ export default class AuthController {
           sameSite: "lax",
           path: "/",
           domain:
-          process.env.NODE_ENV === "production" ? "paymefans.shop" : undefined, // Allow subdomain access
+            process.env.NODE_ENV === "production"
+              ? "paymefans.shop"
+              : undefined, // Allow subdomain access
         }),
         serialize("refresh_token", refreshToken as string, {
           httpOnly: process.env.NODE_ENV === "production",
@@ -295,7 +325,9 @@ export default class AuthController {
           sameSite: "lax",
           path: "/",
           domain:
-          process.env.NODE_ENV === "production" ? "paymefans.shop" : undefined, // Allow subdomain access
+            process.env.NODE_ENV === "production"
+              ? "paymefans.shop"
+              : undefined, // Allow subdomain access
         }),
       ]);
 
