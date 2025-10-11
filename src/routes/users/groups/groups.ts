@@ -89,4 +89,8 @@ groups.post(
   UploadController.CreateMediaUploadSignedUrl,
 );
 
+groups.post("/presigned-urls", Auth, GroupController.GetPresignedUrls);
+
+groups.post("/complete-upload", Auth, GroupController.CompleteUpload);
+
 export default groups;

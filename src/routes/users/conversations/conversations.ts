@@ -31,6 +31,16 @@ conversations.post(
   attachments.fields([{ name: "attachments[]", maxCount: 20 }]),
   ConversationController.UploadAttachments
 );
+conversations.post(
+  "/presigned-urls",
+  Auth,
+  ConversationController.GetPresignedUrls
+);
+conversations.post(
+  "/complete-upload",
+  Auth,
+  ConversationController.CompleteUpload
+);
 conversations.get("/search/", Auth, ConversationController.SearchConversations);
 conversations.post(
   "/search/messages/:conversationId",
