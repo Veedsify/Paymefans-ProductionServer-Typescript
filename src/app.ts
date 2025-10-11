@@ -15,6 +15,7 @@ import { connectDB } from "@utils/mongodb";
 import cookieParser from "cookie-parser";
 import InitializeQueueJobs from "@libs/InitializeQueueJobs";
 import { CronJobService } from "@services/CronJobService";
+import { RecommendationWorkerService } from "@services/RecommendationWorkerService";
 import rateLimit from "express-rate-limit";
 import slowDown from "express-slow-down";
 import helmet from "helmet";
@@ -38,14 +39,14 @@ server.maxConnections = 10000; // Maximum concurrent connections
  */
 if (process.env.NODE_ENV !== "production") {
   app.use(logger("dev"));
-} 
+}
 
 // Security headers middleware
 app.use(
   helmet({
     contentSecurityPolicy: false, // Disable CSP for now, configure as needed
     crossOriginEmbedderPolicy: false, // Disable for Socket.IO compatibility
-  }),
+  })
 );
 
 // Trust proxy if behind reverse proxy (Cloudflare, nginx, etc.)
@@ -161,7 +162,7 @@ app.use(
       "Cache-Control",
       "Last-Event-ID",
     ],
-  }),
+  })
 );
 
 // Instance of Socket.IO
@@ -170,6 +171,9 @@ IoInstance.init(server).then(async (instance) => {
   await InitializeQueueJobs();
   // Socket.IO instance
   await AppSocket(instance);
+  // Initialize Recommendation Worker Service
+  await RecommendationWorkerService.initialize();
+  console.log("✅ Recommendation Worker Service initialized");
 });
 
 // Connect to MongoDB
@@ -255,6 +259,7 @@ app.use((err: any, req: Request, res: Response, next: NextFunction): any => {
 process.on("SIGINT", async () => {
   console.log("Shutting down gracefully...");
   await CronJobService.destroy();
+  await RecommendationWorkerService.shutdown();
   server.close(() => {
     console.log("Server closed.");
     process.exit(0);

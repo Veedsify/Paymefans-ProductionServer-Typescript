@@ -4,6 +4,7 @@ import type { PostWithLike } from "../types/feed";
 import { Permissions, RBAC } from "@utils/FlagsConfig";
 import { GenerateBatchSignedUrls } from "@libs/GenerateSignedUrls";
 import { RedisPostService } from "./RedisPostService";
+import { RecommendationService } from "./RecommendationService";
 
 class FeedService {
   private static readonly POSTS_PER_HOME_PAGE =
@@ -33,20 +34,22 @@ class FeedService {
     userId: number,
     followMap: Set<number>,
     subMap: Set<number>,
-    interactionCountByCreator: Map<number, number>,
+    interactionCountByCreator: Map<number, number>
   ): number {
     let relevanceScore = 0;
     if (followMap.has(post.user_id)) relevanceScore += 0.3;
-    if (subMap.has(post.user_id) || userId === post.user_id) relevanceScore += 0.5;
+    if (subMap.has(post.user_id) || userId === post.user_id)
+      relevanceScore += 0.5;
 
-    const similarContentInteraction = interactionCountByCreator.get(post.user_id) || 0;
+    const similarContentInteraction =
+      interactionCountByCreator.get(post.user_id) || 0;
     relevanceScore += Math.min(similarContentInteraction * 0.1, 0.2);
     return Math.min(relevanceScore, 1);
   }
 
   public async getHomeFeed(
     authUserid: number,
-    cursor?: string,
+    cursor?: string
   ): Promise<{
     posts: Array<Post & { score: number; likedByme: boolean }>;
     nextCursor?: string;
@@ -71,6 +74,28 @@ class FeedService {
 
       const blockedByUserIds = blockedByUsers.map((b) => b.blocker_id);
 
+      // 🚀 TRY RECOMMENDATION SERVICE FIRST (for first page only, cursor-less requests)
+      let recommendedPostIds: number[] = [];
+      if (!cursor) {
+        try {
+          const startTime = Date.now();
+          recommendedPostIds = await RecommendationService.getRecommendedFeed(
+            authUserid,
+            FeedService.POSTS_PER_HOME_PAGE *
+              FeedService.FETCH_WINDOW_MULTIPLIER
+          );
+          const fetchTime = Date.now() - startTime;
+          console.log(
+            `✅ Fetched ${recommendedPostIds.length} recommendations in ${fetchTime}ms`
+          );
+        } catch (error) {
+          console.error(
+            "⚠️ Failed to get recommendations, falling back to traditional feed:",
+            error
+          );
+        }
+      }
+
       const whereClause: any = {
         post_is_visible: true,
         post_status: "approved",
@@ -85,7 +110,11 @@ class FeedService {
         ],
       };
 
-      if (cursorInfo) {
+      // If we have recommendations, use them to filter posts
+      if (recommendedPostIds.length > 0) {
+        whereClause.id = { in: recommendedPostIds };
+      } else if (cursorInfo) {
+        // Traditional cursor-based pagination
         whereClause.id = { lt: cursorInfo };
       }
 
@@ -141,8 +170,16 @@ class FeedService {
             },
           },
         },
-        take: FeedService.POSTS_PER_HOME_PAGE * FeedService.FETCH_WINDOW_MULTIPLIER + 1,
-        orderBy: { id: "desc" },
+        take:
+          recommendedPostIds.length > 0
+            ? undefined // Get all recommended posts
+            : FeedService.POSTS_PER_HOME_PAGE *
+                FeedService.FETCH_WINDOW_MULTIPLIER +
+              1,
+        orderBy:
+          recommendedPostIds.length > 0
+            ? undefined // We'll sort by recommendation order
+            : { id: "desc" },
       });
 
       const postIds = posts.map((p) => p.id);
@@ -150,7 +187,14 @@ class FeedService {
       const userIds = [...new Set(posts.map((p) => p.user_id))];
 
       // Batch fetch related data
-      const [likeData, reposts, subscriptions, paidPosts, follows, interactions] = await Promise.all([
+      const [
+        likeData,
+        reposts,
+        subscriptions,
+        paidPosts,
+        follows,
+        interactions,
+      ] = await Promise.all([
         // Use Redis for like data
         RedisPostService.getMultiplePostsLikeData(postIdStrings, authUserid),
         query.userRepost.findMany({
@@ -182,13 +226,16 @@ class FeedService {
       const interactionCountByCreator = new Map<number, number>();
       for (const l of interactions) {
         const cid = l.post.user_id;
-        interactionCountByCreator.set(cid, (interactionCountByCreator.get(cid) || 0) + 1);
+        interactionCountByCreator.set(
+          cid,
+          (interactionCountByCreator.get(cid) || 0) + 1
+        );
       }
 
       const user = await query.user.findUnique({ where: { id: authUserid } });
       const hasViewPaidPermission = RBAC.checkUserFlag(
         user?.flags,
-        Permissions.VIEW_PAID_POSTS,
+        Permissions.VIEW_PAID_POSTS
       );
 
       const processedPostsWithoutMedia = posts.map((post) => {
@@ -203,7 +250,10 @@ class FeedService {
           post.post_audience !== "price";
 
         // Get like data from Redis
-        const likeInfo = likeData.get(post.post_id) || { count: post.post_likes, isLiked: false };
+        const likeInfo = likeData.get(post.post_id) || {
+          count: post.post_likes,
+          isLiked: false,
+        };
         const wasReposted = !!repostMap.get(post.id);
 
         return {
@@ -217,10 +267,18 @@ class FeedService {
       });
 
       // Collect all viewable media for batch signing
-      const mediaToSign: Array<{ media_id: string; media_type: string; url: string; poster: string; blur: string; postId: number; media: any }> = [];
-      processedPostsWithoutMedia.forEach(post => {
+      const mediaToSign: Array<{
+        media_id: string;
+        media_type: string;
+        url: string;
+        poster: string;
+        blur: string;
+        postId: number;
+        media: any;
+      }> = [];
+      processedPostsWithoutMedia.forEach((post) => {
         if (post.watermark_enabled) {
-          (post.UserMedia || []).forEach(media => {
+          (post.UserMedia || []).forEach((media) => {
             if (post.hasPaid || !media.locked) {
               mediaToSign.push({
                 media_id: media.media_id,
@@ -247,39 +305,78 @@ class FeedService {
       }
 
       // Attach signed media
-      const processedPosts = processedPostsWithoutMedia.map(post => ({
+      const processedPosts = processedPostsWithoutMedia.map((post) => ({
         ...post,
         UserMedia: post.watermark_enabled
-          ? (post.UserMedia || []).map(media => signedMediaMap.get(media.media_id) || media)
+          ? (post.UserMedia || []).map(
+              (media) => signedMediaMap.get(media.media_id) || media
+            )
           : post.UserMedia,
       }));
 
-      const scoredPosts = processedPosts.map((post) => {
-        const engagementScore = this.calculateEngagementScore(post);
-        const recencyScore = this.calculateRecencyScore(post.created_at);
-        const relevanceScore = this.calculateRelevanceScore(
-          post,
-          authUserid,
-          followMap,
-          subMap,
-          interactionCountByCreator,
+      // If using recommendations, preserve the recommendation order
+      let scoredPosts;
+      if (recommendedPostIds.length > 0) {
+        // Create a map for fast lookup
+        const postMap = new Map(processedPosts.map((p) => [p.id, p]));
+
+        // Sort posts according to recommendation order
+        scoredPosts = recommendedPostIds
+          .map((postId, index) => {
+            const post = postMap.get(postId);
+            if (!post) return null;
+
+            // Use recommendation rank as score (higher rank = higher score)
+            const recommendationScore = recommendedPostIds.length - index;
+            return { ...post, score: recommendationScore };
+          })
+          .filter((post): post is NonNullable<typeof post> => post !== null);
+
+        console.log(
+          `✅ Using ${scoredPosts.length} recommended posts (ordered by ML algorithm)`
         );
+      } else {
+        // Traditional scoring for non-recommendation feeds (pagination, fallback)
+        scoredPosts = processedPosts.map((post) => {
+          const engagementScore = this.calculateEngagementScore(post);
+          const recencyScore = this.calculateRecencyScore(post.created_at);
+          const relevanceScore = this.calculateRelevanceScore(
+            post,
+            authUserid,
+            followMap,
+            subMap,
+            interactionCountByCreator
+          );
 
-        const totalScore =
-          engagementScore * FeedService.ENGAGEMENT_WEIGHT +
-          recencyScore * FeedService.RECENCY_WEIGHT +
-          relevanceScore * FeedService.RELEVANCE_WEIGHT;
+          const totalScore =
+            engagementScore * FeedService.ENGAGEMENT_WEIGHT +
+            recencyScore * FeedService.RECENCY_WEIGHT +
+            relevanceScore * FeedService.RELEVANCE_WEIGHT;
 
-        return { ...post, score: totalScore };
-      });
+          return { ...post, score: totalScore };
+        });
 
-      const sortedPosts = scoredPosts.sort((a, b) => b.score - a.score);
-      const hasMore = posts.length > FeedService.POSTS_PER_HOME_PAGE * FeedService.FETCH_WINDOW_MULTIPLIER;
-      const postsToReturn = sortedPosts.slice(0, FeedService.POSTS_PER_HOME_PAGE);
+        scoredPosts.sort((a, b) => b.score - a.score);
+        console.log(
+          `ℹ️ Using traditional scoring for ${scoredPosts.length} posts`
+        );
+      }
+
+      const hasMore =
+        recommendedPostIds.length > 0
+          ? scoredPosts.length > FeedService.POSTS_PER_HOME_PAGE // For recommendations
+          : posts.length >
+            FeedService.POSTS_PER_HOME_PAGE *
+              FeedService.FETCH_WINDOW_MULTIPLIER; // For traditional
+
+      const postsToReturn = scoredPosts.slice(
+        0,
+        FeedService.POSTS_PER_HOME_PAGE
+      );
 
       let nextCursor: string | undefined;
       if (hasMore && postsToReturn.length > 0) {
-        const minId = Math.min(...postsToReturn.map(p => p.id));
+        const minId = Math.min(...postsToReturn.map((p) => p.id));
         nextCursor = minId.toString();
       }
 
@@ -297,7 +394,7 @@ class FeedService {
   public async getUserPosts(
     viewerId: number,
     targetUserId: number,
-    cursor?: string,
+    cursor?: string
   ): Promise<{ posts: PostWithLike; nextCursor?: string; hasMore: boolean }> {
     try {
       let cursorInfo: number | undefined;
@@ -432,16 +529,16 @@ class FeedService {
           ...post,
           UserMedia: post.watermark_enabled
             ? await GenerateBatchSignedUrls(
-              (post.UserMedia || []).map(media => ({
-                media_id: media.media_id,
-                media_type: media.media_type,
-                url: media.url,
-                poster: media.poster,
-                blur: media.blur
-              }))
-            )
+                (post.UserMedia || []).map((media) => ({
+                  media_id: media.media_id,
+                  media_type: media.media_type,
+                  url: media.url,
+                  poster: media.poster,
+                  blur: media.blur,
+                }))
+              )
             : post.UserMedia,
-        })),
+        }))
       );
 
       let nextCursor: string | undefined;
