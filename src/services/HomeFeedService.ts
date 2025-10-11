@@ -80,6 +80,9 @@ class FeedService {
         select: { user_id: true },
       });
       const followedUserIds = followedUsers.map((f) => f.user_id);
+      
+      // Include the authenticated user in the list to see their own reposts
+      const userIdsForReposts = [...followedUserIds, authUserid];
 
       // 🚀 TRY RECOMMENDATION SERVICE FIRST (for first page only, cursor-less requests)
       let recommendedPostIds: number[] = [];
@@ -188,9 +191,9 @@ class FeedService {
 
       // 📌 FETCH REPOSTS from followed users (only for non-recommendation queries)
       let repostedPosts: typeof posts = [];
-      if (recommendedPostIds.length === 0 && followedUserIds.length > 0) {
+      if (recommendedPostIds.length === 0 && userIdsForReposts.length > 0) {
         const repostWhereClause: any = {
-          user_id: { in: followedUserIds, notIn: blockedByUserIds },
+          user_id: { in: userIdsForReposts, notIn: blockedByUserIds },
         };
 
         if (cursorInfo) {
@@ -200,7 +203,8 @@ class FeedService {
         const userReposts = await query.userRepost.findMany({
           where: repostWhereClause,
           select: {
-            created_at: true,
+            id: true, // ⭐ NEW: Get repost ID for timestamp tracking
+            created_at: true, // ⭐ This is when the repost happened
             user_id: true,
             user: {
               select: {
@@ -280,7 +284,13 @@ class FeedService {
             was_repost: true,
             repost_id: repost.post.post_id,
             repost_username: repost.user.username,
+            repost_created_at: repost.created_at, // ⭐ NEW: When the repost happened
+            repost_by_current_user: repost.user_id === authUserid, // ⭐ NEW: Flag for user's own reposts
           }));
+
+        console.log(
+          `📌 Found ${repostedPosts.length} reposted posts (including ${repostedPosts.filter((p: any) => p.repost_by_current_user).length} from current user)`
+        );
       }
 
       // Merge regular posts and reposts, remove duplicates
@@ -389,9 +399,11 @@ class FeedService {
           hasPaid,
           isSubscribed,
           // Explicitly preserve repost information
-          was_repost: post.was_repost || false,
-          repost_id: post.repost_id || null,
-          repost_username: post.repost_username || null,
+          was_repost: (post as any).was_repost || false,
+          repost_id: (post as any).repost_id || null,
+          repost_username: (post as any).repost_username || null,
+          repost_created_at: (post as any).repost_created_at || null, // ⭐ NEW
+          repost_by_current_user: (post as any).repost_by_current_user || false, // ⭐ NEW
         };
       });
 
@@ -470,13 +482,30 @@ class FeedService {
             authUserid,
             followMap,
             subMap,
-            interactionCountByCreator
+            interactionCountByCreator,
           );
 
-          const totalScore =
+          let totalScore =
             engagementScore * FeedService.ENGAGEMENT_WEIGHT +
             recencyScore * FeedService.RECENCY_WEIGHT +
             relevanceScore * FeedService.RELEVANCE_WEIGHT;
+
+          // ⭐ NEW: Boost score for recent reposts
+          if ((post as any).was_repost && (post as any).repost_created_at) {
+            const repostAgeInHours =
+              (Date.now() - new Date((post as any).repost_created_at).getTime()) /
+              (1000 * 60 * 60);
+            
+            // Apply exponential decay to repost boost (stronger for newer reposts)
+            // Fresh reposts (< 1 hour) get significant boost
+            const repostBoost = Math.exp(-0.1 * repostAgeInHours) * 5;
+            totalScore += repostBoost;
+
+            // Extra boost for user's own reposts
+            if ((post as any).repost_by_current_user) {
+              totalScore += 2;
+            }
+          }
 
           return { ...post, score: totalScore };
         });

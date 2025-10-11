@@ -224,6 +224,12 @@ export class RecommendationService {
         ...profile.subscribedCreators,
         ...profile.topAffinityCreators.slice(0, 30).map((c) => c.creatorId),
       ]);
+      
+      // ⭐ Include the user themselves to see their own reposts
+      const userIdsForReposts = new Set([
+        ...Array.from(preferredCreatorIds),
+        userId,
+      ]);
 
       // Fetch candidates from multiple sources
       const [creatorPosts, trendingPosts, diversePosts, repostedPosts] =
@@ -365,16 +371,18 @@ export class RecommendationService {
           }),
 
           // 4. Reposts from followed/subscribed creators (10% of candidates)
-          preferredCreatorIds.size > 0
+          userIdsForReposts.size > 0
             ? query.userRepost
                 .findMany({
                   where: {
                     user_id: {
-                      in: Array.from(preferredCreatorIds),
+                      in: Array.from(userIdsForReposts), // ⭐ Now includes user's own reposts
                       notIn: blockedByUserIds,
                     },
                   },
                   select: {
+                    created_at: true, // ⭐ Repost timestamp for prioritization
+                    user_id: true,    // ⭐ To identify user's own reposts
                     post: {
                       select: {
                         id: true,
@@ -401,11 +409,15 @@ export class RecommendationService {
                     },
                   },
                   take: Math.floor(this.CANDIDATE_POOL_SIZE * 0.1),
-                  orderBy: { created_at: "desc" },
+                  orderBy: { created_at: "desc" }, // ⭐ Most recent reposts first
                 })
                 .then((reposts) =>
                   reposts
-                    .map((r) => r.post)
+                    .map((r) => ({
+                      ...r.post,
+                      repost_created_at: r.created_at, // ⭐ Attach repost timestamp
+                      repost_by_user: r.user_id === userId, // ⭐ Flag user's own reposts
+                    }))
                     .filter(
                       (post) =>
                         post.post_is_visible &&
@@ -511,6 +523,22 @@ export class RecommendationService {
     // 6. Creator popularity factor (5%)
     const followerScore = Math.log1p(post.user.total_followers) * 0.5;
     score += followerScore;
+
+    // 7. ⭐ NEW: Repost recency boost (15% for fresh reposts)
+    if ((post as any).repost_created_at) {
+      const repostAgeInHours =
+        (Date.now() - new Date((post as any).repost_created_at).getTime()) /
+        (1000 * 60 * 60);
+      
+      // Exponential decay: Fresh reposts get higher priority
+      const repostRecencyBoost = Math.exp(-0.08 * repostAgeInHours) * 15;
+      score += repostRecencyBoost;
+
+      // Extra boost for user's own reposts
+      if ((post as any).repost_by_user) {
+        score += 5;
+      }
+    }
 
     return score;
   }
