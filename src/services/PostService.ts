@@ -1951,7 +1951,8 @@ export default class PostService {
         where: { post_id: postId, post_status: "approved" },
         select: {
           post_audience: true,
-          user: { select: { id: true } },
+          post_id: true,
+          user: { select: { id: true, name: true, username: true } },
           id: true,
         },
       });
@@ -2002,6 +2003,50 @@ export default class PostService {
             data: { post_reposts: { increment: 1 } },
           }),
         ]);
+
+        if (getPost.user.id !== userId) {
+          try {
+            const reposter = await query.user.findUnique({
+              where: { id: userId },
+              select: {
+                username: true,
+                name: true,
+              },
+            });
+
+            const ownerGreeting =
+              FormatName(getPost.user?.name) ||
+              getPost.user?.username ||
+              "there";
+            const reposterDisplay =
+              reposter?.username || FormatName(reposter?.name) || "someone";
+            const reposterUrl = reposter?.username
+              ? `/${reposter.username}`
+              : "/";
+
+            await UserNotificationQueue.add(
+              "post-repost-notification",
+              {
+                user_id: getPost.user.id,
+                url: `/posts/${getPost.post_id ?? postId}`,
+                message: `Hi ${ownerGreeting}, <strong><a href="${reposterUrl}">${reposterDisplay}</a></strong> reposted your post.`,
+                action: "repost",
+                notification_id: `NOT${GenerateUniqueId()}`,
+                read: false,
+              },
+              {
+                removeOnComplete: true,
+                attempts: 3,
+              }
+            );
+          } catch (notificationError) {
+            console.error(
+              "Error queueing post repost notification:",
+              notificationError
+            );
+          }
+        }
+
         return { error: false, message: "Post reposted successfully" };
       }
     } catch (error: any) {
