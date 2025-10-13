@@ -228,6 +228,7 @@ export interface MyPost {
   post_impressions: number;
   repost_id: string | null;
   repost_username: string | null;
+  repost_name: string | null; 
   UserMedia?: UserMedia[];
   likedByme: boolean;
   isSubscribed: boolean;
@@ -289,6 +290,7 @@ interface GetSinglePost {
   was_repost: boolean;
   repost_id: string | null;
   repost_username: string | null;
+  repost_name: string | null; 
   UserMedia?: UserMedia[];
   likedByme: boolean;
   isSubscribed: boolean;

@@ -9,11 +9,11 @@ import { RecommendationService } from "./RecommendationService";
 class FeedService {
   private static readonly POSTS_PER_HOME_PAGE =
     Number(process.env.POSTS_PER_HOME_PAGE) || 10;
-  private static readonly FETCH_WINDOW_MULTIPLIER = 5; // Fetch 5x to account for re-ranking
+  private static readonly FETCH_WINDOW_MULTIPLIER = 5; 
   private static readonly ENGAGEMENT_WEIGHT = 0.2;
-  private static readonly RECENCY_WEIGHT = 0.5; // ⭐ INCREASED from 0.3 to prioritize new posts
+  private static readonly RECENCY_WEIGHT = 0.5; // 
   private static readonly RELEVANCE_WEIGHT = 0.3;
-  private static readonly TIME_DECAY_FACTOR = 0.15; // ⭐ INCREASED from 0.1 for faster decay
+  private static readonly TIME_DECAY_FACTOR = 0.15; 
 
   private calculateEngagementScore(post: Post): number {
     const totalInteractions =
@@ -203,12 +203,13 @@ class FeedService {
         const userReposts = await query.userRepost.findMany({
           where: repostWhereClause,
           select: {
-            id: true, // ⭐ NEW: Get repost ID for timestamp tracking
-            created_at: true, // ⭐ This is when the repost happened
+            id: true, 
+            created_at: true, 
             user_id: true,
             user: {
               select: {
                 username: true,
+                name: true, //
               },
             },
             post: {
@@ -267,7 +268,7 @@ class FeedService {
           take:
             FeedService.POSTS_PER_HOME_PAGE *
             FeedService.FETCH_WINDOW_MULTIPLIER,
-          orderBy: { created_at: "desc" }, // ⭐ CRITICAL: Order by repost timestamp, not ID
+          orderBy: { created_at: "desc" }, 
         });
 
         // Filter valid reposts and mark them with reposter info
@@ -284,8 +285,9 @@ class FeedService {
             was_repost: true,
             repost_id: repost.post.post_id,
             repost_username: repost.user.username,
-            repost_created_at: repost.created_at, // ⭐ NEW: When the repost happened
-            repost_by_current_user: repost.user_id === authUserid, // ⭐ NEW: Flag for user's own reposts
+            repost_name: repost.user.name, 
+            repost_created_at: repost.created_at, 
+            repost_by_current_user: repost.user_id === authUserid, 
           }));
 
         console.log(
@@ -404,8 +406,9 @@ class FeedService {
           was_repost: (post as any).was_repost || false,
           repost_id: (post as any).repost_id || null,
           repost_username: (post as any).repost_username || null,
-          repost_created_at: (post as any).repost_created_at || null, // ⭐ NEW
-          repost_by_current_user: (post as any).repost_by_current_user || false, // ⭐ NEW
+          repost_name: (post as any).repost_name || null, 
+          repost_created_at: (post as any).repost_created_at || null, 
+          repost_by_current_user: (post as any).repost_by_current_user || false, 
         };
       });
 
@@ -492,7 +495,7 @@ class FeedService {
             recencyScore * FeedService.RECENCY_WEIGHT +
             relevanceScore * FeedService.RELEVANCE_WEIGHT;
 
-          // ⭐ MASSIVE boost for recent reposts with personalized scoring
+          
           if ((post as any).was_repost && (post as any).repost_created_at) {
             const repostAgeInHours =
               (Date.now() -
@@ -503,17 +506,17 @@ class FeedService {
             const repostBoost = Math.exp(-0.3 * repostAgeInHours) * 50;
             totalScore += repostBoost;
 
-            // ⭐ NEW: MASSIVE boost if user has already liked this post
+            
             // Someone reposted content the user engaged with before
             if ((post as any).likedByme) {
               totalScore += 40; // Huge boost - user liked this, now someone reposted it
             }
 
-            // ⭐ Boost based on post popularity (like count)
+            
             const likeBoost = Math.log1p(post.post_likes) * 2;
             totalScore += likeBoost;
 
-            // ⭐ Engagement rate boost (quality signal)
+            
             const totalEngagement =
               post.post_likes + post.post_comments + post.post_reposts;
             const engagementRate =
@@ -526,7 +529,7 @@ class FeedService {
             }
           }
 
-          // ⭐ HUGE boost for very recent posts (< 6 hours old)
+          
           const postAgeInHours =
             (Date.now() - new Date(post.created_at).getTime()) /
             (1000 * 60 * 60);

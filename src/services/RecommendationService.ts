@@ -151,7 +151,7 @@ export class RecommendationService {
         };
       }
 
-      // ⭐ NEW: Fetch user's likes for these posts to personalize repost scoring
+      
       const postIds = candidates.map((p) => p.id);
       const userLikes = await query.postLike.findMany({
         where: {
@@ -169,7 +169,7 @@ export class RecommendationService {
           post,
           profile,
           preferences,
-          likedPostIds // ⭐ Pass user's likes
+          likedPostIds 
         ),
       }));
 
@@ -241,7 +241,7 @@ export class RecommendationService {
         ...profile.topAffinityCreators.slice(0, 30).map((c) => c.creatorId),
       ]);
 
-      // ⭐ Include the user themselves to see their own reposts
+      
       const userIdsForReposts = new Set([
         ...Array.from(preferredCreatorIds),
         userId,
@@ -392,16 +392,16 @@ export class RecommendationService {
                 .findMany({
                   where: {
                     user_id: {
-                      in: Array.from(userIdsForReposts), // ⭐ Now includes user's own reposts
+                      in: Array.from(userIdsForReposts), 
                       notIn: blockedByUserIds,
                     },
                     created_at: {
-                      gte: new Date(Date.now() - 24 * 60 * 60 * 1000), // ⭐ Only last 24 hours for freshness
+                      gte: new Date(Date.now() - 24 * 60 * 60 * 1000), 
                     },
                   },
                   select: {
-                    created_at: true, // ⭐ Repost timestamp for prioritization
-                    user_id: true, // ⭐ To identify user's own reposts
+                    created_at: true, 
+                    user_id: true, 
                     post: {
                       select: {
                         id: true,
@@ -428,14 +428,14 @@ export class RecommendationService {
                     },
                   },
                   take: Math.floor(this.CANDIDATE_POOL_SIZE * 0.1),
-                  orderBy: { created_at: "desc" }, // ⭐ Most recent reposts first
+                  orderBy: { created_at: "desc" }, 
                 })
                 .then((reposts) =>
                   reposts
                     .map((r) => ({
                       ...r.post,
-                      repost_created_at: r.created_at, // ⭐ Attach repost timestamp
-                      repost_by_user: r.user_id === userId, // ⭐ Flag user's own reposts
+                      repost_created_at: r.created_at, 
+                      repost_by_user: r.user_id === userId, 
                     }))
                     .filter(
                       (post) =>
@@ -496,7 +496,7 @@ export class RecommendationService {
     preferences: Awaited<
       ReturnType<typeof UserProfileService.getContentPreferences>
     >,
-    userLikedPostIds: Set<number> // ⭐ NEW: User's liked posts for personalized repost scoring
+    userLikedPostIds: Set<number> 
   ): number {
     let score = 0;
 
@@ -524,10 +524,10 @@ export class RecommendationService {
     // 4. Recency (25% - INCREASED to prioritize new posts)
     const ageInHours =
       (Date.now() - post.created_at.getTime()) / (1000 * 60 * 60);
-    const recencyScore = Math.exp(-0.1 * ageInHours); // ⭐ Faster decay (0.1 instead of 0.05)
-    score += recencyScore * 25; // ⭐ Increased from 10 to 25
+    const recencyScore = Math.exp(-0.1 * ageInHours); 
+    score += recencyScore * 25; 
 
-    // ⭐ HUGE bonus for very fresh posts (< 6 hours)
+    
     if (ageInHours < 6) {
       const newPostBonus = Math.exp(-0.4 * ageInHours) * 40;
       score += newPostBonus;
@@ -550,7 +550,7 @@ export class RecommendationService {
     const followerScore = Math.log1p(post.user.total_followers) * 0.5;
     score += followerScore;
 
-    // 7. ⭐ MASSIVE repost recency boost (prioritize fresh reposts)
+    // 7. MASSIVE repost recency boost (prioritize fresh reposts)
     if ((post as any).repost_created_at) {
       const repostAgeInHours =
         (Date.now() - new Date((post as any).repost_created_at).getTime()) /
@@ -560,25 +560,25 @@ export class RecommendationService {
       const repostRecencyBoost = Math.exp(-0.25 * repostAgeInHours) * 60;
       score += repostRecencyBoost;
 
-      // ⭐ NEW: HUGE additional boost if user has liked this post before
+      
       // This means someone reposted content the user already engaged with
       if (userLikedPostIds.has(post.id)) {
         score += 50; // Massive boost - user liked this, now someone they follow reposted it
       }
 
-      // ⭐ Boost based on post's like count (popular reposts rank higher)
+      
       // More likes = content user is more likely to engage with
       const likeBoost = Math.log1p(post.post_likes) * 2;
       score += likeBoost;
 
-      // ⭐ Extra boost for posts with high engagement rate
+      
       const engagementRate =
         totalEngagement / Math.max(post.post_impressions || 1, 1);
       score += engagementRate * 10;
 
       // Huge boost for user's own reposts
       if ((post as any).repost_by_user) {
-        score += 30; // ⭐ User's own reposts still get priority
+        score += 30; 
       }
     }
 
