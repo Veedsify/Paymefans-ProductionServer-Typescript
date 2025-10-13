@@ -224,7 +224,7 @@ export class RecommendationService {
         ...profile.subscribedCreators,
         ...profile.topAffinityCreators.slice(0, 30).map((c) => c.creatorId),
       ]);
-      
+
       // ⭐ Include the user themselves to see their own reposts
       const userIdsForReposts = new Set([
         ...Array.from(preferredCreatorIds),
@@ -379,10 +379,13 @@ export class RecommendationService {
                       in: Array.from(userIdsForReposts), // ⭐ Now includes user's own reposts
                       notIn: blockedByUserIds,
                     },
+                    created_at: {
+                      gte: new Date(Date.now() - 24 * 60 * 60 * 1000), // ⭐ Only last 24 hours for freshness
+                    },
                   },
                   select: {
                     created_at: true, // ⭐ Repost timestamp for prioritization
-                    user_id: true,    // ⭐ To identify user's own reposts
+                    user_id: true, // ⭐ To identify user's own reposts
                     post: {
                       select: {
                         id: true,
@@ -501,11 +504,17 @@ export class RecommendationService {
     const normalizedEngagement = Math.log1p(totalEngagement);
     score += normalizedEngagement * 0.2;
 
-    // 4. Recency (10%)
+    // 4. Recency (25% - INCREASED to prioritize new posts)
     const ageInHours =
       (Date.now() - post.created_at.getTime()) / (1000 * 60 * 60);
-    const recencyScore = Math.exp(-0.05 * ageInHours); // Decay over time
-    score += recencyScore * 10;
+    const recencyScore = Math.exp(-0.1 * ageInHours); // ⭐ Faster decay (0.1 instead of 0.05)
+    score += recencyScore * 25; // ⭐ Increased from 10 to 25
+
+    // ⭐ HUGE bonus for very fresh posts (< 6 hours)
+    if (ageInHours < 6) {
+      const newPostBonus = Math.exp(-0.4 * ageInHours) * 40;
+      score += newPostBonus;
+    }
 
     // 5. Content type preference bonus (10%)
     if (
@@ -524,19 +533,20 @@ export class RecommendationService {
     const followerScore = Math.log1p(post.user.total_followers) * 0.5;
     score += followerScore;
 
-    // 7. ⭐ NEW: Repost recency boost (15% for fresh reposts)
+    // 7. ⭐ MASSIVE repost recency boost (prioritize fresh reposts)
     if ((post as any).repost_created_at) {
       const repostAgeInHours =
         (Date.now() - new Date((post as any).repost_created_at).getTime()) /
         (1000 * 60 * 60);
-      
-      // Exponential decay: Fresh reposts get higher priority
-      const repostRecencyBoost = Math.exp(-0.08 * repostAgeInHours) * 15;
+
+      // Aggressive exponential decay: Fresh reposts dominate the feed
+      // Decay rate increased to 0.25 for rapid drop-off after first few hours
+      const repostRecencyBoost = Math.exp(-0.25 * repostAgeInHours) * 60; // ⭐ Multiplier increased from 15 to 60
       score += repostRecencyBoost;
 
-      // Extra boost for user's own reposts
+      // Huge boost for user's own reposts
       if ((post as any).repost_by_user) {
-        score += 5;
+        score += 30; // ⭐ Increased from 5 to 30
       }
     }
 

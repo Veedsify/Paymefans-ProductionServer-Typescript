@@ -10,10 +10,10 @@ class FeedService {
   private static readonly POSTS_PER_HOME_PAGE =
     Number(process.env.POSTS_PER_HOME_PAGE) || 10;
   private static readonly FETCH_WINDOW_MULTIPLIER = 5; // Fetch 5x to account for re-ranking
-  private static readonly ENGAGEMENT_WEIGHT = 0.4;
-  private static readonly RECENCY_WEIGHT = 0.3;
+  private static readonly ENGAGEMENT_WEIGHT = 0.2;
+  private static readonly RECENCY_WEIGHT = 0.5; // ⭐ INCREASED from 0.3 to prioritize new posts
   private static readonly RELEVANCE_WEIGHT = 0.3;
-  private static readonly TIME_DECAY_FACTOR = 0.1;
+  private static readonly TIME_DECAY_FACTOR = 0.15; // ⭐ INCREASED from 0.1 for faster decay
 
   private calculateEngagementScore(post: Post): number {
     const totalInteractions =
@@ -80,7 +80,7 @@ class FeedService {
         select: { user_id: true },
       });
       const followedUserIds = followedUsers.map((f) => f.user_id);
-      
+
       // Include the authenticated user in the list to see their own reposts
       const userIdsForReposts = [...followedUserIds, authUserid];
 
@@ -267,7 +267,7 @@ class FeedService {
           take:
             FeedService.POSTS_PER_HOME_PAGE *
             FeedService.FETCH_WINDOW_MULTIPLIER,
-          orderBy: { id: "desc" },
+          orderBy: { created_at: "desc" }, // ⭐ CRITICAL: Order by repost timestamp, not ID
         });
 
         // Filter valid reposts and mark them with reposter info
@@ -289,7 +289,9 @@ class FeedService {
           }));
 
         console.log(
-          `📌 Found ${repostedPosts.length} reposted posts (including ${repostedPosts.filter((p: any) => p.repost_by_current_user).length} from current user)`
+          `📌 Found ${repostedPosts.length} reposted posts (including ${
+            repostedPosts.filter((p: any) => p.repost_by_current_user).length
+          } from current user)`
         );
       }
 
@@ -482,7 +484,7 @@ class FeedService {
             authUserid,
             followMap,
             subMap,
-            interactionCountByCreator,
+            interactionCountByCreator
           );
 
           let totalScore =
@@ -490,21 +492,34 @@ class FeedService {
             recencyScore * FeedService.RECENCY_WEIGHT +
             relevanceScore * FeedService.RELEVANCE_WEIGHT;
 
-          // ⭐ NEW: Boost score for recent reposts
+          // ⭐ MASSIVE boost for recent reposts
           if ((post as any).was_repost && (post as any).repost_created_at) {
             const repostAgeInHours =
-              (Date.now() - new Date((post as any).repost_created_at).getTime()) /
+              (Date.now() -
+                new Date((post as any).repost_created_at).getTime()) /
               (1000 * 60 * 60);
-            
-            // Apply exponential decay to repost boost (stronger for newer reposts)
-            // Fresh reposts (< 1 hour) get significant boost
-            const repostBoost = Math.exp(-0.1 * repostAgeInHours) * 5;
+
+            // Apply aggressive exponential decay to repost boost
+            // Fresh reposts (< 1 hour) get HUGE boost to appear at top
+            // Decay rate increased to 0.3 for faster drop-off
+            const repostBoost = Math.exp(-0.3 * repostAgeInHours) * 50; // ⭐ Multiplier increased from 5 to 50
             totalScore += repostBoost;
 
             // Extra boost for user's own reposts
             if ((post as any).repost_by_current_user) {
-              totalScore += 2;
+              totalScore += 20; // ⭐ Increased from 2 to 20
             }
+          }
+
+          // ⭐ NEW: HUGE boost for very recent posts (< 6 hours old)
+          const postAgeInHours =
+            (Date.now() - new Date(post.created_at).getTime()) /
+            (1000 * 60 * 60);
+
+          if (postAgeInHours < 6) {
+            // Posts less than 6 hours old get exponential boost
+            const newPostBoost = Math.exp(-0.5 * postAgeInHours) * 30;
+            totalScore += newPostBoost;
           }
 
           return { ...post, score: totalScore };

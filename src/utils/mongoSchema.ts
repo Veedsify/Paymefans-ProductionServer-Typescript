@@ -237,7 +237,7 @@ const recommendedFeedSchema = new mongoose.Schema({
 });
 
 // Create compound index for userId and ensure latest feed is retrieved first
-recommendedFeedSchema.index({ userId: 1, computedAt: -1 });
+recommendedFeedSchema.index({ computedAt: -1 });
 
 // User Interaction Schema - Tracks real-time interactions
 const userInteractionSchema = new mongoose.Schema({
@@ -273,12 +273,7 @@ const userInteractionSchema = new mongoose.Schema({
 });
 
 // Compound indexes for efficient queries
-userInteractionSchema.index({ userId: 1, timestamp: -1 });
-userInteractionSchema.index({ creatorId: 1, timestamp: -1 });
 userInteractionSchema.index({ postId: 1, interactionType: 1 });
-
-// TTL index to auto-delete old interactions after 90 days
-userInteractionSchema.index({ timestamp: 1 }, { expireAfterSeconds: 7776000 });
 
 const UserProfile = mongo.model("UserProfile", userProfileSchema);
 const RecommendedFeed = mongo.model("RecommendedFeed", recommendedFeedSchema);
