@@ -36,10 +36,10 @@ export class MentionService {
         let url: string;
 
         if (type === "post") {
-          message = `<strong>${mentioner.username}</strong> mentioned you in a post`;
+          message = `<strong><a href="/${mentioner.username}">${mentioner.username}</a></strong> mentioned you in a post`;
           url = `${process.env.APP_URL}/posts/${contentId}`;
         } else {
-          message = `<strong>${mentioner.username}</strong> mentioned you in a comment`;
+          message = `<strong><a href="/${mentioner.username}">${mentioner.username}</a></strong> mentioned you in a comment`;
           url = `${process.env.APP_URL}/posts/${contentId}#comment`;
         }
 
@@ -223,7 +223,7 @@ export class MentionService {
       // Create notifications for each mentioned user
       const notificationPromises = validMentions.map(async (mention) => {
         const notificationId = `NOT${GenerateUniqueId()}`;
-        const message = `<strong>${mentioner.username}</strong> mentioned you in their story`;
+        const message = `<strong><a href="/${mentioner.username}">${mentioner.username}</a></strong> mentioned you in their story`;
         const url = `${process.env.APP_URL}/stories/${storyMediaId}`;
 
         return query.notifications.create({
