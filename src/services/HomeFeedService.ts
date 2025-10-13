@@ -492,26 +492,41 @@ class FeedService {
             recencyScore * FeedService.RECENCY_WEIGHT +
             relevanceScore * FeedService.RELEVANCE_WEIGHT;
 
-          // ⭐ MASSIVE boost for recent reposts
+          // ⭐ MASSIVE boost for recent reposts with personalized scoring
           if ((post as any).was_repost && (post as any).repost_created_at) {
             const repostAgeInHours =
               (Date.now() -
                 new Date((post as any).repost_created_at).getTime()) /
               (1000 * 60 * 60);
 
-            // Apply aggressive exponential decay to repost boost
-            // Fresh reposts (< 1 hour) get HUGE boost to appear at top
-            // Decay rate increased to 0.3 for faster drop-off
-            const repostBoost = Math.exp(-0.3 * repostAgeInHours) * 50; // ⭐ Multiplier increased from 5 to 50
+            // Base repost recency boost (aggressive exponential decay)
+            const repostBoost = Math.exp(-0.3 * repostAgeInHours) * 50;
             totalScore += repostBoost;
+
+            // ⭐ NEW: MASSIVE boost if user has already liked this post
+            // Someone reposted content the user engaged with before
+            if ((post as any).likedByme) {
+              totalScore += 40; // Huge boost - user liked this, now someone reposted it
+            }
+
+            // ⭐ Boost based on post popularity (like count)
+            const likeBoost = Math.log1p(post.post_likes) * 2;
+            totalScore += likeBoost;
+
+            // ⭐ Engagement rate boost (quality signal)
+            const totalEngagement =
+              post.post_likes + post.post_comments + post.post_reposts;
+            const engagementRate =
+              totalEngagement / Math.max(post.post_impressions || 1, 1);
+            totalScore += engagementRate * 10;
 
             // Extra boost for user's own reposts
             if ((post as any).repost_by_current_user) {
-              totalScore += 20; // ⭐ Increased from 2 to 20
+              totalScore += 20;
             }
           }
 
-          // ⭐ NEW: HUGE boost for very recent posts (< 6 hours old)
+          // ⭐ HUGE boost for very recent posts (< 6 hours old)
           const postAgeInHours =
             (Date.now() - new Date(post.created_at).getTime()) /
             (1000 * 60 * 60);

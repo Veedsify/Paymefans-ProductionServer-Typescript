@@ -151,10 +151,26 @@ export class RecommendationService {
         };
       }
 
+      // ⭐ NEW: Fetch user's likes for these posts to personalize repost scoring
+      const postIds = candidates.map((p) => p.id);
+      const userLikes = await query.postLike.findMany({
+        where: {
+          user_id: userId,
+          post_id: { in: postIds },
+        },
+        select: { post_id: true },
+      });
+      const likedPostIds = new Set(userLikes.map((l) => l.post_id));
+
       // Score and rank candidates
       const scored = candidates.map((post) => ({
         postId: post.id,
-        score: this.calculateRecommendationScore(post, profile, preferences),
+        score: this.calculateRecommendationScore(
+          post,
+          profile,
+          preferences,
+          likedPostIds // ⭐ Pass user's likes
+        ),
       }));
 
       // Sort by score and return top N
@@ -479,7 +495,8 @@ export class RecommendationService {
     profile: Awaited<ReturnType<typeof UserProfileService.buildUserProfile>>,
     preferences: Awaited<
       ReturnType<typeof UserProfileService.getContentPreferences>
-    >
+    >,
+    userLikedPostIds: Set<number> // ⭐ NEW: User's liked posts for personalized repost scoring
   ): number {
     let score = 0;
 
@@ -539,20 +556,34 @@ export class RecommendationService {
         (Date.now() - new Date((post as any).repost_created_at).getTime()) /
         (1000 * 60 * 60);
 
-      // Aggressive exponential decay: Fresh reposts dominate the feed
-      // Decay rate increased to 0.25 for rapid drop-off after first few hours
-      const repostRecencyBoost = Math.exp(-0.25 * repostAgeInHours) * 60; // ⭐ Multiplier increased from 15 to 60
+      // Base repost recency boost (aggressive exponential decay)
+      const repostRecencyBoost = Math.exp(-0.25 * repostAgeInHours) * 60;
       score += repostRecencyBoost;
+
+      // ⭐ NEW: HUGE additional boost if user has liked this post before
+      // This means someone reposted content the user already engaged with
+      if (userLikedPostIds.has(post.id)) {
+        score += 50; // Massive boost - user liked this, now someone they follow reposted it
+      }
+
+      // ⭐ Boost based on post's like count (popular reposts rank higher)
+      // More likes = content user is more likely to engage with
+      const likeBoost = Math.log1p(post.post_likes) * 2;
+      score += likeBoost;
+
+      // ⭐ Extra boost for posts with high engagement rate
+      const engagementRate =
+        totalEngagement / Math.max(post.post_impressions || 1, 1);
+      score += engagementRate * 10;
 
       // Huge boost for user's own reposts
       if ((post as any).repost_by_user) {
-        score += 30; // ⭐ Increased from 5 to 30
+        score += 30; // ⭐ User's own reposts still get priority
       }
     }
 
     return score;
   }
-
   /**
    * Pre-compute recommendations for a user (for background jobs)
    * Saves to both Redis and MongoDB
