@@ -310,6 +310,7 @@ export default class PostService {
           post_reposts: true,
           was_repost: true,
           repost_id: true,
+          repost_name: true,
           repost_username: true,
           UserMedia: {
             select: {
@@ -437,6 +438,7 @@ export default class PostService {
           was_repost: true,
           repost_id: true,
           repost_username: true,
+          repost_name: true,
           UserMedia: {
             select: {
               id: true,
@@ -565,6 +567,7 @@ export default class PostService {
               was_repost: true,
               repost_id: true,
               repost_username: true,
+              repost_name: true,
               UserMedia: {
                 select: {
                   id: true,
@@ -690,6 +693,7 @@ export default class PostService {
               was_repost: true,
               repost_id: true,
               repost_username: true,
+              repost_name: true,
               UserMedia: {
                 select: {
                   id: true,
@@ -1233,6 +1237,7 @@ export default class PostService {
           post_reposts: true,
           was_repost: true,
           repost_id: true,
+          repost_name: true,
           repost_username: true,
           UserMedia: {
             select: {
@@ -1384,6 +1389,7 @@ export default class PostService {
           was_repost: true,
           repost_id: true,
           repost_username: true,
+          repost_name: true,
           UserMedia: {
             select: {
               id: true,
@@ -1536,6 +1542,7 @@ export default class PostService {
           repost_id: true,
           user_id: true,
           repost_username: true,
+          repost_name: true,
         },
       });
       if (!post) {

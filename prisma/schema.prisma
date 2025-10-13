@@ -329,6 +329,7 @@ model Post {
   post_id           String
   was_repost        Boolean          @default(false)
   repost_username   String?          @default("")
+  repost_name       String?          @default("") 
   repost_id         String?          @default("")
   user_id           Int
   content           String?
