@@ -16,7 +16,7 @@ export const MentionNotificationQueue = new Queue("mentionNotification", {
 const mentionWorker = new Worker(
   "mentionNotification",
   async (job: Job<MentionJobData>) => {
-    const { mentions, mentioner, type, contentId, content } = job.data;
+    const { mentions, mentioner, type, contentId, content, contentOwnerId } = job.data;
 
     try {
       await MentionService.processMentions({
@@ -25,6 +25,7 @@ const mentionWorker = new Worker(
         type,
         contentId,
         content,
+        contentOwnerId,
       });
     } catch (error) {
       console.error("Error processing mention notifications:", error);

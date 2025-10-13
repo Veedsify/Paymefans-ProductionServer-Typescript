@@ -39,6 +39,7 @@ import RemoveCloudflareMedia from "@libs/RemoveCloudflareMedia";
 import { CommentLikes, Comments } from "@utils/mongoSchema";
 import { GenerateUniqueId } from "@utils/GenerateUniqueId";
 import { UserTransactionQueue } from "@jobs/UserTransactionJob";
+import { UserNotificationQueue } from "@jobs/UserNotificaton";
 import EmailService from "./EmailService";
 import GetSinglename from "@utils/GetSingleName";
 import { redis } from "@libs/RedisStore";
@@ -2239,11 +2240,75 @@ export default class PostService {
     userId,
   }: LikePostProps): Promise<LikePostResponse> {
     try {
+      const post = await query.post.findFirst({
+        where: { post_id: postId },
+        select: {
+          id: true,
+          post_id: true,
+          user_id: true,
+          user: {
+            select: {
+              id: true,
+              name: true,
+              username: true,
+            },
+          },
+        },
+      });
+
+      if (!post) {
+        return {
+          success: false,
+          isLiked: false,
+          likeCount: 0,
+          message: "Post not found",
+        };
+      }
+
       // Use Redis for real-time like operations
       const result = await RedisPostService.likePost(postId, userId);
 
       if (!result.success) {
         throw new Error("Failed to process like operation");
+      }
+
+      if (result.isLiked && post.user_id !== userId) {
+        try {
+          const liker = await query.user.findUnique({
+            where: { id: userId },
+            select: {
+              username: true,
+              name: true,
+            },
+          });
+
+          const likerHandle =
+            liker?.username || FormatName(liker?.name) || "someone";
+          const likerUrl = liker?.username ? `/${liker.username}` : "/";
+          const ownerGreeting =
+            FormatName(post.user?.name) || post.user?.username || "there";
+
+          await UserNotificationQueue.add(
+            "post-like-notification",
+            {
+              user_id: post.user_id,
+              url: `/posts/${post.post_id}`,
+              message: `Hi ${ownerGreeting}, <strong><a href="${likerUrl}">${likerHandle}</a></strong> liked your post.`,
+              action: "like",
+              notification_id: `NOT${GenerateUniqueId()}`,
+              read: false,
+            },
+            {
+              removeOnComplete: true,
+              attempts: 3,
+            }
+          );
+        } catch (notificationError) {
+          console.error(
+            "Error queueing post like notification:",
+            notificationError
+          );
+        }
       }
 
       return {

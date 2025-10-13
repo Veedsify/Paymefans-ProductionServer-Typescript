@@ -7,6 +7,8 @@ import type { LikeCommentResponse, NewCommentResponse } from "types/comments";
 import type { AuthUser } from "types/user";
 import { MentionService } from "./MentionService";
 import { MentionNotificationQueue } from "@jobs/MentionNotificationJob";
+import { UserNotificationQueue } from "@jobs/UserNotificaton";
+import FormatName from "@utils/FormatName";
 export default class CommentsService {
   // New Comment
   // This is for creating a new comment on a post
@@ -65,6 +67,33 @@ export default class CommentsService {
           throw new Error("Failed to upload comment attachments");
         }
       }
+      const postDetails = await query.post.findFirst({
+        where: {
+          post_id,
+        },
+        select: {
+          id: true,
+          post_id: true,
+          user_id: true,
+          user: {
+            select: {
+              id: true,
+              name: true,
+              username: true,
+            },
+          },
+        },
+      });
+
+      if (!postDetails) {
+        return {
+          status: false,
+          error: true,
+          message: "Post not found",
+          data: null,
+        };
+      }
+
       const commentOwner = await query.user.findUnique({
         where: {
           id: user.id,
@@ -99,7 +128,7 @@ export default class CommentsService {
       }
       await query.post.update({
         where: {
-          id: Number(postId),
+          id: postDetails.id,
         },
         data: {
           post_comments: {
@@ -130,6 +159,7 @@ export default class CommentsService {
                 type: "comment",
                 contentId: post_id,
                 content: comment,
+                contentOwnerId: postDetails.user_id,
               },
               {
                 removeOnComplete: true,
@@ -139,6 +169,39 @@ export default class CommentsService {
           }
         } catch (error) {
           console.error("Error processing comment mentions:", error);
+        }
+      }
+
+      if (postDetails.user_id !== user.id) {
+        const ownerGreeting =
+          FormatName(postDetails.user?.name) ||
+          postDetails.user?.username ||
+          "there";
+        const commenterDisplay =
+          user.username || FormatName(user.name) || "someone";
+        const commenterUrl = user.username ? `/${user.username}` : "/";
+
+        try {
+          await UserNotificationQueue.add(
+            "post-comment-notification",
+            {
+              user_id: postDetails.user_id,
+              url: `/posts/${postDetails.post_id}`,
+              message: `Hi ${ownerGreeting}, <strong><a href="${commenterUrl}">${commenterDisplay}</a></strong> commented on your post.`,
+              action: "comment",
+              notification_id: `NOT${GenerateUniqueId()}`,
+              read: false,
+            },
+            {
+              removeOnComplete: true,
+              attempts: 3,
+            },
+          );
+        } catch (notificationError) {
+          console.error(
+            "Error queueing post comment notification:",
+            notificationError,
+          );
         }
       }
 
@@ -176,6 +239,19 @@ export default class CommentsService {
 
       console.log("Liking comment with ID:", commentId);
 
+      const commentDoc = await Comments.findOne({
+        comment_id: commentId,
+      });
+
+      if (!commentDoc) {
+        return {
+          error: true,
+          status: false,
+          action: "Invalid Comment",
+          message: "Comment not found",
+        };
+      }
+
       const commentLike = await CommentLikes.findOne({
         commentId: commentId,
         userId: Number(user.id),
@@ -210,6 +286,50 @@ export default class CommentsService {
           { comment_id: commentId },
           { $inc: { likes: 1 } },
         );
+
+        if (commentDoc.userId !== user.id) {
+          try {
+            const commentOwner = await query.user.findUnique({
+              where: { id: commentDoc.userId },
+              select: {
+                id: true,
+                name: true,
+                username: true,
+              },
+            });
+
+            if (commentOwner) {
+              const ownerGreeting =
+                FormatName(commentOwner.name) ||
+                commentOwner.username ||
+                "there";
+              const likerDisplay =
+                user.username || FormatName(user.name) || "someone";
+              const likerUrl = user.username ? `/${user.username}` : "/";
+
+              await UserNotificationQueue.add(
+                "comment-like-notification",
+                {
+                  user_id: commentOwner.id,
+                  url: `/posts/${commentDoc.postId}`,
+                  message: `Hi ${ownerGreeting}, <strong><a href="${likerUrl}">${likerDisplay}</a></strong> liked your comment.`,
+                  action: "like",
+                  notification_id: `NOT${GenerateUniqueId()}`,
+                  read: false,
+                },
+                {
+                  removeOnComplete: true,
+                  attempts: 3,
+                },
+              );
+            }
+          } catch (notificationError) {
+            console.error(
+              "Error queueing comment like notification:",
+              notificationError,
+            );
+          }
+        }
 
         return {
           error: false,

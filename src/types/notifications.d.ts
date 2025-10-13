@@ -24,4 +24,5 @@ export interface MentionJobData {
     type: "post" | "comment";
     contentId: string;
     content?: string;
+    contentOwnerId?: number;
 }

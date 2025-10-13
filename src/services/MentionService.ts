@@ -6,7 +6,7 @@ type MentionData = MentionJobData;
 
 export class MentionService {
   static async processMentions(data: MentionData): Promise<void> {
-    const { mentions, mentioner, type, contentId } = data;
+    const { mentions, mentioner, type, contentId, contentOwnerId } = data;
 
     if (!mentions || mentions.length === 0) {
       return;
@@ -53,6 +53,49 @@ export class MentionService {
           },
         });
       });
+
+      if (
+        contentOwnerId &&
+        contentOwnerId !== mentioner.id &&
+        !validMentions.some((mention) => mention.id === contentOwnerId)
+      ) {
+        const owner = await query.user.findUnique({
+          where: { id: contentOwnerId },
+          select: {
+            id: true,
+            username: true,
+            name: true,
+          },
+        });
+
+        if (owner) {
+          const mentionSummary =
+            validMentions.length === 1
+              ? `@${validMentions[0].username}`
+              : `@${validMentions[0].username} and ${
+                  validMentions.length - 1
+                } others`;
+          const ownerMessage = `<strong>${mentioner.username}</strong> mentioned ${mentionSummary} in your ${
+            type === "post" ? "post" : "comment"
+          }`;
+          const ownerUrl =
+            type === "post"
+              ? `${process.env.APP_URL}/posts/${contentId}`
+              : `${process.env.APP_URL}/posts/${contentId}#comment`;
+
+          notificationPromises.push(
+            query.notifications.create({
+              data: {
+                notification_id: `NOT${GenerateUniqueId()}`,
+                message: ownerMessage,
+                user_id: owner.id,
+                action: "sparkle",
+                url: ownerUrl,
+              },
+            }),
+          );
+        }
+      }
 
       await Promise.all(notificationPromises);
 
