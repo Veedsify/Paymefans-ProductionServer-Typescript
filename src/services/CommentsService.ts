@@ -17,10 +17,9 @@ export default class CommentsService {
     post_id: string,
     comment: string,
     user: AuthUser,
-    postId: number,
     parentId: string | null,
     mentions: string,
-    files?: Express.Multer.File[],
+    files?: Express.Multer.File[]
   ): Promise<NewCommentResponse> {
     try {
       const comment_id = `COM${GenerateUniqueId()}`;
@@ -102,7 +101,7 @@ export default class CommentsService {
 
       const formattedComments = ParseContentToHtml(
         comment,
-        JSON.parse(mentions),
+        JSON.parse(mentions)
       );
 
       const newComment = await Comments.insertOne({
@@ -123,7 +122,7 @@ export default class CommentsService {
       if (parentId) {
         await Comments.updateOne(
           { comment_id: parentId },
-          { $inc: { replies: 1 } },
+          { $inc: { replies: 1 } }
         );
       }
       await query.post.update({
@@ -143,7 +142,7 @@ export default class CommentsService {
           const parsedMentions = JSON.parse(mentions);
           const validMentions = await MentionService.validateMentions(
             parsedMentions,
-            user.id,
+            user.id
           );
 
           if (validMentions.length > 0) {
@@ -164,7 +163,7 @@ export default class CommentsService {
               {
                 removeOnComplete: true,
                 attempts: 3,
-              },
+              }
             );
           }
         } catch (error) {
@@ -195,12 +194,12 @@ export default class CommentsService {
             {
               removeOnComplete: true,
               attempts: 3,
-            },
+            }
           );
         } catch (notificationError) {
           console.error(
             "Error queueing post comment notification:",
-            notificationError,
+            notificationError
           );
         }
       }
@@ -225,7 +224,7 @@ export default class CommentsService {
   // This is for liking a comment
   static async LikeComment(
     commentId: string,
-    user: AuthUser,
+    user: AuthUser
   ): Promise<LikeCommentResponse> {
     try {
       if (!commentId) {
@@ -265,7 +264,7 @@ export default class CommentsService {
         });
         await Comments.updateOne(
           { comment_id: commentId },
-          { $inc: { likes: -1 } },
+          { $inc: { likes: -1 } }
         );
 
         return {
@@ -284,7 +283,7 @@ export default class CommentsService {
         });
         await Comments.updateOne(
           { comment_id: commentId },
-          { $inc: { likes: 1 } },
+          { $inc: { likes: 1 } }
         );
 
         if (commentDoc.userId !== user.id) {
@@ -320,13 +319,13 @@ export default class CommentsService {
                 {
                   removeOnComplete: true,
                   attempts: 3,
-                },
+                }
               );
             }
           } catch (notificationError) {
             console.error(
               "Error queueing comment like notification:",
-              notificationError,
+              notificationError
             );
           }
         }
@@ -353,7 +352,7 @@ export default class CommentsService {
   // This is for tracking a comment view
   static async ViewComment(
     commentId: string,
-    user: AuthUser,
+    user: AuthUser
   ): Promise<{ status: boolean; error: boolean; message: string; data?: any }> {
     try {
       if (!commentId) {
@@ -391,7 +390,7 @@ export default class CommentsService {
       // Increment impressions count on the comment
       await Comments.updateOne(
         { comment_id: commentId },
-        { $inc: { impressions: 1 } },
+        { $inc: { impressions: 1 } }
       );
 
       return {
@@ -414,7 +413,7 @@ export default class CommentsService {
   // This is for tracking multiple comment views at once
   static async BulkViewComments(
     commentIds: string[],
-    user: AuthUser,
+    user: AuthUser
   ): Promise<{ status: boolean; error: boolean; message: string; data?: any }> {
     try {
       if (
@@ -437,7 +436,7 @@ export default class CommentsService {
 
       const viewedCommentIds = existingViews.map((view) => view.commentId);
       const newCommentIds = commentIds.filter(
-        (id) => !viewedCommentIds.includes(id),
+        (id) => !viewedCommentIds.includes(id)
       );
 
       if (newCommentIds.length === 0) {
@@ -461,7 +460,7 @@ export default class CommentsService {
       // Increment impressions for all newly viewed comments
       await Comments.updateMany(
         { comment_id: { $in: newCommentIds } },
-        { $inc: { impressions: 1 } },
+        { $inc: { impressions: 1 } }
       );
 
       return {
