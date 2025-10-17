@@ -4,14 +4,12 @@ import { GenerateUniqueId } from "@utils/GenerateUniqueId";
 import { CreateHashedPassword } from "@libs/HashPassword";
 import type { CheckForAdminResponse } from "../types/admin";
 import EmailService from "./EmailService";
-import type { EmailServiceProp } from "../types/email";
 import type {
   RegisterServiceProp,
   RegisterServiceResponse,
 } from "../types/auth";
 import { scheduleWelcomeMessage } from "../jobs/WelcomeMessageJob";
 import { countries } from "@libs/countries";
-import LoginService from "./LoginService";
 import { RBAC } from "@utils/FlagsConfig";
 import { customAlphabet } from "nanoid";
 import FormatName from "@utils/FormatName";
@@ -102,44 +100,52 @@ export default class RegisterService {
       return { message: admin.message, error: true };
     }
 
-    const EmailData: EmailServiceProp = {
-      email: data.email,
-      name: data.name,
-      subject: "Welcome to PayMeFans",
-      message:
-        "Welcome to PayMeFans, we are excited to have you here. If you have any questions or need help, feel free to reach out to us.",
-    };
-
     const WelcomeData = [
       await this.CreateWelcomeConversationAndMessage(
         user,
-        welcomeAccount.userId,
+        welcomeAccount.userId
       ),
       await this.CreateWelcomeNotification(user),
       await this.CreateFollowing(user, admin.id),
-      await EmailService.SendWelcomeEmail(EmailData),
     ];
     await Promise.all(WelcomeData);
 
-    const authenticateUser = await LoginService.LoginUser({
-      email: data.email,
-      ip: data.ip,
-      password: data.password,
+    // Generate verification code
+    const { random } = await import("lodash");
+    const verificationCode = random(100000, 999999);
+
+    // Store verification code in TwoFactorAuth table (reusing for email verification)
+    await query.twoFactorAuth.create({
+      data: {
+        code: verificationCode,
+        user_id: user.id,
+      },
     });
 
-    if (authenticateUser.error) {
+    // Send verification email
+    const FormatName = (await import("@utils/FormatName")).default;
+    const sendVerificationEmail = await EmailService.SendTwoFactorAuthEmail({
+      email: data.email,
+      code: verificationCode,
+      subject: "Verify Your Email Address",
+      name: FormatName(data.name.split(" ")[0] ?? data.name),
+    });
+
+    if (sendVerificationEmail.error) {
       return {
-        message: authenticateUser.message,
+        message:
+          "Account created but failed to send verification email. Please contact support.",
         error: true,
       };
     }
 
     return {
-      shouldRedirect: true,
-      message: "Account created successfully",
+      shouldRedirect: false,
+      message:
+        "Account created successfully. Please check your email for verification code.",
       error: false,
-      token: authenticateUser.token,
-      tfa: authenticateUser.tfa,
+      requiresVerification: true,
+      email: data.email,
       data: user,
     };
   }

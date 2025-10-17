@@ -20,6 +20,14 @@ auth.post(
   Paths.API.Auth.ResendTwoFactorCode,
   AuthController.ResendTwoFactorCode
 );
+auth.post(
+  Paths.API.Auth.VerifyEmailRegistration,
+  AuthController.VerifyEmailRegistration
+);
+auth.post(
+  Paths.API.Auth.ResendEmailVerificationCode,
+  AuthController.ResendEmailVerificationCode
+);
 auth.post(Paths.API.Auth.Logout, LogOutController.Logout)
 auth.post(Paths.API.Auth.TokenRefresh, AuthController.RefreshToken);
 

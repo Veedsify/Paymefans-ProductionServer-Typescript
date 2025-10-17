@@ -248,6 +248,81 @@ export default class AuthController {
     }
   }
 
+  // Verify Email Registration (for new users)
+  static async VerifyEmailRegistration(
+    req: Request,
+    res: Response
+  ): Promise<any> {
+    try {
+      const { code } = req.body;
+      const user = await UserService.VerifyEmailRegistration(code);
+
+      if (user.error) {
+        return res.status(400).json(user);
+      }
+
+      const cookieOptions = {
+        httpOnly: false,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "lax" as const,
+        path: "/",
+        domain:
+          process.env.NODE_ENV === "production" ? "paymefans.shop" : undefined,
+      };
+
+      if (user.token) {
+        res.setHeader("Set-Cookie", [
+          serialize("token", user.token.accessToken as string, {
+            ...cookieOptions,
+            maxAge: 3600,
+          }),
+          serialize("refresh_token", user.token.refreshToken as string, {
+            ...cookieOptions,
+            maxAge: durationInSeconds(REFRESH_TOKEN_EXPIRATION),
+          }),
+        ]);
+      }
+
+      return res.status(200).json(user);
+    } catch (error) {
+      console.log(error);
+      return res
+        .status(500)
+        .json({ message: "Internal server error", status: false, error: true });
+    }
+  }
+
+  // Resend Email Verification Code (for new users)
+  static async ResendEmailVerificationCode(
+    req: Request,
+    res: Response
+  ): Promise<any> {
+    try {
+      const { email } = req.body;
+
+      if (!email) {
+        return res.status(400).json({
+          message: "Email is required",
+          status: false,
+          error: true,
+        });
+      }
+
+      const result = await UserService.ResendEmailVerificationCode(email);
+
+      if (result.error) {
+        return res.status(400).json(result);
+      }
+
+      return res.status(200).json(result);
+    } catch (error) {
+      console.log(error);
+      return res
+        .status(500)
+        .json({ message: "Internal server error", status: false, error: true });
+    }
+  }
+
   // Refresh Token
   static async RefreshToken(req: Request, res: Response): Promise<any> {
     try {

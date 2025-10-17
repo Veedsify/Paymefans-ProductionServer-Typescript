@@ -25,14 +25,15 @@ interface NotificationResult {
   user_id: number;
   message: string;
   action:
-  | "follow"
-  | "like"
-  | "purchase"
-  | "comment"
-  | "repost"
-  | "message"
-  | "live"
-  | "sparkle";
+    | "follow"
+    | "like"
+    | "purchase"
+    | "comment"
+    | "repost"
+    | "message"
+    | "reply"
+    | "live"
+    | "sparkle";
   url: string | null;
   read: boolean;
   created_at: Date;
@@ -177,6 +178,7 @@ export default class NotificationService {
       | "repost"
       | "message"
       | "live"
+      | "reply"
       | "sparkle" = "message",
     url: string | null = null,
   ): Promise<NotificationResult[]> {

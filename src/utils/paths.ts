@@ -26,6 +26,8 @@ const Paths = {
       TwoFactorAuthentication: "/two-factor-authentication",
       VerifyTwoFactorAuth: "/verify/authentication",
       ResendTwoFactorCode: "/verify/resend",
+      VerifyEmailRegistration: "/verify/email",
+      ResendEmailVerificationCode: "/verify/email/resend",
       Logout: "/logout",
       TokenRefresh: "/token/refresh",
     },

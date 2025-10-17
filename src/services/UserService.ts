@@ -345,4 +345,196 @@ export default class UserService {
       };
     }
   }
+
+  // Verify Email Registration (for new users)
+  static async VerifyEmailRegistration(
+    code: number
+  ): Promise<VerificationControllerResponse> {
+    try {
+      const verify = await query.twoFactorAuth.findFirst({
+        where: {
+          code: code,
+        },
+        include: {
+          user: {
+            select: {
+              id: true,
+              username: true,
+              email: true,
+              is_email_verified: true,
+            },
+          },
+        },
+      });
+
+      if (!verify) {
+        return { success: false, message: "Invalid verification code", error: true };
+      }
+
+      // Check if email is already verified
+      if (verify.user.is_email_verified) {
+        await query.twoFactorAuth.delete({
+          where: {
+            id: verify.id,
+          },
+        });
+        return { success: false, message: "Email already verified", error: true };
+      }
+
+      // Delete the verification code
+      await query.twoFactorAuth.delete({
+        where: {
+          id: verify.id,
+        },
+      });
+
+      // Update user email verification status
+      const updatedUser = await query.user.update({
+        where: {
+          id: verify.user_id,
+        },
+        data: {
+          is_email_verified: true,
+        },
+        omit: {
+          password: true,
+        },
+      });
+
+      if (!updatedUser) {
+        return { success: false, message: "User not found", error: true };
+      }
+
+      // Generate authentication token
+      const token = await Authenticate(updatedUser as any);
+
+      // Save Login History
+      try {
+        const ip = "192.168.0.1";
+        await LoginHistoryService.SaveLoginHistory(verify.user_id, ip);
+      } catch (error) {
+        console.error("Error saving login history:", error);
+      }
+
+      // Send welcome email
+      const EmailService = (await import("./EmailService")).default;
+      const FormatName = (await import("@utils/FormatName")).default;
+      
+      await EmailService.SendWelcomeEmail({
+        email: updatedUser.email,
+        name: FormatName(updatedUser.name),
+        subject: "Welcome to PayMeFans",
+        message:
+          "Welcome to PayMeFans, we are excited to have you here. If you have any questions or need help, feel free to reach out to us.",
+      });
+
+      return {
+        token: {
+          accessToken: token.accessToken,
+          refreshToken: token.refreshToken,
+        },
+        error: false,
+        message: "Email verified successfully",
+        success: true,
+        user: updatedUser as AuthUser,
+      };
+    } catch (error) {
+      console.log(error);
+      return { success: false, message: "Internal server error", error: true };
+    }
+  }
+
+  // Resend Email Verification Code (for new users)
+  static async ResendEmailVerificationCode(
+    email: string
+  ): Promise<{ message: string; error: boolean; status: boolean }> {
+    try {
+      // Find the user with a pending email verification code
+      const pendingVerification = await query.twoFactorAuth.findFirst({
+        where: {
+          user: {
+            email: {
+              equals: email,
+              mode: "insensitive",
+            },
+            is_email_verified: false,
+          },
+        },
+        include: {
+          user: {
+            select: {
+              id: true,
+              email: true,
+              name: true,
+              is_email_verified: true,
+            },
+          },
+        },
+      });
+
+      if (!pendingVerification) {
+        return {
+          message: "No pending email verification found or email already verified.",
+          error: true,
+          status: false,
+        };
+      }
+
+      const user = pendingVerification.user;
+
+      if (user.is_email_verified) {
+        return {
+          message: "Email is already verified",
+          error: true,
+          status: false,
+        };
+      }
+
+      // Generate new code
+      const { random } = await import("lodash");
+      const code = random(100000, 999999);
+
+      // Update existing code
+      await query.twoFactorAuth.update({
+        where: {
+          id: pendingVerification.id,
+        },
+        data: {
+          code: code,
+        },
+      });
+
+      // Send email
+      const EmailService = (await import("./EmailService")).default;
+      const FormatName = (await import("@utils/FormatName")).default;
+
+      const sendVerificationEmail = await EmailService.SendTwoFactorAuthEmail({
+        email: user.email,
+        code: code,
+        subject: "Verify Your Email Address",
+        name: FormatName(user.name.split(" ")[0] ?? user.name),
+      });
+
+      if (sendVerificationEmail.error) {
+        return {
+          message: sendVerificationEmail.message,
+          error: true,
+          status: false,
+        };
+      }
+
+      return {
+        message: "Verification code resent successfully",
+        error: false,
+        status: true,
+      };
+    } catch (error) {
+      console.log(error);
+      return {
+        message: "Internal server error",
+        error: true,
+        status: false,
+      };
+    }
+  }
 }

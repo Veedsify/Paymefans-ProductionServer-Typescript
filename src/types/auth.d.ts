@@ -18,6 +18,8 @@ export type RegisterServiceResponse = {
   error: boolean;
   message: string;
   data?: any;
+  requiresVerification?: boolean;
+  email?: string;
 };
 
 export type FindUserNameResponse = {
