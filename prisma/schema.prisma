@@ -1598,6 +1598,7 @@ enum NotificationTypes {
   message
   live
   sparkle
+reply
 }
 
 enum VerificationStateEnum {

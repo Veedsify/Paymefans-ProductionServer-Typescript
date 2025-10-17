@@ -19,6 +19,7 @@ export default class CommentsService {
     user: AuthUser,
     parentId: string | null,
     mentions: string,
+    reply_to: string,
     files?: Express.Multer.File[]
   ): Promise<NewCommentResponse> {
     try {
@@ -181,21 +182,56 @@ export default class CommentsService {
         const commenterUrl = user.username ? `/${user.username}` : "/";
 
         try {
-          await UserNotificationQueue.add(
-            "post-comment-notification",
-            {
-              user_id: postDetails.user_id,
-              url: `/posts/${postDetails.post_id}`,
-              message: `Hi ${ownerGreeting}, <strong><a href="${commenterUrl}">${commenterDisplay}</a></strong> commented on your post.`,
-              action: "comment",
-              notification_id: `NOT${GenerateUniqueId()}`,
-              read: false,
-            },
-            {
-              removeOnComplete: true,
-              attempts: 3,
-            }
-          );
+          if (parentId) {
+            Promise.all([
+              UserNotificationQueue.add(
+                "post-reply-notification",
+                {
+                  user_id: reply_to ? Number(reply_to) : postDetails.user_id,
+                  url: `/posts/${postDetails.post_id}`,
+                  message: `${user.username} replied to your comment`,
+                  action: "reply",
+                  notification_id: `NOT${GenerateUniqueId()}`,
+                  read: false,
+                },
+                {
+                  removeOnComplete: true,
+                  attempts: 3,
+                }
+              ),
+              UserNotificationQueue.add(
+                "post-reply-notification",
+                {
+                  user_id: postDetails.user_id,
+                  url: `/posts/${postDetails.post_id}`,
+                  message: `${user.username} replied on your post`,
+                  action: "reply",
+                  notification_id: `NOT${GenerateUniqueId()}`,
+                  read: false,
+                },
+                {
+                  removeOnComplete: true,
+                  attempts: 3,
+                }
+              ),
+            ]);
+          } else {
+            await UserNotificationQueue.add(
+              "post-comment-notification",
+              {
+                user_id: postDetails.user_id,
+                url: `/posts/${postDetails.post_id}`,
+                message: `Hi ${ownerGreeting}, <strong><a href="${commenterUrl}">${commenterDisplay}</a></strong> commented on your post.`,
+                action: "comment",
+                notification_id: `NOT${GenerateUniqueId()}`,
+                read: false,
+              },
+              {
+                removeOnComplete: true,
+                attempts: 3,
+              }
+            );
+          }
         } catch (notificationError) {
           console.error(
             "Error queueing post comment notification:",

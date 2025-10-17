@@ -272,7 +272,7 @@ export default class RegisterService {
               price_per_message: 0,
               enable_free_message: true,
               subscription_price: 0,
-              two_factor_auth: true,
+              two_factor_auth: false,
               subscription_duration: "1 month",
               subscription_type: "free",
             },
