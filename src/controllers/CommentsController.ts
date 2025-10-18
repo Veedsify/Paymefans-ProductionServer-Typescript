@@ -80,9 +80,14 @@ export default class CommentsController {
 
       const viewComment = await CommentsService.ViewComment(commentId, user);
 
-      if (viewComment.error) {
+      if (viewComment.error && viewComment.status === false) {
+        return res.status(201).json({ ...viewComment });
+      }
+
+      if (viewComment.error && viewComment.status === true) {
         return res.status(400).json({ ...viewComment });
       }
+
       return res.status(200).json({ ...viewComment });
     } catch (error) {
       console.log(error);

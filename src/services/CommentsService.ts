@@ -399,8 +399,6 @@ export default class CommentsService {
         };
       }
 
-      console.log(commentId, user.id);
-
       // Check if user has already viewed this comment
       const existingView = await CommentViews.findOne({
         commentId: commentId,
@@ -409,7 +407,7 @@ export default class CommentsService {
 
       if (existingView) {
         return {
-          status: true,
+          status: false,
           error: false,
           message: "Comment view already recorded",
           data: existingView,
