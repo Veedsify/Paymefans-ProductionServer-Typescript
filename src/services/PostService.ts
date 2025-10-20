@@ -636,7 +636,7 @@ export default class PostService {
             const postIdStrings = reposts.map((post) => post.post_id); // Redis uses string post_id
 
             // Batch likes and reposts
-            const [likeData, repostsDb, purchasedPosts] = await Promise.all([
+            const [likeData, repostsDb] = await Promise.all([
                 RedisPostService.getMultiplePostsLikeData(
                     postIdStrings,
                     userId,
