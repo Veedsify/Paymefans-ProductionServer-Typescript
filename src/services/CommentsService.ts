@@ -188,23 +188,7 @@ export default class CommentsService {
                     user.username || FormatName(user.name) || "someone";
                 const commenterUrl = user.username ? `/${user.username}` : "/";
 
-                const notificationPromises = [
-                    UserNotificationQueue.add(
-                        "post-reply-notification",
-                        {
-                            user_id: postDetails.user_id,
-                            url: `/posts/${postDetails.post_id}`,
-                            message: `${user.username} replied on your post`,
-                            action: "reply",
-                            notification_id: `NOT${GenerateUniqueId()}`,
-                            read: false,
-                        },
-                        {
-                            removeOnComplete: true,
-                            attempts: 3,
-                        },
-                    ),
-                ];
+                const notificationPromises = [];
 
                 try {
                     if (parentId) {

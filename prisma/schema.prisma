@@ -1,11 +1,11 @@
 generator client {
-  provider = "prisma-client-js"
-  output   = "../node_modules/.prisma/client"
+    provider = "prisma-client-js"
+    output   = "../node_modules/.prisma/client"
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+    provider = "postgresql"
+    url      = env("DATABASE_URL")
 }
 
 model User {
@@ -136,1526 +136,1526 @@ model User {
 }
 
 model Participants {
-  id            Int             @id @default(autoincrement())
-  user_1        String
-  user_2        String
-  created_at    DateTime        @default(now())
-  updated_at    DateTime        @updatedAt
-  Conversations Conversations[] @relation("ConversationsToParticipants")
+    id            Int             @id @default(autoincrement())
+    user_1        String
+    user_2        String
+    created_at    DateTime        @default(now())
+    updated_at    DateTime        @updatedAt
+    Conversations Conversations[] @relation("ConversationsToParticipants")
 }
 
 model Conversations {
-  id              Int            @id @default(autoincrement())
-  conversation_id String         @unique
-  created_at      DateTime       @default(now())
-  updated_at      DateTime       @updatedAt
-  messages        Messages[]
-  participants    Participants[] @relation("ConversationsToParticipants")
+    id              Int            @id @default(autoincrement())
+    conversation_id String         @unique
+    created_at      DateTime       @default(now())
+    updated_at      DateTime       @updatedAt
+    messages        Messages[]
+    participants    Participants[] @relation("ConversationsToParticipants")
 }
 
 model Messages {
-  id              Int             @id @default(autoincrement())
-  message_id      String          @unique
-  sender_id       String
-  receiver_id     String
-  seen            Boolean         @default(false)
-  message         String
-  attachment      Json?
-  isSystemMessage Boolean         @default(false)
-  created_at      DateTime        @default(now())
-  updated_at      DateTime        @updatedAt
-  conversationsId String?
-  groupsId        Int?
-  story_reply     Json?
-  Conversations   Conversations?  @relation(fields: [conversationsId], references: [conversation_id])
-  receiver        User            @relation("MessageReceiver", fields: [receiver_id], references: [user_id], onDelete: Cascade)
-  sender          User            @relation("MessageSender", fields: [sender_id], references: [user_id], onDelete: Cascade)
-  ReportMessage   ReportMessage[]
+    id              Int             @id @default(autoincrement())
+    message_id      String          @unique
+    sender_id       String
+    receiver_id     String
+    seen            Boolean         @default(false)
+    message         String
+    attachment      Json?
+    isSystemMessage Boolean         @default(false)
+    created_at      DateTime        @default(now())
+    updated_at      DateTime        @updatedAt
+    conversationsId String?
+    groupsId        Int?
+    story_reply     Json?
+    Conversations   Conversations?  @relation(fields: [conversationsId], references: [conversation_id])
+    receiver        User            @relation("MessageReceiver", fields: [receiver_id], references: [user_id], onDelete: Cascade)
+    sender          User            @relation("MessageSender", fields: [sender_id], references: [user_id], onDelete: Cascade)
+    ReportMessage   ReportMessage[]
 
-  @@index([sender_id])
-  @@index([receiver_id])
+    @@index([sender_id])
+    @@index([receiver_id])
 }
 
 model OldUsername {
-  id           Int      @id @default(autoincrement())
-  user_id      Int
-  old_username String?
-  created_at   DateTime @default(now())
-  updated_at   DateTime @updatedAt
-  user         User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+    id           Int      @id @default(autoincrement())
+    user_id      Int
+    old_username String?
+    created_at   DateTime @default(now())
+    updated_at   DateTime @updatedAt
+    user         User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
 
-  @@index([user_id])
-  @@index([old_username])
+    @@index([user_id])
+    @@index([old_username])
 }
 
 model Model {
-  id                  Int                   @id @default(autoincrement())
-  firstname           String
-  lastname            String
-  user_id             Int                   @unique
-  gender              String
-  dob                 DateTime
-  country             String
-  hookup              Boolean               @default(false)
-  payment_status      Boolean               @default(false)
-  payment_reference   String?               @unique
-  verification_video  String?
-  verification_image  String?
-  verification_status Boolean               @default(false)
-  verification_state  VerificationStateEnum @default(not_started)
-  token               String?               @unique
-  created_at          DateTime              @default(now())
-  watermark           String?               @default("/site/watermark.png")
-  user                User                  @relation(fields: [user_id], references: [id], onDelete: Cascade)
+    id                  Int                   @id @default(autoincrement())
+    firstname           String
+    lastname            String
+    user_id             Int                   @unique
+    gender              String
+    dob                 DateTime
+    country             String
+    hookup              Boolean               @default(false)
+    payment_status      Boolean               @default(false)
+    payment_reference   String?               @unique
+    verification_video  String?
+    verification_image  String?
+    verification_status Boolean               @default(false)
+    verification_state  VerificationStateEnum @default(not_started)
+    token               String?               @unique
+    created_at          DateTime              @default(now())
+    watermark           String?               @default("/site/watermark.png")
+    user                User                  @relation(fields: [user_id], references: [id], onDelete: Cascade)
 }
 
 model UploadedMedia {
-  id          Int        @id @default(autoincrement())
-  media_id    String     @unique
-  user_id     Int
-  key         String?
-  type        String
-  url         String?
-  name        String
-  size        Int?
-  extension   String?
-  media_state MediaState @default(processing)
-  created_at  DateTime   @default(now())
-  updated_at  DateTime   @updatedAt
-  user        User       @relation(fields: [user_id], references: [id], onDelete: Cascade)
+    id          Int        @id @default(autoincrement())
+    media_id    String     @unique
+    user_id     Int
+    key         String?
+    type        String
+    url         String?
+    name        String
+    size        Int?
+    extension   String?
+    media_state MediaState @default(processing)
+    created_at  DateTime   @default(now())
+    updated_at  DateTime   @updatedAt
+    user        User       @relation(fields: [user_id], references: [id], onDelete: Cascade)
 
-  @@index([user_id])
+    @@index([user_id])
 }
 
 model UserMedia {
-  id            Int        @id @default(autoincrement())
-  media_id      String     @unique
-  post_id       Int
-  media_type    String
-  media_state   MediaState @default(processing)
-  duration      String?    @default("")
-  url           String
-  blur          String
-  poster        String
-  locked        Boolean    @default(false)
-  accessible_to String
-  created_at    DateTime   @default(now())
-  updated_at    DateTime   @updatedAt
-  user_id       Int
-  post          Post       @relation(fields: [post_id], references: [id], onDelete: Cascade)
-  user          User       @relation(fields: [user_id], references: [id], onDelete: Cascade)
+    id            Int        @id @default(autoincrement())
+    media_id      String     @unique
+    post_id       Int
+    media_type    String
+    media_state   MediaState @default(processing)
+    duration      String?    @default("")
+    url           String
+    blur          String
+    poster        String
+    locked        Boolean    @default(false)
+    accessible_to String
+    created_at    DateTime   @default(now())
+    updated_at    DateTime   @updatedAt
+    user_id       Int
+    post          Post       @relation(fields: [post_id], references: [id], onDelete: Cascade)
+    user          User       @relation(fields: [user_id], references: [id], onDelete: Cascade)
 
-  @@index([post_id])
+    @@index([post_id])
 }
 
 model UserRepost {
-  id         Int      @id @default(autoincrement())
-  repost_id  String
-  user_id    Int
-  post_id    Int
-  created_at DateTime @default(now())
-  updated_at DateTime @updatedAt
-  post       Post     @relation(fields: [post_id], references: [id], onDelete: Cascade)
-  user       User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+    id         Int      @id @default(autoincrement())
+    repost_id  String
+    user_id    Int
+    post_id    Int
+    created_at DateTime @default(now())
+    updated_at DateTime @updatedAt
+    post       Post     @relation(fields: [post_id], references: [id], onDelete: Cascade)
+    user       User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
 
-  @@index([post_id])
-  @@index([user_id])
+    @@index([post_id])
+    @@index([user_id])
 }
 
 model UserStory {
-  id         Int          @id @default(autoincrement())
-  story_id   String       @unique
-  user_id    Int
-  created_at DateTime     @default(now())
-  updated_at DateTime     @updatedAt
-  StoryMedia StoryMedia[]
-  StoryView  StoryView[]
-  user       User         @relation(fields: [user_id], references: [id], onDelete: Cascade)
+    id         Int          @id @default(autoincrement())
+    story_id   String       @unique
+    user_id    Int
+    created_at DateTime     @default(now())
+    updated_at DateTime     @updatedAt
+    StoryMedia StoryMedia[]
+    StoryView  StoryView[]
+    user       User         @relation(fields: [user_id], references: [id], onDelete: Cascade)
 
-  @@index([user_id])
+    @@index([user_id])
 }
 
 model StoryMedia {
-  id              Int            @id @default(autoincrement())
-  media_id        String         @unique
-  media_type      String
-  filename        String
-  story_content   String?
-  duration        Int?
-  user_story_id   Int
-  media_state     MediaState     @default(processing)
-  created_at      DateTime       @default(now())
-  updated_at      DateTime       @updatedAt
-  captionElements Json?
-  media_url       String?
-  story           UserStory      @relation(fields: [user_story_id], references: [id], onDelete: Cascade)
-  StoryView       StoryView[]
-  StoryMention    StoryMention[]
+    id              Int            @id @default(autoincrement())
+    media_id        String         @unique
+    media_type      String
+    filename        String
+    story_content   String?
+    duration        Int?
+    user_story_id   Int
+    media_state     MediaState     @default(processing)
+    created_at      DateTime       @default(now())
+    updated_at      DateTime       @updatedAt
+    captionElements Json?
+    media_url       String?
+    story           UserStory      @relation(fields: [user_story_id], references: [id], onDelete: Cascade)
+    StoryView       StoryView[]
+    StoryMention    StoryMention[]
 }
 
 model StoryView {
-  id             Int        @id @default(autoincrement())
-  story_media_id String
-  viewer_id      Int
-  viewed_at      DateTime   @default(now())
-  userStoryId    Int?
-  story_media    StoryMedia @relation(fields: [story_media_id], references: [media_id], onDelete: Cascade)
-  UserStory      UserStory? @relation(fields: [userStoryId], references: [id])
-  viewer         User       @relation("StoryViews", fields: [viewer_id], references: [id], onDelete: Cascade)
+    id             Int        @id @default(autoincrement())
+    story_media_id String
+    viewer_id      Int
+    viewed_at      DateTime   @default(now())
+    userStoryId    Int?
+    story_media    StoryMedia @relation(fields: [story_media_id], references: [media_id], onDelete: Cascade)
+    UserStory      UserStory? @relation(fields: [userStoryId], references: [id])
+    viewer         User       @relation("StoryViews", fields: [viewer_id], references: [id], onDelete: Cascade)
 
-  @@unique([story_media_id, viewer_id])
-  @@index([story_media_id])
-  @@index([viewer_id])
+    @@unique([story_media_id, viewer_id])
+    @@index([story_media_id])
+    @@index([viewer_id])
 }
 
 model StoryMention {
-  id                Int        @id @default(autoincrement())
-  story_media_id    String
-  mentioned_user_id Int
-  mentioner_id      Int
-  created_at        DateTime   @default(now())
-  story_media       StoryMedia @relation(fields: [story_media_id], references: [media_id], onDelete: Cascade)
-  mentioned_user    User       @relation("StoryMentions", fields: [mentioned_user_id], references: [id], onDelete: Cascade)
-  mentioner         User       @relation("StoryMentioner", fields: [mentioner_id], references: [id], onDelete: Cascade)
+    id                Int        @id @default(autoincrement())
+    story_media_id    String
+    mentioned_user_id Int
+    mentioner_id      Int
+    created_at        DateTime   @default(now())
+    story_media       StoryMedia @relation(fields: [story_media_id], references: [media_id], onDelete: Cascade)
+    mentioned_user    User       @relation("StoryMentions", fields: [mentioned_user_id], references: [id], onDelete: Cascade)
+    mentioner         User       @relation("StoryMentioner", fields: [mentioner_id], references: [id], onDelete: Cascade)
 
-  @@unique([story_media_id, mentioned_user_id])
-  @@index([story_media_id])
-  @@index([mentioned_user_id])
-  @@index([mentioner_id])
+    @@unique([story_media_id, mentioned_user_id])
+    @@index([story_media_id])
+    @@index([mentioned_user_id])
+    @@index([mentioner_id])
 }
 
 model Post {
-  id                Int              @id @default(autoincrement())
-  post_id           String
-  was_repost        Boolean          @default(false)
-  repost_username   String?          @default("")
-  repost_name       String?          @default("") 
-  repost_id         String?          @default("")
-  user_id           Int
-  content           String?
-  media             Json?
-  post_price        Float?           @default(0)
-  post_status       PostStatus       @default(pending)
-  post_audience     PostAudience
-  post_is_visible   Boolean          @default(true)
-  post_likes        Int              @default(0)
-  post_comments     Int              @default(0)
-  post_reposts      Int              @default(0)
-  post_impressions  Int              @default(0)
-  created_at        DateTime         @default(now())
-  updated_at        DateTime         @updatedAt
-  watermark_enabled Boolean          @default(false)
-  user              User             @relation(fields: [user_id], references: [id], onDelete: Cascade)
-  PostComment       PostComment[]
-  PostGift          PostGift[]
-  PostImpression    PostImpression[]
-  PostLike          PostLike[]
-  PostShared        PostShared[]
-  PurchasedPosts    PurchasedPosts[]
-  ReportPost        ReportPost[]
-  UserMedia         UserMedia[]
-  UserRepost        UserRepost[]
+    id                Int              @id @default(autoincrement())
+    post_id           String
+    was_repost        Boolean          @default(false)
+    repost_username   String?          @default("")
+    repost_name       String?          @default("")
+    repost_id         String?          @default("")
+    user_id           Int
+    content           String?
+    media             Json?
+    post_price        Float?           @default(0)
+    post_status       PostStatus       @default(pending)
+    post_audience     PostAudience
+    post_is_visible   Boolean          @default(true)
+    post_likes        Int              @default(0)
+    post_comments     Int              @default(0)
+    post_reposts      Int              @default(0)
+    post_impressions  Int              @default(0)
+    created_at        DateTime         @default(now())
+    updated_at        DateTime         @updatedAt
+    watermark_enabled Boolean          @default(false)
+    user              User             @relation(fields: [user_id], references: [id], onDelete: Cascade)
+    PostComment       PostComment[]
+    PostGift          PostGift[]
+    PostImpression    PostImpression[]
+    PostLike          PostLike[]
+    PostShared        PostShared[]
+    PurchasedPosts    PurchasedPosts[]
+    ReportPost        ReportPost[]
+    UserMedia         UserMedia[]
+    UserRepost        UserRepost[]
 }
 
 model PostImpression {
-  id         Int      @id @default(autoincrement())
-  post_id    Int
-  user_id    Int
-  created_at DateTime @default(now())
-  updated_at DateTime @updatedAt
-  post       Post     @relation(fields: [post_id], references: [id], onDelete: Cascade)
-  user       User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+    id         Int      @id @default(autoincrement())
+    post_id    Int
+    user_id    Int
+    created_at DateTime @default(now())
+    updated_at DateTime @updatedAt
+    post       Post     @relation(fields: [post_id], references: [id], onDelete: Cascade)
+    user       User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
 
-  @@index([post_id])
-  @@index([user_id])
+    @@index([post_id])
+    @@index([user_id])
 }
 
 model ProfileView {
-  id         Int      @id @default(autoincrement())
-  profile_id Int
-  viewer_id  Int?
-  ip_address String?
-  created_at DateTime @default(now())
-  profile    User     @relation("ProfileViewed", fields: [profile_id], references: [id], onDelete: Cascade)
-  viewer     User?    @relation("ProfileViewer", fields: [viewer_id], references: [id], onDelete: Cascade)
+    id         Int      @id @default(autoincrement())
+    profile_id Int
+    viewer_id  Int?
+    ip_address String?
+    created_at DateTime @default(now())
+    profile    User     @relation("ProfileViewed", fields: [profile_id], references: [id], onDelete: Cascade)
+    viewer     User?    @relation("ProfileViewer", fields: [viewer_id], references: [id], onDelete: Cascade)
 
-  @@index([profile_id])
-  @@index([viewer_id])
-  @@index([created_at])
+    @@index([profile_id])
+    @@index([viewer_id])
+    @@index([created_at])
 }
 
 model CommentView {
-  id         Int         @id @default(autoincrement())
-  comment_id Int
-  user_id    Int?
-  ip_address String?
-  created_at DateTime    @default(now())
-  comment    PostComment @relation(fields: [comment_id], references: [id], onDelete: Cascade)
-  user       User?       @relation("CommentViews", fields: [user_id], references: [id], onDelete: Cascade)
+    id         Int         @id @default(autoincrement())
+    comment_id Int
+    user_id    Int?
+    ip_address String?
+    created_at DateTime    @default(now())
+    comment    PostComment @relation(fields: [comment_id], references: [id], onDelete: Cascade)
+    user       User?       @relation("CommentViews", fields: [user_id], references: [id], onDelete: Cascade)
 
-  @@unique([comment_id, user_id, ip_address])
-  @@index([comment_id])
-  @@index([user_id])
-  @@index([created_at])
+    @@unique([comment_id, user_id, ip_address])
+    @@index([comment_id])
+    @@index([user_id])
+    @@index([created_at])
 }
 
 model PostComment {
-  id                     Int                      @id @default(autoincrement())
-  comment_id             String
-  user_id                Int
-  post_id                Int
-  comment                String
-  comment_impressions    Int                      @default(0)
-  created_at             DateTime                 @default(now())
-  updated_at             DateTime                 @updatedAt
-  CommentImpression      CommentImpression[]
-  CommentView            CommentView[]
-  post                   Post                     @relation(fields: [post_id], references: [id], onDelete: Cascade)
-  user                   User                     @relation(fields: [user_id], references: [id], onDelete: Cascade)
-  PostCommentAttachments PostCommentAttachments[]
-  PostCommentLikes       PostCommentLikes[]
-  ReportComment          ReportComment[]
+    id                     Int                      @id @default(autoincrement())
+    comment_id             String
+    user_id                Int
+    post_id                Int
+    comment                String
+    comment_impressions    Int                      @default(0)
+    created_at             DateTime                 @default(now())
+    updated_at             DateTime                 @updatedAt
+    CommentImpression      CommentImpression[]
+    CommentView            CommentView[]
+    post                   Post                     @relation(fields: [post_id], references: [id], onDelete: Cascade)
+    user                   User                     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+    PostCommentAttachments PostCommentAttachments[]
+    PostCommentLikes       PostCommentLikes[]
+    ReportComment          ReportComment[]
 
-  @@index([post_id])
-  @@index([created_at])
+    @@index([post_id])
+    @@index([created_at])
 }
 
 model CommentImpression {
-  id         Int         @id @default(autoincrement())
-  comment_id Int
-  user_id    Int
-  created_at DateTime    @default(now())
-  updated_at DateTime    @updatedAt
-  postId     Int?
-  comment    PostComment @relation(fields: [comment_id], references: [id], onDelete: Cascade)
-  user       User        @relation(fields: [user_id], references: [id], onDelete: Cascade)
+    id         Int         @id @default(autoincrement())
+    comment_id Int
+    user_id    Int
+    created_at DateTime    @default(now())
+    updated_at DateTime    @updatedAt
+    postId     Int?
+    comment    PostComment @relation(fields: [comment_id], references: [id], onDelete: Cascade)
+    user       User        @relation(fields: [user_id], references: [id], onDelete: Cascade)
 
-  @@index([comment_id])
-  @@index([user_id])
+    @@index([comment_id])
+    @@index([user_id])
 }
 
 model PostCommentAttachments {
-  id         Int         @id @default(autoincrement())
-  comment_id Int
-  path       String
-  type       String
-  name       String
-  created_at DateTime    @default(now())
-  updated_at DateTime    @updatedAt
-  Comment    PostComment @relation(fields: [comment_id], references: [id], onDelete: Cascade)
+    id         Int         @id @default(autoincrement())
+    comment_id Int
+    path       String
+    type       String
+    name       String
+    created_at DateTime    @default(now())
+    updated_at DateTime    @updatedAt
+    Comment    PostComment @relation(fields: [comment_id], references: [id], onDelete: Cascade)
 }
 
 model PostCommentLikes {
-  id         Int         @id @default(autoincrement())
-  like_id    String      @default(cuid())
-  user_id    Int
-  comment_id Int
-  created_at DateTime    @default(now())
-  updated_at DateTime    @updatedAt
-  comment    PostComment @relation(fields: [comment_id], references: [id], onDelete: Cascade)
-  user       User        @relation(fields: [user_id], references: [id], onDelete: Cascade)
+    id         Int         @id @default(autoincrement())
+    like_id    String      @default(cuid())
+    user_id    Int
+    comment_id Int
+    created_at DateTime    @default(now())
+    updated_at DateTime    @updatedAt
+    comment    PostComment @relation(fields: [comment_id], references: [id], onDelete: Cascade)
+    user       User        @relation(fields: [user_id], references: [id], onDelete: Cascade)
 
-  @@index([comment_id])
-  @@index([user_id])
+    @@index([comment_id])
+    @@index([user_id])
 }
 
 model PostLike {
-  id         Int      @id @default(autoincrement())
-  like_id    Int
-  user_id    Int
-  post_id    Int
-  created_at DateTime @default(now())
-  updated_at DateTime @updatedAt
-  post       Post     @relation(fields: [post_id], references: [id], onDelete: Cascade)
-  user       User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+    id         Int      @id @default(autoincrement())
+    like_id    Int
+    user_id    Int
+    post_id    Int
+    created_at DateTime @default(now())
+    updated_at DateTime @updatedAt
+    post       Post     @relation(fields: [post_id], references: [id], onDelete: Cascade)
+    user       User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
 
-  @@index([post_id])
-  @@index([user_id])
+    @@index([post_id])
+    @@index([user_id])
 }
 
 model PostShared {
-  id         Int      @id @default(autoincrement())
-  shared_id  String
-  user_id    Int?
-  post_id    Int
-  created_at DateTime @default(now())
-  updated_at DateTime @updatedAt
-  post       Post     @relation(fields: [post_id], references: [id], onDelete: Cascade)
-  user       User?    @relation(fields: [user_id], references: [id])
+    id         Int      @id @default(autoincrement())
+    shared_id  String
+    user_id    Int?
+    post_id    Int
+    created_at DateTime @default(now())
+    updated_at DateTime @updatedAt
+    post       Post     @relation(fields: [post_id], references: [id], onDelete: Cascade)
+    user       User?    @relation(fields: [user_id], references: [id])
 
-  @@index([post_id])
-  @@index([user_id])
+    @@index([post_id])
+    @@index([user_id])
 }
 
 model Follow {
-  id          Int      @id @default(autoincrement())
-  follow_id   String   @unique
-  user_id     Int
-  follower_id Int
-  created_at  DateTime @default(now())
-  updated_at  DateTime @updatedAt
-  followers   User     @relation("Followers", fields: [follower_id], references: [id], onDelete: Cascade)
-  users       User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+    id          Int      @id @default(autoincrement())
+    follow_id   String   @unique
+    user_id     Int
+    follower_id Int
+    created_at  DateTime @default(now())
+    updated_at  DateTime @updatedAt
+    followers   User     @relation("Followers", fields: [follower_id], references: [id], onDelete: Cascade)
+    users       User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
 
-  @@index([user_id])
+    @@index([user_id])
 }
 
 model Subscribers {
-  id            Int      @id @default(autoincrement())
-  sub_id        String
-  user_id       Int
-  subscriber_id Int
-  created_at    DateTime @default(now())
-  updated_at    DateTime @updatedAt
-  status        String   @default("active")
-  subscriber    User     @relation("Subscribers", fields: [subscriber_id], references: [id], onDelete: Cascade)
-  user          User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+    id            Int      @id @default(autoincrement())
+    sub_id        String
+    user_id       Int
+    subscriber_id Int
+    created_at    DateTime @default(now())
+    updated_at    DateTime @updatedAt
+    status        String   @default("active")
+    subscriber    User     @relation("Subscribers", fields: [subscriber_id], references: [id], onDelete: Cascade)
+    user          User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
 
-  @@index([user_id])
+    @@index([user_id])
 }
 
 model LiveStream {
-  id                Int                      @id @default(autoincrement())
-  user_id           String
-  username          String
-  stream_id         String                   @unique
-  stream_token      String
-  user_stream_id    String
-  title             String
-  stream_call_id    String
-  stream_status     String                   @default("offline")
-  created_at        DateTime                 @default(now())
-  updated_at        DateTime                 @updatedAt
-  user              User                     @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
-  LiveStreamComment LiveStreamComment[]
-  LiveStreamLike    LiveStreamLike[]
-  participants      LiveStreamParticipants[]
-  LiveStreamView    LiveStreamView[]
-  ReportLive        ReportLive[]
+    id                Int                      @id @default(autoincrement())
+    user_id           String
+    username          String
+    stream_id         String                   @unique
+    stream_token      String
+    user_stream_id    String
+    title             String
+    stream_call_id    String
+    stream_status     String                   @default("offline")
+    created_at        DateTime                 @default(now())
+    updated_at        DateTime                 @updatedAt
+    user              User                     @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
+    LiveStreamComment LiveStreamComment[]
+    LiveStreamLike    LiveStreamLike[]
+    participants      LiveStreamParticipants[]
+    LiveStreamView    LiveStreamView[]
+    ReportLive        ReportLive[]
 
-  @@index([user_id])
+    @@index([user_id])
 }
 
 model LiveStreamParticipants {
-  id             Int         @id @default(autoincrement())
-  stream_id      String
-  host_id        String
-  participant_id String
-  created_at     DateTime    @default(now())
-  updated_at     DateTime    @updatedAt
-  liveStreamId   Int?
-  LiveStream     LiveStream? @relation(fields: [liveStreamId], references: [id])
+    id             Int         @id @default(autoincrement())
+    stream_id      String
+    host_id        String
+    participant_id String
+    created_at     DateTime    @default(now())
+    updated_at     DateTime    @updatedAt
+    liveStreamId   Int?
+    LiveStream     LiveStream? @relation(fields: [liveStreamId], references: [id])
 }
 
 model LiveStreamComment {
-  id              Int        @id @default(autoincrement())
-  live_comment_id String
-  user_id         Int
-  live_id         Int
-  comment         String
-  created_at      DateTime   @default(now())
-  updated_at      DateTime   @updatedAt
-  live            LiveStream @relation(fields: [live_id], references: [id], onDelete: Cascade)
-  user            User       @relation(fields: [user_id], references: [id], onDelete: Cascade)
+    id              Int        @id @default(autoincrement())
+    live_comment_id String
+    user_id         Int
+    live_id         Int
+    comment         String
+    created_at      DateTime   @default(now())
+    updated_at      DateTime   @updatedAt
+    live            LiveStream @relation(fields: [live_id], references: [id], onDelete: Cascade)
+    user            User       @relation(fields: [user_id], references: [id], onDelete: Cascade)
 
-  @@index([live_id])
-  @@index([user_id])
+    @@index([live_id])
+    @@index([user_id])
 }
 
 model LiveStreamLike {
-  id           Int        @id @default(autoincrement())
-  live_like_id String
-  user_id      Int
-  live_id      Int
-  created_at   DateTime   @default(now())
-  updated_at   DateTime   @updatedAt
-  live         LiveStream @relation(fields: [live_id], references: [id], onDelete: Cascade)
-  user         User       @relation(fields: [user_id], references: [id], onDelete: Cascade)
+    id           Int        @id @default(autoincrement())
+    live_like_id String
+    user_id      Int
+    live_id      Int
+    created_at   DateTime   @default(now())
+    updated_at   DateTime   @updatedAt
+    live         LiveStream @relation(fields: [live_id], references: [id], onDelete: Cascade)
+    user         User       @relation(fields: [user_id], references: [id], onDelete: Cascade)
 
-  @@index([live_id])
-  @@index([user_id])
+    @@index([live_id])
+    @@index([user_id])
 }
 
 model LiveStreamView {
-  id         Int        @id @default(autoincrement())
-  user_id    Int
-  live_id    Int
-  created_at DateTime   @default(now())
-  updated_at DateTime   @updatedAt
-  live       LiveStream @relation(fields: [live_id], references: [id], onDelete: Cascade)
-  user       User       @relation(fields: [user_id], references: [id], onDelete: Cascade)
+    id         Int        @id @default(autoincrement())
+    user_id    Int
+    live_id    Int
+    created_at DateTime   @default(now())
+    updated_at DateTime   @updatedAt
+    live       LiveStream @relation(fields: [live_id], references: [id], onDelete: Cascade)
+    user       User       @relation(fields: [user_id], references: [id], onDelete: Cascade)
 
-  @@index([user_id])
+    @@index([user_id])
 }
 
 model Settings {
-  id                    Int      @id @default(autoincrement())
-  user_id               Int      @unique
-  price_per_message     Float    @default(0)
-  subscription_active   Boolean  @default(false)
-  enable_free_message   Boolean
-  subscription_price    Float
-  subscription_type     String
-  subscription_duration String
-  two_factor_auth       Boolean  @default(false)
-  instagram_url         String?
-  twitter_url           String?
-  facebook_url          String?
-  snapchat_url          String?
-  tiktok_url            String?
-  telegram_url          String?
-  youtube_url           String?
-  watermark_uid         String?
-  created_at            DateTime @default(now())
-  updated_at            DateTime @updatedAt
-  user                  User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+    id                    Int      @id @default(autoincrement())
+    user_id               Int      @unique
+    price_per_message     Float    @default(0)
+    subscription_active   Boolean  @default(false)
+    enable_free_message   Boolean
+    subscription_price    Float
+    subscription_type     String
+    subscription_duration String
+    two_factor_auth       Boolean  @default(false)
+    instagram_url         String?
+    twitter_url           String?
+    facebook_url          String?
+    snapchat_url          String?
+    tiktok_url            String?
+    telegram_url          String?
+    youtube_url           String?
+    watermark_uid         String?
+    created_at            DateTime @default(now())
+    updated_at            DateTime @updatedAt
+    user                  User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
 
-  @@index([user_id])
+    @@index([user_id])
 }
 
 model Notifications {
-  id              Int               @id @default(autoincrement())
-  notification_id String
-  user_id         Int
-  message         String
-  action          NotificationTypes
-  url             String
-  read            Boolean           @default(false)
-  created_at      DateTime          @default(now())
-  updated_at      DateTime          @updatedAt
-  user            User              @relation(fields: [user_id], references: [id], onDelete: Cascade)
+    id              Int               @id @default(autoincrement())
+    notification_id String
+    user_id         Int
+    message         String
+    action          NotificationTypes
+    url             String
+    read            Boolean           @default(false)
+    created_at      DateTime          @default(now())
+    updated_at      DateTime          @updatedAt
+    user            User              @relation(fields: [user_id], references: [id], onDelete: Cascade)
 
-  @@index([user_id])
+    @@index([user_id])
 }
 
 model ReportUser {
-  id          Int      @id @default(autoincrement())
-  report_id   String
-  user_id     Int
-  reported_id String
-  report_type String
-  report      String
-  created_at  DateTime @default(now())
-  updated_at  DateTime @updatedAt
-  reportUser  User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+    id          Int      @id @default(autoincrement())
+    report_id   String
+    user_id     Int
+    reported_id String
+    report_type String
+    report      String
+    created_at  DateTime @default(now())
+    updated_at  DateTime @updatedAt
+    reportUser  User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
 
-  @@index([user_id])
+    @@index([user_id])
 }
 
 model ReportPost {
-  id          Int      @id @default(autoincrement())
-  report_id   String
-  user_id     Int
-  post_id     Int
-  report_type String
-  report      String
-  created_at  DateTime @default(now())
-  updated_at  DateTime @updatedAt
-  post        Post     @relation(fields: [post_id], references: [id], onDelete: Cascade)
-  user        User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+    id          Int      @id @default(autoincrement())
+    report_id   String
+    user_id     Int
+    post_id     Int
+    report_type String
+    report      String
+    created_at  DateTime @default(now())
+    updated_at  DateTime @updatedAt
+    post        Post     @relation(fields: [post_id], references: [id], onDelete: Cascade)
+    user        User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
 
-  @@index([post_id])
-  @@index([user_id])
+    @@index([post_id])
+    @@index([user_id])
 }
 
 model ReportComment {
-  id          Int         @id @default(autoincrement())
-  report_id   String
-  user_id     Int
-  comment_id  Int
-  report_type String
-  report      String
-  created_at  DateTime    @default(now())
-  updated_at  DateTime    @updatedAt
-  comment     PostComment @relation(fields: [comment_id], references: [id], onDelete: Cascade)
-  user        User        @relation(fields: [user_id], references: [id], onDelete: Cascade)
+    id          Int         @id @default(autoincrement())
+    report_id   String
+    user_id     Int
+    comment_id  Int
+    report_type String
+    report      String
+    created_at  DateTime    @default(now())
+    updated_at  DateTime    @updatedAt
+    comment     PostComment @relation(fields: [comment_id], references: [id], onDelete: Cascade)
+    user        User        @relation(fields: [user_id], references: [id], onDelete: Cascade)
 
-  @@index([comment_id])
-  @@index([user_id])
+    @@index([comment_id])
+    @@index([user_id])
 }
 
 model ReportLive {
-  id          Int        @id @default(autoincrement())
-  report_id   String
-  user_id     Int
-  live_id     Int
-  report_type String
-  report      String
-  created_at  DateTime   @default(now())
-  updated_at  DateTime   @updatedAt
-  comment     LiveStream @relation(fields: [live_id], references: [id], onDelete: Cascade)
-  user        User       @relation(fields: [user_id], references: [id], onDelete: Cascade)
+    id          Int        @id @default(autoincrement())
+    report_id   String
+    user_id     Int
+    live_id     Int
+    report_type String
+    report      String
+    created_at  DateTime   @default(now())
+    updated_at  DateTime   @updatedAt
+    comment     LiveStream @relation(fields: [live_id], references: [id], onDelete: Cascade)
+    user        User       @relation(fields: [user_id], references: [id], onDelete: Cascade)
 
-  @@index([live_id])
-  @@index([user_id])
+    @@index([live_id])
+    @@index([user_id])
 }
 
 model ReportMessage {
-  id          Int      @id @default(autoincrement())
-  report_id   String
-  user_id     Int
-  message_id  Int
-  report_type String
-  report      String
-  created_at  DateTime @default(now())
-  updated_at  DateTime @updatedAt
-  message     Messages @relation(fields: [message_id], references: [id], onDelete: Cascade)
-  user        User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+    id          Int      @id @default(autoincrement())
+    report_id   String
+    user_id     Int
+    message_id  Int
+    report_type String
+    report      String
+    created_at  DateTime @default(now())
+    updated_at  DateTime @updatedAt
+    message     Messages @relation(fields: [message_id], references: [id], onDelete: Cascade)
+    user        User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
 
-  @@index([message_id])
-  @@index([user_id])
+    @@index([message_id])
+    @@index([user_id])
 }
 
 model UserPoints {
-  id                 Int                  @id @default(autoincrement())
-  user_id            Int                  @unique
-  points             Int
-  conversion_rate    Float
-  created_at         DateTime             @default(now())
-  updated_at         DateTime             @updatedAt
-  user               User                 @relation(fields: [user_id], references: [id], onDelete: Cascade)
-  UserPointsPurchase UserPointsPurchase[]
+    id                 Int                  @id @default(autoincrement())
+    user_id            Int                  @unique
+    points             Int
+    conversion_rate    Float
+    created_at         DateTime             @default(now())
+    updated_at         DateTime             @updatedAt
+    user               User                 @relation(fields: [user_id], references: [id], onDelete: Cascade)
+    UserPointsPurchase UserPointsPurchase[]
 }
 
 model PointConversionRateUsers {
-  id                    Int                  @id @default(autoincrement())
-  user_id               Int
-  pointConversionRateId Int?
-  PointConversionRate   PointConversionRate? @relation(fields: [pointConversionRateId], references: [id])
-  user                  User                 @relation(fields: [user_id], references: [id], onDelete: Cascade)
+    id                    Int                  @id @default(autoincrement())
+    user_id               Int
+    pointConversionRateId Int?
+    PointConversionRate   PointConversionRate? @relation(fields: [pointConversionRateId], references: [id])
+    user                  User                 @relation(fields: [user_id], references: [id], onDelete: Cascade)
 }
 
 model PointConversionRate {
-  id                       Int                        @id @default(autoincrement())
-  amount                   Int?
-  points                   Int?
-  pointConversionRateUsers PointConversionRateUsers[]
+    id                       Int                        @id @default(autoincrement())
+    amount                   Int?
+    points                   Int?
+    pointConversionRateUsers PointConversionRateUsers[]
 }
 
 model UserWallet {
-  id              Int               @id @default(autoincrement())
-  user_id         Int               @unique
-  wallet_id       String
-  balance         Float
-  created_at      DateTime          @default(now())
-  updated_at      DateTime          @updatedAt
-  UserTransaction UserTransaction[]
-  user            User              @relation(fields: [user_id], references: [id], onDelete: Cascade)
+    id              Int               @id @default(autoincrement())
+    user_id         Int               @unique
+    wallet_id       String
+    balance         Float
+    created_at      DateTime          @default(now())
+    updated_at      DateTime          @updatedAt
+    UserTransaction UserTransaction[]
+    user            User              @relation(fields: [user_id], references: [id], onDelete: Cascade)
 
-  @@index([user_id])
+    @@index([user_id])
 }
 
 model UserTransaction {
-  id                  Int             @id @default(autoincrement())
-  transaction_id      String
-  user_id             Int
-  wallet_id           Int
-  amount              Float
-  transaction_message String
-  transaction         String
-  transaction_type    TransactionType
-  currency            String?
-  exchange_rate       Float?
-  usd_equivalent      Float?
-  current_buy_value   Float           @default(0)
-  created_at          DateTime        @default(now())
-  updated_at          DateTime        @updatedAt
-  user                User            @relation(fields: [user_id], references: [id], onDelete: Cascade)
-  UserWallet          UserWallet      @relation(fields: [wallet_id], references: [id], onDelete: Cascade)
+    id                  Int             @id @default(autoincrement())
+    transaction_id      String
+    user_id             Int
+    wallet_id           Int
+    amount              Float
+    transaction_message String
+    transaction         String
+    transaction_type    TransactionType
+    currency            String?
+    exchange_rate       Float?
+    usd_equivalent      Float?
+    current_buy_value   Float           @default(0)
+    created_at          DateTime        @default(now())
+    updated_at          DateTime        @updatedAt
+    user                User            @relation(fields: [user_id], references: [id], onDelete: Cascade)
+    UserWallet          UserWallet      @relation(fields: [wallet_id], references: [id], onDelete: Cascade)
 
-  @@index([user_id])
-  @@index([wallet_id])
+    @@index([user_id])
+    @@index([wallet_id])
 }
 
 model ModelSubscriptionPack {
-  id                    Int                     @id @default(autoincrement())
-  subscription_id       String
-  created_at            DateTime                @default(now())
-  updated_at            DateTime                @updatedAt
-  user_id               Int                     @unique
-  user                  User                    @relation(fields: [user_id], references: [id], onDelete: Cascade)
-  ModelSubscriptionTier ModelSubscriptionTier[]
+    id                    Int                     @id @default(autoincrement())
+    subscription_id       String
+    created_at            DateTime                @default(now())
+    updated_at            DateTime                @updatedAt
+    user_id               Int                     @unique
+    user                  User                    @relation(fields: [user_id], references: [id], onDelete: Cascade)
+    ModelSubscriptionTier ModelSubscriptionTier[]
 }
 
 model ModelSubscriptionTier {
-  id                      Int                   @id @default(autoincrement())
-  subscription_id         Int
-  tier_name               String
-  tier_price              Float
-  tier_description        String?
-  tier_duration           String
-  created_at              DateTime              @default(now())
-  updated_at              DateTime              @updatedAt
-  model_subscription_pack ModelSubscriptionPack @relation(fields: [subscription_id], references: [id], onDelete: Cascade)
+    id                      Int                   @id @default(autoincrement())
+    subscription_id         Int
+    tier_name               String
+    tier_price              Float
+    tier_description        String?
+    tier_duration           String
+    created_at              DateTime              @default(now())
+    updated_at              DateTime              @updatedAt
+    model_subscription_pack ModelSubscriptionPack @relation(fields: [subscription_id], references: [id], onDelete: Cascade)
 }
 
 model UserSubscriptionCurrent {
-  id              Int      @id @default(autoincrement())
-  subscription_id String
-  user_id         Int
-  model_id        Int
-  subscription    String
-  created_at      DateTime @default(now())
-  updated_at      DateTime @updatedAt
-  userId          Int?
-  ends_at         BigInt
-  model           User     @relation("ModelCurrentSubscriptions", fields: [model_id], references: [id], onDelete: Cascade)
-  user            User     @relation("UserCurrentSubscription", fields: [user_id], references: [id], onDelete: Cascade)
+    id              Int      @id @default(autoincrement())
+    subscription_id String
+    user_id         Int
+    model_id        Int
+    subscription    String
+    created_at      DateTime @default(now())
+    updated_at      DateTime @updatedAt
+    userId          Int?
+    ends_at         BigInt
+    model           User     @relation("ModelCurrentSubscriptions", fields: [model_id], references: [id], onDelete: Cascade)
+    user            User     @relation("UserCurrentSubscription", fields: [user_id], references: [id], onDelete: Cascade)
 
-  @@index([user_id])
+    @@index([user_id])
 }
 
 model UserSubscriptionHistory {
-  id              Int      @id @default(autoincrement())
-  subscription_id String
-  user_id         Int
-  model_id        Int
-  subscription    String
-  created_at      DateTime @default(now())
-  updated_at      DateTime @updatedAt
-  model           User     @relation("UserSubscriptionHistory", fields: [model_id], references: [id], onDelete: Cascade)
-  user            User     @relation("UserSubscription", fields: [user_id], references: [id], onDelete: Cascade)
+    id              Int      @id @default(autoincrement())
+    subscription_id String
+    user_id         Int
+    model_id        Int
+    subscription    String
+    created_at      DateTime @default(now())
+    updated_at      DateTime @updatedAt
+    model           User     @relation("UserSubscriptionHistory", fields: [model_id], references: [id], onDelete: Cascade)
+    user            User     @relation("UserSubscription", fields: [user_id], references: [id], onDelete: Cascade)
 }
 
 model UserLocation {
-  id         Int      @id @default(autoincrement())
-  user_id    Int      @unique
-  latitude   Float    @default(0.0)
-  longitude  Float    @default(0.0)
-  city       String?
-  state      String?
-  created_at DateTime @default(now())
-  updated_at DateTime @updatedAt
-  user       User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+    id         Int      @id @default(autoincrement())
+    user_id    Int      @unique
+    latitude   Float    @default(0.0)
+    longitude  Float    @default(0.0)
+    city       String?
+    state      String?
+    created_at DateTime @default(now())
+    updated_at DateTime @updatedAt
+    user       User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
 
-  @@index([user_id])
+    @@index([user_id])
 }
 
 model GlobalPointsBuy {
-  id              Int      @id @default(autoincrement())
-  points_buy_id   String
-  points          Int
-  amount          Float
-  conversion_rate Float
-  currency        String
-  created_at      DateTime @default(now())
-  updated_at      DateTime @updatedAt
+    id              Int      @id @default(autoincrement())
+    points_buy_id   String
+    points          Int
+    amount          Float
+    conversion_rate Float
+    currency        String
+    created_at      DateTime @default(now())
+    updated_at      DateTime @updatedAt
 }
 
 model UserWithdrawalBankAccount {
-  id              Int      @id @default(autoincrement())
-  user_id         Int
-  bank_account_id String
-  bank_name       String
-  account_name    String
-  account_number  String
-  bank_type       String   @default("nuban")
-  routing_number  String
-  bank_country    String
-  created_at      DateTime @default(now())
-  updated_at      DateTime @updatedAt
-  user            User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+    id              Int      @id @default(autoincrement())
+    user_id         Int
+    bank_account_id String
+    bank_name       String
+    account_name    String
+    account_number  String
+    bank_type       String   @default("nuban")
+    routing_number  String
+    bank_country    String
+    created_at      DateTime @default(now())
+    updated_at      DateTime @updatedAt
+    user            User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
 
-  @@index([user_id])
+    @@index([user_id])
 }
 
 model UserPointsPurchase {
-  id                Int         @id @default(autoincrement())
-  purchase_id       String      @unique
-  user_id           Int
-  points            Int         @default(0)
-  amount            Float
-  currency          String?
-  exchange_rate     Float?
-  usd_equivalent    Float?
-  current_buy_value Float       @default(0)
-  success           Boolean     @default(false)
-  created_at        DateTime    @default(now())
-  updated_at        DateTime    @updatedAt
-  userPointsId      Int?
-  UserPoints        UserPoints? @relation(fields: [userPointsId], references: [id])
+    id                Int         @id @default(autoincrement())
+    purchase_id       String      @unique
+    user_id           Int
+    points            Int         @default(0)
+    amount            Float
+    currency          String?
+    exchange_rate     Float?
+    usd_equivalent    Float?
+    current_buy_value Float       @default(0)
+    success           Boolean     @default(false)
+    created_at        DateTime    @default(now())
+    updated_at        DateTime    @updatedAt
+    userPointsId      Int?
+    UserPoints        UserPoints? @relation(fields: [userPointsId], references: [id])
 
-  @@index([userPointsId])
+    @@index([userPointsId])
 }
 
 model UserAttachments {
-  id         Int      @id @default(autoincrement())
-  path       String
-  type       String
-  name       String
-  size       Int
-  extension  String
-  created_at DateTime @default(now())
-  updated_at DateTime @updatedAt
-  user_id    Int
-  user       User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+    id         Int      @id @default(autoincrement())
+    path       String
+    type       String
+    name       String
+    size       Int
+    extension  String
+    created_at DateTime @default(now())
+    updated_at DateTime @updatedAt
+    user_id    Int
+    user       User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
 }
 
 model UserBanks {
-  id                Int                 @id @default(autoincrement())
-  user_id           Int
-  bank_id           String
-  bank_name         String
-  account_name      String
-  account_number    String
-  bank_type         String              @default("nuban")
-  routing_number    String?
-  swift_code        String?
-  bank_country      String
-  recipient_code    String?
-  created_at        DateTime            @default(now())
-  updated_at        DateTime            @updatedAt
-  user              User                @relation(fields: [user_id], references: [id], onDelete: Cascade)
-  WithdrawalRequest WithdrawalRequest[]
+    id                Int                 @id @default(autoincrement())
+    user_id           Int
+    bank_id           String
+    bank_name         String
+    account_name      String
+    account_number    String
+    bank_type         String              @default("nuban")
+    routing_number    String?
+    swift_code        String?
+    bank_country      String
+    recipient_code    String?
+    created_at        DateTime            @default(now())
+    updated_at        DateTime            @updatedAt
+    user              User                @relation(fields: [user_id], references: [id], onDelete: Cascade)
+    WithdrawalRequest WithdrawalRequest[]
 
-  @@index([user_id])
+    @@index([user_id])
 }
 
 model ProductCategory {
-  id          Int       @id @default(autoincrement())
-  name        String
-  description String?
-  created_at  DateTime  @default(now())
-  product     Product[]
+    id          Int       @id @default(autoincrement())
+    name        String
+    description String?
+    created_at  DateTime  @default(now())
+    product     Product[]
 }
 
 model ProductSize {
-  id                 Int                @id @default(autoincrement())
-  name               String
-  description        String?
-  created_at         DateTime           @default(now())
-  Cart               Cart[]
-  OrderItem          OrderItem[]
-  product_size_links ProductSizePivot[]
+    id                 Int                @id @default(autoincrement())
+    name               String
+    description        String?
+    created_at         DateTime           @default(now())
+    Cart               Cart[]
+    OrderItem          OrderItem[]
+    product_size_links ProductSizePivot[]
 }
 
 model Product {
-  id          Int                @id @default(autoincrement())
-  product_id  String             @unique
-  user_id     Int
-  name        String
-  description String?
-  price       Float
-  category_id Int
-  instock     Int
-  Cart        Cart[]
-  OrderItem   OrderItem[]
-  category    ProductCategory    @relation(fields: [category_id], references: [id], onDelete: Cascade)
-  images      ProductImages[]
-  sizes       ProductSizePivot[]
-  WishList    WishList[]
+    id          Int                @id @default(autoincrement())
+    product_id  String             @unique
+    user_id     Int
+    name        String
+    description String?
+    price       Float
+    category_id Int
+    instock     Int
+    Cart        Cart[]
+    OrderItem   OrderItem[]
+    category    ProductCategory    @relation(fields: [category_id], references: [id], onDelete: Cascade)
+    images      ProductImages[]
+    sizes       ProductSizePivot[]
+    WishList    WishList[]
 }
 
 model ProductSizePivot {
-  id         Int         @id @default(autoincrement())
-  product_id Int
-  size_id    Int
-  created_at DateTime    @default(now())
-  updated_at DateTime    @updatedAt
-  product    Product     @relation(fields: [product_id], references: [id], onDelete: Cascade)
-  size       ProductSize @relation(fields: [size_id], references: [id], onDelete: Cascade)
+    id         Int         @id @default(autoincrement())
+    product_id Int
+    size_id    Int
+    created_at DateTime    @default(now())
+    updated_at DateTime    @updatedAt
+    product    Product     @relation(fields: [product_id], references: [id], onDelete: Cascade)
+    size       ProductSize @relation(fields: [size_id], references: [id], onDelete: Cascade)
 }
 
 model ProductImages {
-  id         Int      @id @default(autoincrement())
-  product_id Int
-  image_url  String
-  created_at DateTime @default(now())
-  updated_at DateTime @updatedAt
-  product    Product  @relation(fields: [product_id], references: [id], onDelete: Cascade)
+    id         Int      @id @default(autoincrement())
+    product_id Int
+    image_url  String
+    created_at DateTime @default(now())
+    updated_at DateTime @updatedAt
+    product    Product  @relation(fields: [product_id], references: [id], onDelete: Cascade)
 }
 
 model Cart {
-  id         Int         @id @default(autoincrement())
-  user_id    Int
-  product_id Int
-  quantity   Int
-  size_id    Int
-  created_at DateTime    @default(now())
-  updated_at DateTime    @updatedAt
-  product    Product     @relation(fields: [product_id], references: [id], onDelete: Cascade)
-  size       ProductSize @relation(fields: [size_id], references: [id])
-  user       User        @relation(fields: [user_id], references: [id], onDelete: Cascade)
+    id         Int         @id @default(autoincrement())
+    user_id    Int
+    product_id Int
+    quantity   Int
+    size_id    Int
+    created_at DateTime    @default(now())
+    updated_at DateTime    @updatedAt
+    product    Product     @relation(fields: [product_id], references: [id], onDelete: Cascade)
+    size       ProductSize @relation(fields: [size_id], references: [id])
+    user       User        @relation(fields: [user_id], references: [id], onDelete: Cascade)
 }
 
 model WishList {
-  id         Int      @id @default(autoincrement())
-  user_id    Int
-  product_id Int
-  created_at DateTime @default(now())
-  updated_at DateTime @updatedAt
-  product    Product  @relation(fields: [product_id], references: [id], onDelete: Cascade)
-  user       User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+    id         Int      @id @default(autoincrement())
+    user_id    Int
+    product_id Int
+    created_at DateTime @default(now())
+    updated_at DateTime @updatedAt
+    product    Product  @relation(fields: [product_id], references: [id], onDelete: Cascade)
+    user       User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
 }
 
 model Order {
-  id                Int           @id @default(autoincrement())
-  order_id          String        @unique
-  user_id           Int
-  total_amount      Float
-  created_at        DateTime      @default(now())
-  updated_at        DateTime      @updatedAt
-  payment_reference String?
-  payment_status    PaymentStatus @default(pending)
-  shipping_address  Json
-  status            OrderStatus   @default(pending)
-  user              User          @relation(fields: [user_id], references: [id], onDelete: Cascade)
-  items             OrderItem[]
+    id                Int           @id @default(autoincrement())
+    order_id          String        @unique
+    user_id           Int
+    total_amount      Float
+    created_at        DateTime      @default(now())
+    updated_at        DateTime      @updatedAt
+    payment_reference String?
+    payment_status    PaymentStatus @default(pending)
+    shipping_address  Json
+    status            OrderStatus   @default(pending)
+    user              User          @relation(fields: [user_id], references: [id], onDelete: Cascade)
+    items             OrderItem[]
 
-  @@index([user_id])
-  @@index([status])
-  @@index([payment_reference])
+    @@index([user_id])
+    @@index([status])
+    @@index([payment_reference])
 }
 
 model OrderItem {
-  id         Int          @id @default(autoincrement())
-  order_id   String
-  product_id String
-  quantity   Int
-  price      Float
-  size_id    Int?
-  created_at DateTime     @default(now())
-  updated_at DateTime     @updatedAt
-  order      Order        @relation(fields: [order_id], references: [order_id], onDelete: Cascade)
-  product    Product      @relation(fields: [product_id], references: [product_id], onDelete: Cascade)
-  size       ProductSize? @relation(fields: [size_id], references: [id])
+    id         Int          @id @default(autoincrement())
+    order_id   String
+    product_id String
+    quantity   Int
+    price      Float
+    size_id    Int?
+    created_at DateTime     @default(now())
+    updated_at DateTime     @updatedAt
+    order      Order        @relation(fields: [order_id], references: [order_id], onDelete: Cascade)
+    product    Product      @relation(fields: [product_id], references: [product_id], onDelete: Cascade)
+    size       ProductSize? @relation(fields: [size_id], references: [id])
 
-  @@index([order_id])
-  @@index([product_id])
+    @@index([order_id])
+    @@index([product_id])
 }
 
 model PendingCheckout {
-  id         Int      @id @default(autoincrement())
-  reference  String   @unique
-  user_id    Int
-  order_data Json
-  created_at DateTime @default(now())
-  expires_at DateTime
-  user       User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+    id         Int      @id @default(autoincrement())
+    reference  String   @unique
+    user_id    Int
+    order_data Json
+    created_at DateTime @default(now())
+    expires_at DateTime
+    user       User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
 
-  @@index([reference])
-  @@index([user_id])
-  @@index([expires_at])
+    @@index([reference])
+    @@index([user_id])
+    @@index([expires_at])
 }
 
 model HelpCategory {
-  id           Int            @id @default(autoincrement())
-  name         String
-  description  String?
-  created_at   DateTime       @default(now())
-  HelpArticles HelpArticles[]
+    id           Int            @id @default(autoincrement())
+    name         String
+    description  String?
+    created_at   DateTime       @default(now())
+    HelpArticles HelpArticles[]
 }
 
 model HelpArticles {
-  id           Int          @id @default(autoincrement())
-  article_id   String       @unique
-  category_id  Int
-  title        String
-  content      String
-  created_at   DateTime     @default(now())
-  updated_at   DateTime     @updatedAt
-  HelpCategory HelpCategory @relation(fields: [category_id], references: [id], onDelete: Cascade)
+    id           Int          @id @default(autoincrement())
+    article_id   String       @unique
+    category_id  Int
+    title        String
+    content      String
+    created_at   DateTime     @default(now())
+    updated_at   DateTime     @updatedAt
+    HelpCategory HelpCategory @relation(fields: [category_id], references: [id], onDelete: Cascade)
 }
 
 model HelpContact {
-  id         Int      @id @default(autoincrement())
-  user_id    Int
-  subject    String
-  message    String
-  created_at DateTime @default(now())
-  updated_at DateTime @updatedAt
-  user       User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+    id         Int      @id @default(autoincrement())
+    user_id    Int
+    subject    String
+    message    String
+    created_at DateTime @default(now())
+    updated_at DateTime @updatedAt
+    user       User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
 }
 
 model FAQ {
-  id         Int          @id @default(autoincrement())
-  question   String
-  created_at DateTime     @default(now())
-  FAQAnswers FAQAnswers[]
+    id         Int          @id @default(autoincrement())
+    question   String
+    created_at DateTime     @default(now())
+    FAQAnswers FAQAnswers[]
 }
 
 model FAQAnswers {
-  id         Int      @id @default(autoincrement())
-  faq_id     Int
-  answer     String
-  created_at DateTime @default(now())
-  updated_at DateTime @updatedAt
-  FAQ        FAQ      @relation(fields: [faq_id], references: [id], onDelete: Cascade)
+    id         Int      @id @default(autoincrement())
+    faq_id     Int
+    answer     String
+    created_at DateTime @default(now())
+    updated_at DateTime @updatedAt
+    FAQ        FAQ      @relation(fields: [faq_id], references: [id], onDelete: Cascade)
 }
 
 model Tag {
-  id         Int          @id @default(autoincrement())
-  userId     Int
-  messageId  Int
-  created_at DateTime     @default(now())
-  message    GroupMessage @relation(fields: [messageId], references: [id])
-  user       User         @relation(fields: [userId], references: [id])
+    id         Int          @id @default(autoincrement())
+    userId     Int
+    messageId  Int
+    created_at DateTime     @default(now())
+    message    GroupMessage @relation(fields: [messageId], references: [id])
+    user       User         @relation(fields: [userId], references: [id])
 }
 
 model Groups {
-  id          Int       @id @default(autoincrement())
-  adminId     Int
-  created_at  DateTime  @default(now())
-  description String?
-  groupIcon   String?
-  groupType   GroupType @default(PUBLIC)
-  isActive    Boolean   @default(true)
+    id          Int       @id @default(autoincrement())
+    adminId     Int
+    created_at  DateTime  @default(now())
+    description String?
+    groupIcon   String?
+    groupType   GroupType @default(PUBLIC)
+    isActive    Boolean   @default(true)
 
-  name                String
-  updated_at          DateTime                  @updatedAt
-  blockedParticipants BlockedGroupParticipant[]
-  members             GroupMember[]
-  messages            GroupMessage[]
-  settings            GroupSettings?
-  joinRequests        GroupJoinRequest[]
-  invitations         GroupInvitation[]
-  admin               User                      @relation("GroupAdmin", fields: [adminId], references: [id])
+    name                String
+    updated_at          DateTime                  @updatedAt
+    blockedParticipants BlockedGroupParticipant[]
+    members             GroupMember[]
+    messages            GroupMessage[]
+    settings            GroupSettings?
+    joinRequests        GroupJoinRequest[]
+    invitations         GroupInvitation[]
+    admin               User                      @relation("GroupAdmin", fields: [adminId], references: [id])
 
-  @@index([adminId])
-  @@index([groupType])
+    @@index([adminId])
+    @@index([groupType])
 }
 
 model GroupMessage {
-  id               Int                @id @default(autoincrement())
-  content          String?
-  senderId         Int
-  created_at       DateTime           @default(now())
-  editedAt         DateTime?
-  groupId          Int
-  isEdited         Boolean            @default(false)
-  messageType      String             @default("text")
-  replyToId        Int?
-  deliveryStatus   String             @default("sent") // "sent", "delivered", "read"
-  updated_at       DateTime           @updatedAt
-  attachments      GroupAttachment[]
-  group            Groups             @relation(fields: [groupId], references: [id], onDelete: Cascade)
-  replyTo          GroupMessage?      @relation("MessageReplies", fields: [replyToId], references: [id])
-  replies          GroupMessage[]     @relation("MessageReplies")
-  sender           User               @relation(fields: [senderId], references: [id])
-  tags             Tag[]
-  GroupMessageRead GroupMessageRead[]
+    id               Int                @id @default(autoincrement())
+    content          String?
+    senderId         Int
+    created_at       DateTime           @default(now())
+    editedAt         DateTime?
+    groupId          Int
+    isEdited         Boolean            @default(false)
+    messageType      String             @default("text")
+    replyToId        Int?
+    deliveryStatus   String             @default("sent") // "sent", "delivered", "read"
+    updated_at       DateTime           @updatedAt
+    attachments      GroupAttachment[]
+    group            Groups             @relation(fields: [groupId], references: [id], onDelete: Cascade)
+    replyTo          GroupMessage?      @relation("MessageReplies", fields: [replyToId], references: [id])
+    replies          GroupMessage[]     @relation("MessageReplies")
+    sender           User               @relation(fields: [senderId], references: [id])
+    tags             Tag[]
+    GroupMessageRead GroupMessageRead[]
 }
 
 model GroupAttachment {
-  id         Int          @id @default(autoincrement())
-  url        String
-  type       String
-  messageId  Int
-  created_at DateTime     @default(now())
-  fileName   String?
-  fileSize   Int?
-  message    GroupMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+    id         Int          @id @default(autoincrement())
+    url        String
+    type       String
+    messageId  Int
+    created_at DateTime     @default(now())
+    fileName   String?
+    fileSize   Int?
+    message    GroupMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
 }
 
 model GroupSettings {
-  id                  Int       @id @default(autoincrement())
-  allowFileSharing    Boolean   @default(true)
-  allowMediaSharing   Boolean   @default(true)
-  allowMemberInvites  Boolean   @default(true)
-  autoApproveJoinReqs Boolean   @default(true)
-  created_at          DateTime  @default(now())
-  groupId             Int       @unique
-  moderateMessages    Boolean   @default(false)
-  mutedUntil          DateTime?
-  updated_at          DateTime  @updatedAt
-  group               Groups    @relation(fields: [groupId], references: [id], onDelete: Cascade)
+    id                  Int       @id @default(autoincrement())
+    allowFileSharing    Boolean   @default(true)
+    allowMediaSharing   Boolean   @default(true)
+    allowMemberInvites  Boolean   @default(true)
+    autoApproveJoinReqs Boolean   @default(true)
+    created_at          DateTime  @default(now())
+    groupId             Int       @unique
+    moderateMessages    Boolean   @default(false)
+    mutedUntil          DateTime?
+    updated_at          DateTime  @updatedAt
+    group               Groups    @relation(fields: [groupId], references: [id], onDelete: Cascade)
 }
 
 model BlockedGroupParticipant {
-  id         Int      @id @default(autoincrement())
-  blockedBy  Int
-  created_at DateTime @default(now())
-  groupId    Int
-  reason     String?
-  updated_at DateTime @updatedAt
-  userId     Int
-  blocker    User     @relation("BlockedByUser", fields: [blockedBy], references: [id])
-  group      Groups   @relation(fields: [groupId], references: [id], onDelete: Cascade)
-  user       User     @relation("BlockedUser", fields: [userId], references: [id], onDelete: Cascade)
+    id         Int      @id @default(autoincrement())
+    blockedBy  Int
+    created_at DateTime @default(now())
+    groupId    Int
+    reason     String?
+    updated_at DateTime @updatedAt
+    userId     Int
+    blocker    User     @relation("BlockedByUser", fields: [blockedBy], references: [id])
+    group      Groups   @relation(fields: [groupId], references: [id], onDelete: Cascade)
+    user       User     @relation("BlockedUser", fields: [userId], references: [id], onDelete: Cascade)
 
-  @@unique([userId, groupId])
-  @@index([groupId])
+    @@unique([userId, groupId])
+    @@index([groupId])
 }
 
 model GroupMember {
-  id          Int             @id @default(autoincrement())
-  userId      Int
-  groupId     Int
-  role        GroupMemberRole @default(MEMBER)
-  joinedAt    DateTime        @default(now())
-  lastSeen    DateTime?
-  isMuted     Boolean         @default(false)
-  mutedBy     Int?
-  mutedUntil  DateTime?
-  isBlocked   Boolean         @default(false)
-  created_at  DateTime        @default(now())
-  updated_at  DateTime        @updatedAt
-  group       Groups          @relation(fields: [groupId], references: [id], onDelete: Cascade)
-  mutedByUser User?           @relation("MutedByUser", fields: [mutedBy], references: [id])
-  user        User            @relation("GroupMembers", fields: [userId], references: [id], onDelete: Cascade)
+    id          Int             @id @default(autoincrement())
+    userId      Int
+    groupId     Int
+    role        GroupMemberRole @default(MEMBER)
+    joinedAt    DateTime        @default(now())
+    lastSeen    DateTime?
+    isMuted     Boolean         @default(false)
+    mutedBy     Int?
+    mutedUntil  DateTime?
+    isBlocked   Boolean         @default(false)
+    created_at  DateTime        @default(now())
+    updated_at  DateTime        @updatedAt
+    group       Groups          @relation(fields: [groupId], references: [id], onDelete: Cascade)
+    mutedByUser User?           @relation("MutedByUser", fields: [mutedBy], references: [id])
+    user        User            @relation("GroupMembers", fields: [userId], references: [id], onDelete: Cascade)
 
-  @@unique([userId, groupId])
-  @@index([groupId])
-  @@index([userId])
+    @@unique([userId, groupId])
+    @@index([groupId])
+    @@index([userId])
 }
 
 model ActivityLog {
-  id         Int      @id @default(autoincrement())
-  user_id    Int
-  action     String
-  created_at DateTime @default(now())
-  updated_at DateTime @updatedAt
-  user       User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+    id         Int      @id @default(autoincrement())
+    user_id    Int
+    action     String
+    created_at DateTime @default(now())
+    updated_at DateTime @updatedAt
+    user       User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
 }
 
 model LoginHistory {
-  id          Int      @id @default(autoincrement())
-  user_id     Int
-  ip_address  String
-  device      String
-  city        String
-  state       String
-  capital     String
-  country     String
-  countryCode String
-  continent   String
-  longitude   Int
-  latitude    Int
-  location    String
-  created_at  DateTime @default(now())
-  updated_at  DateTime @updatedAt
-  user        User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+    id          Int      @id @default(autoincrement())
+    user_id     Int
+    ip_address  String
+    device      String
+    city        String
+    state       String
+    capital     String
+    country     String
+    countryCode String
+    continent   String
+    longitude   Int
+    latitude    Int
+    location    String
+    created_at  DateTime @default(now())
+    updated_at  DateTime @updatedAt
+    user        User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
 }
 
 model TwoFactorAuth {
-  id         Int      @id @default(autoincrement())
-  user_id    Int
-  code       Int
-  created_at DateTime @default(now())
-  updated_at DateTime @updatedAt
-  user       User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+    id         Int      @id @default(autoincrement())
+    user_id    Int
+    code       Int
+    created_at DateTime @default(now())
+    updated_at DateTime @updatedAt
+    user       User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
 }
 
 model BatchProcessLogs {
-  id       Int    @id @default(autoincrement())
-  job_id   String
-  job_name String @default("Undefined Jobs")
-  job_data String
+    id       Int    @id @default(autoincrement())
+    job_id   String
+    job_name String @default("Undefined Jobs")
+    job_data String
 }
 
 model ResetPasswordRequests {
-  id         Int      @id @default(autoincrement())
-  user_id    Int
-  password   String
-  reset_code String
-  completed  Boolean  @default(false)
-  expires_at DateTime @db.Timestamp(6)
-  created_at DateTime @default(now())
-  updated_at DateTime @updatedAt
-  user       User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+    id         Int      @id @default(autoincrement())
+    user_id    Int
+    password   String
+    reset_code String
+    completed  Boolean  @default(false)
+    expires_at DateTime @db.Timestamp(6)
+    created_at DateTime @default(now())
+    updated_at DateTime @updatedAt
+    user       User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
 }
 
 model WithdrawalRequestCode {
-  id         Int      @id @default(autoincrement())
-  user_id    Int
-  code       Int
-  created_at DateTime @default(now())
-  updated_at DateTime @updatedAt
-  user       User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+    id         Int      @id @default(autoincrement())
+    user_id    Int
+    code       Int
+    created_at DateTime @default(now())
+    updated_at DateTime @updatedAt
+    user       User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
 }
 
 model WithdrawalRequest {
-  id                Int                     @id @default(autoincrement())
-  user_id           Int
-  amount            Int
-  recipient_code    String
-  bank_account_id   Int
-  reason            String                  @default("Paymefans Model Withdrawal")
-  status            WithdrawalRequestStatus
-  created_at        DateTime                @default(now())
-  updated_at        DateTime                @updatedAt
-  reference         String?
-  transfer_code     String?
-  paystack_response Json?
-  bank              UserBanks               @relation(fields: [bank_account_id], references: [id], onDelete: Cascade)
-  user              User                    @relation(fields: [user_id], references: [id], onDelete: Cascade)
+    id                Int                     @id @default(autoincrement())
+    user_id           Int
+    amount            Int
+    recipient_code    String
+    bank_account_id   Int
+    reason            String                  @default("Paymefans Model Withdrawal")
+    status            WithdrawalRequestStatus
+    created_at        DateTime                @default(now())
+    updated_at        DateTime                @updatedAt
+    reference         String?
+    transfer_code     String?
+    paystack_response Json?
+    bank              UserBanks               @relation(fields: [bank_account_id], references: [id], onDelete: Cascade)
+    user              User                    @relation(fields: [user_id], references: [id], onDelete: Cascade)
 }
 
 model PlatformExchangeRate {
-  id         Int      @id @default(autoincrement())
-  name       String   @unique
-  buyValue   Float    @default(0)
-  sellValue  Float    @default(0)
-  rate       Float    @default(0)
-  symbol     String   @default("$")
-  created_at DateTime @default(now())
-  updated_at DateTime @updatedAt
+    id         Int      @id @default(autoincrement())
+    name       String   @unique
+    buyValue   Float    @default(0)
+    sellValue  Float    @default(0)
+    rate       Float    @default(0)
+    symbol     String   @default("$")
+    created_at DateTime @default(now())
+    updated_at DateTime @updatedAt
 }
 
 model OuterPages {
-  id         Int      @id @default(autoincrement())
-  page_id    String   @unique
-  slug       String
-  title      String
-  content    String
-  created_at DateTime @default(now())
-  updated_at DateTime @updatedAt
+    id         Int      @id @default(autoincrement())
+    page_id    String   @unique
+    slug       String
+    title      String
+    content    String
+    created_at DateTime @default(now())
+    updated_at DateTime @updatedAt
 }
 
 model SupportTickets {
-  id                   Int                    @id @default(autoincrement())
-  ticket_id            String                 @unique
-  user_id              Int
-  subject              String
-  message              String
-  status               String                 @default("open")
-  created_at           DateTime               @default(now())
-  updated_at           DateTime               @updatedAt
-  SupportTicketReplies SupportTicketReplies[]
-  user                 User                   @relation(fields: [user_id], references: [id], onDelete: Cascade)
+    id                   Int                    @id @default(autoincrement())
+    ticket_id            String                 @unique
+    user_id              Int
+    subject              String
+    message              String
+    status               String                 @default("open")
+    created_at           DateTime               @default(now())
+    updated_at           DateTime               @updatedAt
+    SupportTicketReplies SupportTicketReplies[]
+    user                 User                   @relation(fields: [user_id], references: [id], onDelete: Cascade)
 }
 
 model SupportTicketReplies {
-  id         Int            @id @default(autoincrement())
-  ticket_id  String
-  user_id    Int
-  message    String
-  created_at DateTime       @default(now())
-  updated_at DateTime       @updatedAt
-  ticket     SupportTickets @relation(fields: [ticket_id], references: [ticket_id], onDelete: Cascade)
-  user       User           @relation(fields: [user_id], references: [id], onDelete: Cascade)
+    id         Int            @id @default(autoincrement())
+    ticket_id  String
+    user_id    Int
+    message    String
+    created_at DateTime       @default(now())
+    updated_at DateTime       @updatedAt
+    ticket     SupportTickets @relation(fields: [ticket_id], references: [ticket_id], onDelete: Cascade)
+    user       User           @relation(fields: [user_id], references: [id], onDelete: Cascade)
 }
 
 model Configurations {
-  id                            Int    @id @default(autoincrement())
-  app_name                      String @map("app_name")
-  app_version                   String @map("app_version")
-  app_url                       String @map("app_url")
-  app_description               String @map("app_description")
-  app_logo                      String @map("app_logo")
-  default_currency              String @default("USD") @map("default_currency")
-  default_rate                  Float  @default(1.0) @map("default_rate")
-  default_symbol                String @default("$") @map("default_symbol")
-  point_conversion_rate         Float  @default(1.0) @map("point_conversion_rate")
-  point_conversion_rate_ngn     Float  @default(1.0) @map("point_conversion_rate_ngn")
-  min_withdrawal_amount         Float  @default(0.0) @map("min_withdrawal_amount")
-  min_withdrawal_amount_ngn     Float  @default(0.0) @map("min_withdrawal_amount_ngn")
-  min_deposit_amount            Float  @default(0.0) @map("min_deposit_amount")
-  min_deposit_amount_ngn        Float  @default(0.0) @map("min_deposit_amount_ngn")
-  default_mode                  String @default("light") @map("default_mode")
-  primary_color                 String @default("#000000") @map("primary_color")
-  secondary_color               String @default("#FFFFFF") @map("secondary_color")
-  accent_color                  String @default("#0000FF") @map("accent_color")
-  home_feed_limit               Int    @default(20) @map("home_feed_limit")
-  personal_profile_limit        Int    @default(10) @map("personal_profile_limit")
-  personal_media_limit          Int    @default(10) @map("personal_media_limit")
-  personal_repost_limit         Int    @default(10) @map("personal_repost_limit")
-  post_page_comment_limit       Int    @default(20) @map("post_page_comment_limit")
-  post_page_comment_reply_limit Int    @default(10) @map("post_page_comment_reply_limit")
-  other_user_profile_limit      Int    @default(10) @map("other_user_profile_limit")
-  other_user_media_limit        Int    @default(10) @map("other_user_media_limit")
-  other_user_repost_limit       Int    @default(10) @map("other_user_repost_limit")
-  notification_limit            Int    @default(20) @map("notification_limit")
-  transaction_limit             Int    @default(20) @map("transaction_limit")
-  model_search_limit            Int    @default(20) @map("model_search_limit")
+    id                            Int    @id @default(autoincrement())
+    app_name                      String @map("app_name")
+    app_version                   String @map("app_version")
+    app_url                       String @map("app_url")
+    app_description               String @map("app_description")
+    app_logo                      String @map("app_logo")
+    default_currency              String @default("USD") @map("default_currency")
+    default_rate                  Float  @default(1.0) @map("default_rate")
+    default_symbol                String @default("$") @map("default_symbol")
+    point_conversion_rate         Float  @default(1.0) @map("point_conversion_rate")
+    point_conversion_rate_ngn     Float  @default(1.0) @map("point_conversion_rate_ngn")
+    min_withdrawal_amount         Float  @default(0.0) @map("min_withdrawal_amount")
+    min_withdrawal_amount_ngn     Float  @default(0.0) @map("min_withdrawal_amount_ngn")
+    min_deposit_amount            Float  @default(0.0) @map("min_deposit_amount")
+    min_deposit_amount_ngn        Float  @default(0.0) @map("min_deposit_amount_ngn")
+    default_mode                  String @default("light") @map("default_mode")
+    primary_color                 String @default("#000000") @map("primary_color")
+    secondary_color               String @default("#FFFFFF") @map("secondary_color")
+    accent_color                  String @default("#0000FF") @map("accent_color")
+    home_feed_limit               Int    @default(20) @map("home_feed_limit")
+    personal_profile_limit        Int    @default(10) @map("personal_profile_limit")
+    personal_media_limit          Int    @default(10) @map("personal_media_limit")
+    personal_repost_limit         Int    @default(10) @map("personal_repost_limit")
+    post_page_comment_limit       Int    @default(20) @map("post_page_comment_limit")
+    post_page_comment_reply_limit Int    @default(10) @map("post_page_comment_reply_limit")
+    other_user_profile_limit      Int    @default(10) @map("other_user_profile_limit")
+    other_user_media_limit        Int    @default(10) @map("other_user_media_limit")
+    other_user_repost_limit       Int    @default(10) @map("other_user_repost_limit")
+    notification_limit            Int    @default(20) @map("notification_limit")
+    transaction_limit             Int    @default(20) @map("transaction_limit")
+    model_search_limit            Int    @default(20) @map("model_search_limit")
 
-  conversation_limit                    Int      @default(20) @map("conversation_limit")
-  message_limit                         Int      @default(50) @map("message_limit")
-  group_message_limit                   Int      @default(50) @map("group_message_limit")
-  group_participant_limit               Int      @default(100) @map("group_participant_limit")
-  group_limit                           Int      @default(20) @map("group_limit")
-  hookup_enabled                        Boolean  @default(false) @map("hookup_enabled")
-  hookup_page_limit                     Int      @default(20) @map("hookup_page_limit")
-  status_limit                          Int      @default(20) @map("status_limit")
-  subscription_limit                    Int      @default(20) @map("subscription_limit")
-  subscribers_limit                     Int      @default(1000) @map("subscribers_limit")
-  active_subscribers_limit              Int      @default(1000) @map("active_subscribers_limit")
-  followers_limit                       Int      @default(1000) @map("followers_limit")
-  upload_media_limit                    Int      @default(10) @map("upload_media_limit")
-  model_upload_media_limit              Int      @default(10) @map("model_upload_media_limit")
-  profile_updated_success_message       String   @default("Profile updated successfully") @map("profile_updated_success_message")
-  profile_updated_error_message         String   @default("Failed to update profile") @map("profile_updated_error_message")
-  profile_updating_message              String   @default("Updating profile...") @map("profile_updating_message")
-  profile_image_updated_success_message String   @default("Profile image updated successfully") @map("profile_image_updated_success_message")
-  profile_image_updated_error_message   String   @default("Failed to update profile image") @map("profile_image_updated_error_message")
-  profile_image_updating_message        String   @default("Updating profile image...") @map("profile_image_updating_message")
-  point_purchase_success_message        String   @default("Points purchased successfully") @map("point_purchase_success_message")
-  point_purchase_error_message          String   @default("Failed to purchase points") @map("point_purchase_error_message")
-  point_purchasing_message              String   @default("Purchasing points...") @map("point_purchasing_message")
-  point_purchase_minimum_message        String   @default("Minimum purchase amount not met") @map("point_purchase_minimum_message")
-  welcome_message_title                 String?  @map("welcome_message_title")
-  welcome_message_content               String?  @map("welcome_message_content")
-  welcome_message_enabled               Boolean  @default(true) @map("welcome_message_enabled")
-  welcome_message_delay                 String   @default("300") @map("welcome_message_delay")
-  created_at                            DateTime @default(now()) @map("created_at")
-  updated_at                            DateTime @updatedAt @map("updated_at")
-  platform_deposit_fee                  Float    @default(0.10) @map("platform_deposit_fee")
-  platform_withdrawal_fee               Float    @default(0.25) @map("platform_withdrawal_fee")
+    conversation_limit                    Int      @default(20) @map("conversation_limit")
+    message_limit                         Int      @default(50) @map("message_limit")
+    group_message_limit                   Int      @default(50) @map("group_message_limit")
+    group_participant_limit               Int      @default(100) @map("group_participant_limit")
+    group_limit                           Int      @default(20) @map("group_limit")
+    hookup_enabled                        Boolean  @default(false) @map("hookup_enabled")
+    hookup_page_limit                     Int      @default(20) @map("hookup_page_limit")
+    status_limit                          Int      @default(20) @map("status_limit")
+    subscription_limit                    Int      @default(20) @map("subscription_limit")
+    subscribers_limit                     Int      @default(1000) @map("subscribers_limit")
+    active_subscribers_limit              Int      @default(1000) @map("active_subscribers_limit")
+    followers_limit                       Int      @default(1000) @map("followers_limit")
+    upload_media_limit                    Int      @default(10) @map("upload_media_limit")
+    model_upload_media_limit              Int      @default(10) @map("model_upload_media_limit")
+    profile_updated_success_message       String   @default("Profile updated successfully") @map("profile_updated_success_message")
+    profile_updated_error_message         String   @default("Failed to update profile") @map("profile_updated_error_message")
+    profile_updating_message              String   @default("Updating profile...") @map("profile_updating_message")
+    profile_image_updated_success_message String   @default("Profile image updated successfully") @map("profile_image_updated_success_message")
+    profile_image_updated_error_message   String   @default("Failed to update profile image") @map("profile_image_updated_error_message")
+    profile_image_updating_message        String   @default("Updating profile image...") @map("profile_image_updating_message")
+    point_purchase_success_message        String   @default("Points purchased successfully") @map("point_purchase_success_message")
+    point_purchase_error_message          String   @default("Failed to purchase points") @map("point_purchase_error_message")
+    point_purchasing_message              String   @default("Purchasing points...") @map("point_purchasing_message")
+    point_purchase_minimum_message        String   @default("Minimum purchase amount not met") @map("point_purchase_minimum_message")
+    welcome_message_title                 String?  @map("welcome_message_title")
+    welcome_message_content               String?  @map("welcome_message_content")
+    welcome_message_enabled               Boolean  @default(true) @map("welcome_message_enabled")
+    welcome_message_delay                 String   @default("300") @map("welcome_message_delay")
+    created_at                            DateTime @default(now()) @map("created_at")
+    updated_at                            DateTime @updatedAt @map("updated_at")
+    platform_deposit_fee                  Float    @default(0.10) @map("platform_deposit_fee")
+    platform_withdrawal_fee               Float    @default(0.25) @map("platform_withdrawal_fee")
 
-  @@index([app_name])
+    @@index([app_name])
 }
 
 model PostGift {
-  id          Int      @id @default(autoincrement())
-  gifter_id   Int
-  receiver_id Int
-  post_id     Int
-  points      Float    @default(0)
-  created_at  DateTime @default(now()) @map("created_at")
-  updated_at  DateTime @updatedAt @map("updated_at")
-  gifter      User     @relation("Gifter", fields: [gifter_id], references: [id], onDelete: Cascade)
-  post        Post     @relation(fields: [post_id], references: [id], onDelete: Cascade)
-  receiver    User     @relation("GiftReceiver", fields: [receiver_id], references: [id], onDelete: Cascade)
+    id          Int      @id @default(autoincrement())
+    gifter_id   Int
+    receiver_id Int
+    post_id     Int
+    points      Float    @default(0)
+    created_at  DateTime @default(now()) @map("created_at")
+    updated_at  DateTime @updatedAt @map("updated_at")
+    gifter      User     @relation("Gifter", fields: [gifter_id], references: [id], onDelete: Cascade)
+    post        Post     @relation(fields: [post_id], references: [id], onDelete: Cascade)
+    receiver    User     @relation("GiftReceiver", fields: [receiver_id], references: [id], onDelete: Cascade)
 }
 
 model UserWithdrawalPin {
-  id         Int      @id @default(autoincrement())
-  user_id    Int
-  pin        String
-  created_at DateTime @default(now())
-  updated_at DateTime @updatedAt
-  user       User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+    id         Int      @id @default(autoincrement())
+    user_id    Int
+    pin        String
+    created_at DateTime @default(now())
+    updated_at DateTime @updatedAt
+    user       User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
 
-  @@index([user_id])
+    @@index([user_id])
 }
 
 model UserBlock {
-  id         Int      @id @default(autoincrement())
-  block_id   String   @unique
-  blocker_id Int
-  blocked_id Int
-  created_at DateTime @default(now())
-  updated_at DateTime @updatedAt
-  blocked    User     @relation("UserBlocked", fields: [blocked_id], references: [id], onDelete: Cascade)
-  blocker    User     @relation("UserBlocker", fields: [blocker_id], references: [id], onDelete: Cascade)
+    id         Int      @id @default(autoincrement())
+    block_id   String   @unique
+    blocker_id Int
+    blocked_id Int
+    created_at DateTime @default(now())
+    updated_at DateTime @updatedAt
+    blocked    User     @relation("UserBlocked", fields: [blocked_id], references: [id], onDelete: Cascade)
+    blocker    User     @relation("UserBlocker", fields: [blocker_id], references: [id], onDelete: Cascade)
 
-  @@unique([blocker_id, blocked_id])
-  @@index([blocker_id])
-  @@index([blocked_id])
+    @@unique([blocker_id, blocked_id])
+    @@index([blocker_id])
+    @@index([blocked_id])
 }
 
 model PurchasedPosts {
-  id          Int      @id @default(autoincrement())
-  user_id     Int
-  post_id     Int
-  purchase_id String   @unique
-  price       Float
-  created_at  DateTime @default(now())
-  updated_at  DateTime @updatedAt
-  post        Post     @relation(fields: [post_id], references: [id], onDelete: Cascade)
-  user        User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+    id          Int      @id @default(autoincrement())
+    user_id     Int
+    post_id     Int
+    purchase_id String   @unique
+    price       Float
+    created_at  DateTime @default(now())
+    updated_at  DateTime @updatedAt
+    post        Post     @relation(fields: [post_id], references: [id], onDelete: Cascade)
+    user        User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
 
-  @@index([user_id])
+    @@index([user_id])
 }
 
 model AutomatedMessage {
-  id           Int                  @id @default(autoincrement())
-  user_id      Int
-  message_type AutomatedMessageType
-  message_text String?
-  attachments  Json?                @default("[]")
-  is_active    Boolean              @default(false)
-  created_at   DateTime             @default(now())
-  updated_at   DateTime             @updatedAt
-  user         User                 @relation(fields: [user_id], references: [id], onDelete: Cascade)
+    id           Int                  @id @default(autoincrement())
+    user_id      Int
+    message_type AutomatedMessageType
+    message_text String?
+    attachments  Json?                @default("[]")
+    is_active    Boolean              @default(false)
+    created_at   DateTime             @default(now())
+    updated_at   DateTime             @updatedAt
+    user         User                 @relation(fields: [user_id], references: [id], onDelete: Cascade)
 
-  @@unique([user_id, message_type])
-  @@index([user_id])
+    @@unique([user_id, message_type])
+    @@index([user_id])
 }
 
 model GroupMessageRead {
-  id        Int          @id @default(autoincrement())
-  messageId Int
-  userId    String
-  readAt    DateTime     @default(now())
-  message   GroupMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
-  user      User         @relation(fields: [userId], references: [user_id], onDelete: Cascade)
+    id        Int          @id @default(autoincrement())
+    messageId Int
+    userId    String
+    readAt    DateTime     @default(now())
+    message   GroupMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+    user      User         @relation(fields: [userId], references: [user_id], onDelete: Cascade)
 
-  @@unique([messageId, userId])
-  @@index([messageId])
-  @@index([userId])
+    @@unique([messageId, userId])
+    @@index([messageId])
+    @@index([userId])
 }
 
 model GroupJoinRequest {
-  id         Int               @id @default(autoincrement())
-  groupId    Int
-  userId     Int
-  message    String?
-  status     JoinRequestStatus @default(PENDING)
-  created_at DateTime          @default(now())
-  updated_at DateTime          @updatedAt
-  group      Groups            @relation(fields: [groupId], references: [id], onDelete: Cascade)
-  user       User              @relation("GroupJoinRequests", fields: [userId], references: [id], onDelete: Cascade)
+    id         Int               @id @default(autoincrement())
+    groupId    Int
+    userId     Int
+    message    String?
+    status     JoinRequestStatus @default(PENDING)
+    created_at DateTime          @default(now())
+    updated_at DateTime          @updatedAt
+    group      Groups            @relation(fields: [groupId], references: [id], onDelete: Cascade)
+    user       User              @relation("GroupJoinRequests", fields: [userId], references: [id], onDelete: Cascade)
 
-  @@unique([groupId, userId])
-  @@index([groupId])
-  @@index([userId])
-  @@index([status])
+    @@unique([groupId, userId])
+    @@index([groupId])
+    @@index([userId])
+    @@index([status])
 }
 
 model GroupInvitation {
-  id         Int              @id @default(autoincrement())
-  groupId    Int
-  inviterId  Int
-  inviteeId  Int
-  message    String?
-  status     InvitationStatus @default(PENDING)
-  expiresAt  DateTime?
-  created_at DateTime         @default(now())
-  updated_at DateTime         @updatedAt
-  group      Groups           @relation(fields: [groupId], references: [id], onDelete: Cascade)
-  inviter    User             @relation("GroupInvitationsSent", fields: [inviterId], references: [id], onDelete: Cascade)
-  invitee    User             @relation("GroupInvitationsReceived", fields: [inviteeId], references: [id], onDelete: Cascade)
+    id         Int              @id @default(autoincrement())
+    groupId    Int
+    inviterId  Int
+    inviteeId  Int
+    message    String?
+    status     InvitationStatus @default(PENDING)
+    expiresAt  DateTime?
+    created_at DateTime         @default(now())
+    updated_at DateTime         @updatedAt
+    group      Groups           @relation(fields: [groupId], references: [id], onDelete: Cascade)
+    inviter    User             @relation("GroupInvitationsSent", fields: [inviterId], references: [id], onDelete: Cascade)
+    invitee    User             @relation("GroupInvitationsReceived", fields: [inviteeId], references: [id], onDelete: Cascade)
 
-  @@unique([groupId, inviteeId])
-  @@index([groupId])
-  @@index([inviterId])
-  @@index([inviteeId])
-  @@index([status])
+    @@unique([groupId, inviteeId])
+    @@index([groupId])
+    @@index([inviterId])
+    @@index([inviteeId])
+    @@index([status])
 }
 
 model Referrals {
-  id          Int      @id @default(autoincrement())
-  user_id     Int
-  referral_id Int
-  code        String
-  created_at  DateTime @default(now())
-  updated_at  DateTime @updatedAt
-  user        User     @relation("Referrer", fields: [user_id], references: [id], onDelete: Cascade)
-  referral    User     @relation("UserReferrals", fields: [referral_id], references: [id], onDelete: Cascade)
+    id          Int      @id @default(autoincrement())
+    user_id     Int
+    referral_id Int
+    code        String
+    created_at  DateTime @default(now())
+    updated_at  DateTime @updatedAt
+    user        User     @relation("Referrer", fields: [user_id], references: [id], onDelete: Cascade)
+    referral    User     @relation("UserReferrals", fields: [referral_id], references: [id], onDelete: Cascade)
 
-  @@index([user_id])
+    @@index([user_id])
 }
 
 model ReferralEarnings {
-  id          Int      @id @default(autoincrement())
-  user_id     Int
-  points      Float
-  description String
-  created_at  DateTime @default(now())
-  updated_at  DateTime @updatedAt
-  user        User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+    id          Int      @id @default(autoincrement())
+    user_id     Int
+    points      Float
+    description String
+    created_at  DateTime @default(now())
+    updated_at  DateTime @updatedAt
+    user        User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
 
-  @@index([user_id])
+    @@index([user_id])
 }
 
 enum WithdrawalRequestStatus {
-  pending
-  processing
-  rejected
-  completed
-  approved
+    pending
+    processing
+    rejected
+    completed
+    approved
 }
 
 enum OrderStatus {
-  pending
-  processing
-  shipped
-  delivered
-  cancelled
+    pending
+    processing
+    shipped
+    delivered
+    cancelled
 }
 
 enum PaymentStatus {
-  pending
-  paid
-  failed
+    pending
+    paid
+    failed
 }
 
 enum UserRole {
-  fan
-  model
-  admin
-  support
+    fan
+    model
+    admin
+    support
 }
 
 enum PostAudience {
-  public
-  private
-  price
-  followers
-  subscribers
+    public
+    private
+    price
+    followers
+    subscribers
 }
 
 enum PostStatus {
-  pending
-  approved
-  rejected
+    pending
+    approved
+    rejected
 }
 
 enum TransactionType {
-  credit
-  debit
-  pending
-  referral
+    credit
+    debit
+    pending
+    referral
 }
 
 enum NotificationTypes {
-  follow
-  like
-  purchase
-  comment
-  repost
-  message
-  live
-  sparkle
-reply
+    follow
+    like
+    purchase
+    comment
+    repost
+    message
+    live
+    sparkle
+    reply
 }
 
 enum VerificationStateEnum {
-  not_started
-  started
-  pending
-  approved
-  rejected
+    not_started
+    started
+    pending
+    approved
+    rejected
 }
 
 enum MediaState {
-  processing
-  completed
-  failed
+    processing
+    completed
+    failed
 }
 
 enum GroupType {
-  PUBLIC
-  PRIVATE
-  SECRET
+    PUBLIC
+    PRIVATE
+    SECRET
 }
 
 enum GroupMemberRole {
-  ADMIN
-  MODERATOR
-  MEMBER
+    ADMIN
+    MODERATOR
+    MEMBER
 }
 
 enum AutomatedMessageType {
-  followers
-  subscribers
+    followers
+    subscribers
 }
 
 enum JoinRequestStatus {
-  PENDING
-  APPROVED
-  REJECTED
+    PENDING
+    APPROVED
+    REJECTED
 }
 
 enum InvitationStatus {
-  PENDING
-  ACCEPTED
-  DECLINED
-  EXPIRED
+    PENDING
+    ACCEPTED
+    DECLINED
+    EXPIRED
 }
 
 model ConversationFreeMessage {
-  id              Int      @id @default(autoincrement())
-  conversation_id String
-  user_id         Int
-  enabled         Boolean  @default(false)
-  created_at      DateTime @default(now())
-  updated_at      DateTime @updatedAt
+    id              Int      @id @default(autoincrement())
+    conversation_id String
+    user_id         Int
+    enabled         Boolean  @default(false)
+    created_at      DateTime @default(now())
+    updated_at      DateTime @updatedAt
 
-  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+    user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
 
-  @@unique([conversation_id, user_id])
-  @@index([conversation_id])
-  @@index([user_id])
+    @@unique([conversation_id, user_id])
+    @@index([conversation_id])
+    @@index([user_id])
 }
