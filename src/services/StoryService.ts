@@ -8,6 +8,7 @@ import type {
   SaveStoryProps,
   SaveStoryResponse,
 } from "types/story";
+import { v4 as uuid } from "uuid";
 
 export default class StoryService {
   // Get Stories from the database
@@ -92,7 +93,7 @@ export default class StoryService {
             acc[userId].stories.push(story);
             acc[userId].storyCount += 1;
             return acc;
-          }, {}),
+          }, {})
         );
 
         return {
@@ -108,7 +109,7 @@ export default class StoryService {
           user_id: { in: userIdsToFetch },
           created_at: {
             gte: new Date(
-              new Date().setHours(0, 0, 0, 0) - 24 * 60 * 60 * 1000,
+              new Date().setHours(0, 0, 0, 0) - 24 * 60 * 60 * 1000
             ),
           },
         },
@@ -146,7 +147,7 @@ export default class StoryService {
           acc[userId].stories.push(story);
           acc[userId].storyCount += 1;
           return acc;
-        }, {}),
+        }, {})
       );
 
       return {
@@ -248,25 +249,38 @@ export default class StoryService {
     try {
       // Save stories
       const story_id = `STR${GenerateUniqueId()}`;
+      // Build media payload ensuring unique media_ids
+      const storyMediaPayload = await Promise.all(
+        stories.map(async (story) => {
+          let mediaId = story.media_id;
+          // Check if a StoryMedia already exists with this media_id
+          const existing = await query.storyMedia.findUnique({
+            where: { media_id: mediaId },
+          });
+
+          if (existing) {
+            mediaId = uuid();
+          }
+
+          return {
+            media_id: mediaId,
+            media_type: story.media_type,
+            filename: story.media_url,
+            media_url: story.media_url,
+            media_state: story.media_state || "completed",
+            duration: story.duration ? Number(story?.duration * 1000) : 5000,
+            story_content: story.caption,
+            captionElements: JSON.stringify(story.captionElements),
+          };
+        })
+      );
+
       const story = await query.userStory.create({
         data: {
           user_id: user.id,
           story_id,
           StoryMedia: {
-            create: stories.map((story) => {
-              return {
-                media_id: story.media_id,
-                media_type: story.media_type,
-                filename: story.media_url,
-                media_url: story.media_url,
-                media_state: story.media_state || "completed",
-                duration: story.duration
-                  ? Number(story?.duration * 1000)
-                  : 5000,
-                story_content: story.caption,
-                captionElements: JSON.stringify(story.captionElements),
-              };
-            }),
+            create: storyMediaPayload,
           },
         },
         include: {

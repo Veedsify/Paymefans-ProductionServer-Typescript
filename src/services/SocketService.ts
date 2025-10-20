@@ -279,6 +279,8 @@ export default class SocketService {
           };
           socket.emit("message-error", errorResponse);
         }
+
+
         return;
       }
 
@@ -355,6 +357,8 @@ export default class SocketService {
                 unreadCount: unreadCountResult.count,
               });
             }
+
+            socket.emit("message-sent", messageResult);
           } catch (error) {
             console.error("❌ Error updating unread count:", error);
           }

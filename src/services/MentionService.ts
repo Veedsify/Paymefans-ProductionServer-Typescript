@@ -224,8 +224,7 @@ export class MentionService {
       const notificationPromises = validMentions.map(async (mention) => {
         const notificationId = `NOT${GenerateUniqueId()}`;
         const message = `<strong><a href="/${mentioner.username}">${mentioner.username}</a></strong> mentioned you in their story`;
-        const url = `${process.env.APP_URL}/stories/${storyMediaId}`;
-
+        const url = `${process.env.APP_URL}/${mentioner.username}`;
         return query.notifications.create({
           data: {
             notification_id: notificationId,
