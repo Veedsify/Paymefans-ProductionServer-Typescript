@@ -45,6 +45,7 @@ const story = express();
 //   StoryController.UploadStory,
 // );
 story.get("/all", Auth, StoryController.GetStories);
+story.get("/user/:username", Auth, StoryController.GetUserStories);
 story.get("/media", Auth, StoryController.GetMyMedia);
 story.post("/save", Auth, StoryController.SaveStory);
 story.post("/presigned-urls", Auth, StoryController.GetPresignedUrls);
