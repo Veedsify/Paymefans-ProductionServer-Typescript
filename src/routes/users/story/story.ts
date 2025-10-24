@@ -38,17 +38,17 @@ const story = express();
 //   },
 // });
 
-story.get("/all", Auth, StoryController.GetStories);
-story.get("/media", Auth, StoryController.GetMyMedia);
-story.post("/save", Auth, StoryController.SaveStory);
-story.post("/presigned-urls", Auth, StoryController.GetPresignedUrls);
-story.post("/complete-upload", Auth, StoryController.CompleteUpload);
 // story.post(
 //   "/upload",
 //   Auth,
 //   storyUpload.array("files[]"),
 //   StoryController.UploadStory,
 // );
+story.get("/all", Auth, StoryController.GetStories);
+story.get("/media", Auth, StoryController.GetMyMedia);
+story.post("/save", Auth, StoryController.SaveStory);
+story.post("/presigned-urls", Auth, StoryController.GetPresignedUrls);
+story.post("/complete-upload", Auth, StoryController.CompleteUpload);
 story.post("/view", Auth, StoryController.ViewStory);
 story.get("/views/:storyMediaId", Auth, StoryController.GetStoryViews);
 story.get("/mentions/:storyMediaId", Auth, StoryController.GetStoryMentions);
