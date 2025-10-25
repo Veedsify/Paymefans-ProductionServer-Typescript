@@ -296,7 +296,9 @@ export default class SocketService {
                     rawFiles: [],
                 };
 
-                io.to(userRoom).emit("message-receiver", messageForReceiver);
+                socket
+                    .to(userRoom)
+                    .emit("message-receiver", messageForReceiver);
 
                 //clear cached conversations
                 const userMessageKey = `user:${user.userId}:conversations:${userRoom}`;
