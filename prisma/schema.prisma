@@ -9,130 +9,130 @@ datasource db {
 }
 
 model User {
-  id                        Int                         @id @default(autoincrement())
-  email                     String                      @unique
-  name                      String
-  password                  String
-  user_id                   String                      @unique
-  username                  String                      @unique
-  admin                     Boolean                     @default(false)
-  role                      UserRole                    @default(fan)
-  is_active                 Boolean                     @default(false)
-  is_verified               Boolean                     @default(false)
-  is_email_verified         Boolean                     @default(false)
-  is_model                  Boolean                     @default(false)
-  email_verify_code         String?
-  email_verify_time         DateTime?
-  is_phone_verified         Boolean                     @default(false)
-  phone                     String                      @unique
-  profile_image             String?                     @default("/site/avatar.png")
-  profile_banner            String?                     @default("/site/banner.png")
-  bio                       String?
-  location                  String?
-  website                   String?
-  country                   String?
-  state                     String?
-  city                      String?
-  zip                       String?
-  currency                  String?                     @default("NGN")
-  post_watermark            String?
-  delete_date               DateTime?
-  total_followers           Int                         @default(0)
-  total_following           Int                         @default(0)
-  total_subscribers         Int                         @default(0)
-  active_status             Boolean                     @default(true)
-  max_post_count            Int                         @default(0)
-  hasPin                    Boolean                     @default(false)
-  created_at                DateTime                    @default(now())
-  updated_at                DateTime                    @updatedAt
-  show_active               Boolean                     @default(true)
-  watermarkEnabled          Boolean                     @default(true)
-  should_delete             Boolean                     @default(false)
-  flags                     Json?                       @default("[]")
-  ActivityLog               ActivityLog[]
-  AutomatedMessage          AutomatedMessage[]
-  blockedUsers              BlockedGroupParticipant[]   @relation("BlockedByUser")
-  blockedFromGroups         BlockedGroupParticipant[]   @relation("BlockedUser")
-  Cart                      Cart[]
-  CommentImpression         CommentImpression[]
-  CommentViews              CommentView[]               @relation("CommentViews")
-  Followers                 Follow[]                    @relation("Followers")
-  Follow                    Follow[]
-  mutedUsers                GroupMember[]               @relation("MutedByUser")
-  groupMemberships          GroupMember[]               @relation("GroupMembers")
-  GroupMessage              GroupMessage[]
-  adminGroups               Groups[]                    @relation("GroupAdmin")
-  HelpContact               HelpContact[]
-  LiveStream                LiveStream[]
-  LiveStreamComment         LiveStreamComment[]
-  LiveStreamLike            LiveStreamLike[]
-  LiveStreamView            LiveStreamView[]
-  LoginHistory              LoginHistory[]
-  receivedMessages          Messages[]                  @relation("MessageReceiver")
-  sentMessages              Messages[]                  @relation("MessageSender")
-  Model                     Model?
-  ModelSubscriptionPack     ModelSubscriptionPack?
-  Notifications             Notifications[]
-  Order                     Order[]
-  PendingCheckout           PendingCheckout[]
-  PointConversionRateUsers  PointConversionRateUsers[]
-  Post                      Post[]
-  PostComment               PostComment[]
-  PostCommentLikes          PostCommentLikes[]
-  Gifter                    PostGift[]                  @relation("Gifter")
-  GiftReciver               PostGift[]                  @relation("GiftReceiver")
-  PostImpression            PostImpression[]
-  PostLike                  PostLike[]
-  PostShared                PostShared[]
-  ProfileViewsReceived      ProfileView[]               @relation("ProfileViewed")
-  ProfileViewsGiven         ProfileView[]               @relation("ProfileViewer")
-  PurchasedPosts            PurchasedPosts[]
-  ReportComment             ReportComment[]
-  ReportLive                ReportLive[]
-  ReportMessage             ReportMessage[]
-  ReportPost                ReportPost[]
-  ReportUser                ReportUser[]
-  ResetPasswordRequests     ResetPasswordRequests[]
-  Settings                  Settings?
-  StoryViews                StoryView[]                 @relation("StoryViews")
-  UserSubscribers           Subscribers[]               @relation("Subscribers")
-  Subscribers               Subscribers[]
-  SupportTicketReplies      SupportTicketReplies[]
-  SupportTickets            SupportTickets[]
-  Tag                       Tag[]
-  TwoFactorAuth             TwoFactorAuth[]
-  UserAttachments           UserAttachments[]
-  UserBanks                 UserBanks[]
-  BlockedUsersList          UserBlock[]                 @relation("UserBlocked")
-  BlockedByUsers            UserBlock[]                 @relation("UserBlocker")
-  UserLocation              UserLocation?
-  UserMedia                 UserMedia[]
-  UserPoints                UserPoints?
-  UserRepost                UserRepost[]
-  UserStory                 UserStory[]
-  ModelSubscriptionCurrent  UserSubscriptionCurrent[]   @relation("ModelCurrentSubscriptions")
-  UserSubscriptionCurrent   UserSubscriptionCurrent[]   @relation("UserCurrentSubscription")
-  UserSubscriptionHistory   UserSubscriptionHistory[]   @relation("UserSubscriptionHistory")
-  UserSubscription          UserSubscriptionHistory[]   @relation("UserSubscription")
-  UserTransaction           UserTransaction[]
-  UserWallet                UserWallet?
-  UserWithdrawalBankAccount UserWithdrawalBankAccount[]
-  UserWithdrawalPin         UserWithdrawalPin[]
-  WishList                  WishList[]
-  WithdrawalRequest         WithdrawalRequest[]
-  WithWithdrawalRequestCode WithdrawalRequestCode[]
-  GroupMessageRead          GroupMessageRead[]
-  GroupJoinRequests         GroupJoinRequest[]          @relation("GroupJoinRequests")
-  GroupInvitationsSent      GroupInvitation[]           @relation("GroupInvitationsSent")
-  GroupInvitationsReceived  GroupInvitation[]           @relation("GroupInvitationsReceived")
-  OldUsernames              OldUsername[]
-  ConversationFreeMessages  ConversationFreeMessage[]
-  ReferralEarnings          ReferralEarnings[]
-  Referrals                 Referrals[]                 @relation("UserReferrals")
-  Referrer                  Referrals[]                 @relation("Referrer")
-  UploadedMedia             UploadedMedia[]
-  StoryMentionsReceived     StoryMention[]              @relation("StoryMentions")
-  StoryMentionsGiven        StoryMention[]              @relation("StoryMentioner")
+    id                        Int                         @id @default(autoincrement())
+    email                     String                      @unique
+    name                      String
+    password                  String
+    user_id                   String                      @unique
+    username                  String                      @unique
+    admin                     Boolean                     @default(false)
+    role                      UserRole                    @default(fan)
+    is_active                 Boolean                     @default(false)
+    is_verified               Boolean                     @default(false)
+    is_email_verified         Boolean                     @default(false)
+    is_model                  Boolean                     @default(false)
+    email_verify_code         String?
+    email_verify_time         DateTime?
+    is_phone_verified         Boolean                     @default(false)
+    phone                     String                      @unique
+    profile_image             String?                     @default("/site/avatar.png")
+    profile_banner            String?                     @default("/site/banner.png")
+    bio                       String?
+    location                  String?
+    website                   String?
+    country                   String?
+    state                     String?
+    city                      String?
+    zip                       String?
+    currency                  String?                     @default("NGN")
+    post_watermark            String?
+    delete_date               DateTime?
+    total_followers           Int                         @default(0)
+    total_following           Int                         @default(0)
+    total_subscribers         Int                         @default(0)
+    active_status             Boolean                     @default(true)
+    max_post_count            Int                         @default(0)
+    hasPin                    Boolean                     @default(false)
+    created_at                DateTime                    @default(now())
+    updated_at                DateTime                    @updatedAt
+    show_active               Boolean                     @default(true)
+    watermarkEnabled          Boolean                     @default(true)
+    should_delete             Boolean                     @default(false)
+    flags                     Json?                       @default("[]")
+    ActivityLog               ActivityLog[]
+    AutomatedMessage          AutomatedMessage[]
+    blockedUsers              BlockedGroupParticipant[]   @relation("BlockedByUser")
+    blockedFromGroups         BlockedGroupParticipant[]   @relation("BlockedUser")
+    Cart                      Cart[]
+    CommentImpression         CommentImpression[]
+    CommentViews              CommentView[]               @relation("CommentViews")
+    Followers                 Follow[]                    @relation("Followers")
+    Follow                    Follow[]
+    mutedUsers                GroupMember[]               @relation("MutedByUser")
+    groupMemberships          GroupMember[]               @relation("GroupMembers")
+    GroupMessage              GroupMessage[]
+    adminGroups               Groups[]                    @relation("GroupAdmin")
+    HelpContact               HelpContact[]
+    LiveStream                LiveStream[]
+    LiveStreamComment         LiveStreamComment[]
+    LiveStreamLike            LiveStreamLike[]
+    LiveStreamView            LiveStreamView[]
+    LoginHistory              LoginHistory[]
+    receivedMessages          Messages[]                  @relation("MessageReceiver")
+    sentMessages              Messages[]                  @relation("MessageSender")
+    Model                     Model?
+    ModelSubscriptionPack     ModelSubscriptionPack?
+    Notifications             Notifications[]
+    Order                     Order[]
+    PendingCheckout           PendingCheckout[]
+    PointConversionRateUsers  PointConversionRateUsers[]
+    Post                      Post[]
+    PostComment               PostComment[]
+    PostCommentLikes          PostCommentLikes[]
+    Gifter                    PostGift[]                  @relation("Gifter")
+    GiftReciver               PostGift[]                  @relation("GiftReceiver")
+    PostImpression            PostImpression[]
+    PostLike                  PostLike[]
+    PostShared                PostShared[]
+    ProfileViewsReceived      ProfileView[]               @relation("ProfileViewed")
+    ProfileViewsGiven         ProfileView[]               @relation("ProfileViewer")
+    PurchasedPosts            PurchasedPosts[]
+    ReportComment             ReportComment[]
+    ReportLive                ReportLive[]
+    ReportMessage             ReportMessage[]
+    ReportPost                ReportPost[]
+    ReportUser                ReportUser[]
+    ResetPasswordRequests     ResetPasswordRequests[]
+    Settings                  Settings?
+    StoryViews                StoryView[]                 @relation("StoryViews")
+    UserSubscribers           Subscribers[]               @relation("Subscribers")
+    Subscribers               Subscribers[]
+    SupportTicketReplies      SupportTicketReplies[]
+    SupportTickets            SupportTickets[]
+    Tag                       Tag[]
+    TwoFactorAuth             TwoFactorAuth[]
+    UserAttachments           UserAttachments[]
+    UserBanks                 UserBanks[]
+    BlockedUsersList          UserBlock[]                 @relation("UserBlocked")
+    BlockedByUsers            UserBlock[]                 @relation("UserBlocker")
+    UserLocation              UserLocation?
+    UserMedia                 UserMedia[]
+    UserPoints                UserPoints?
+    UserRepost                UserRepost[]
+    UserStory                 UserStory[]
+    ModelSubscriptionCurrent  UserSubscriptionCurrent[]   @relation("ModelCurrentSubscriptions")
+    UserSubscriptionCurrent   UserSubscriptionCurrent[]   @relation("UserCurrentSubscription")
+    UserSubscriptionHistory   UserSubscriptionHistory[]   @relation("UserSubscriptionHistory")
+    UserSubscription          UserSubscriptionHistory[]   @relation("UserSubscription")
+    UserTransaction           UserTransaction[]
+    UserWallet                UserWallet?
+    UserWithdrawalBankAccount UserWithdrawalBankAccount[]
+    UserWithdrawalPin         UserWithdrawalPin[]
+    WishList                  WishList[]
+    WithdrawalRequest         WithdrawalRequest[]
+    WithWithdrawalRequestCode WithdrawalRequestCode[]
+    GroupMessageRead          GroupMessageRead[]
+    GroupJoinRequests         GroupJoinRequest[]          @relation("GroupJoinRequests")
+    GroupInvitationsSent      GroupInvitation[]           @relation("GroupInvitationsSent")
+    GroupInvitationsReceived  GroupInvitation[]           @relation("GroupInvitationsReceived")
+    OldUsernames              OldUsername[]
+    ConversationFreeMessages  ConversationFreeMessage[]
+    ReferralEarnings          ReferralEarnings[]
+    Referrals                 Referrals[]                 @relation("UserReferrals")
+    Referrer                  Referrals[]                 @relation("Referrer")
+    UploadedMedia             UploadedMedia[]
+    StoryMentionsReceived     StoryMention[]              @relation("StoryMentions")
+    StoryMentionsGiven        StoryMention[]              @relation("StoryMentioner")
 }
 
 model Participants {
