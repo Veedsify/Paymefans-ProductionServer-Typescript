@@ -28,7 +28,7 @@ async function AppSocket(io: any) {
 
   // Initializing Socket Connection
   io.use((socket: any, next: (err?: Error) => void) => {
-    const username = socket.handshake.headers['x-username'];
+    const username = socket.handshake.headers['X-Username'];
     if (!username || typeof username !== "string") {
       console.error("❌ Missing or invalid username:", socket.id);
       return socket.disconnect(true);
