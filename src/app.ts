@@ -23,7 +23,8 @@ import auth from "@routes/users/auth/auth";
 import Paths from "@utils/paths";
 import query from "@utils/prisma";
 import { config } from "@configs/config";
-const { ADMIN_PANEL_URL, VERIFICATION_URL, APP_URL } = process.env;
+const { ADMIN_PANEL_URL, SERVER_ORIGINAL_URL, VERIFICATION_URL, APP_URL } =
+  process.env;
 
 const app = express();
 const server = http.createServer(app);
@@ -145,8 +146,15 @@ app.use(speedLimiter);
 // Cookie parser
 app.use(cookieParser());
 
+const verificationUrl = VERIFICATION_URL || "http://localhost:3002";
+const adminPanelUrl = ADMIN_PANEL_URL || "http://localhost:8000";
+const appUrl = APP_URL || "http://localhost:3000";
+const serverUrl = SERVER_ORIGINAL_URL || "http://localhost:3009";
+
 // Cors Origins
-const origins = [VERIFICATION_URL!, ADMIN_PANEL_URL!, APP_URL!].filter(Boolean);
+const origins = [verificationUrl, adminPanelUrl, appUrl, serverUrl].filter(
+  Boolean
+);
 
 // CORS configuration
 app.use(
@@ -161,6 +169,18 @@ app.use(
       "Accept",
       "Cache-Control",
       "Last-Event-ID",
+      "X-Requested-With",
+      "If-None-Match",
+      "Origin",
+      "Referer",
+      "User-Agent",
+      "DNT",
+      "Keep-Alive",
+      "X-Forwarded-For",
+      "X-Forwarded-Host",
+      "X-Forwarded-Proto",
+      "X-Real-IP",
+      "X-Client-IP",
     ],
   })
 );
@@ -173,7 +193,6 @@ IoInstance.init(server).then(async (instance) => {
   await AppSocket(instance);
   // Initialize Recommendation Worker Service
   await RecommendationWorkerService.initialize();
-  console.log("✅ Recommendation Worker Service initialized");
 });
 
 // Connect to MongoDB

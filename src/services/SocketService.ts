@@ -31,7 +31,7 @@ export default class SocketService {
 
   static async setUserForSocket(
     socketId: string,
-    user: SocketUser,
+    user: SocketUser
   ): Promise<void> {
     await redis.setex(`socket:${socketId}:user`, 3600, JSON.stringify(user));
     if (user.userId) {
@@ -67,7 +67,7 @@ export default class SocketService {
   static async HandleJoinRoom(
     cb: (value: any) => void,
     socket: Socket,
-    data: any,
+    data: any
   ) {
     cb(data);
     socket.join(data);
@@ -79,7 +79,7 @@ export default class SocketService {
     data: HandleSeenProps,
     socket: Socket,
     userRoom: string,
-    _: any,
+    _: any
   ) {
     const lastMessageSeen = await MessageService.MessagesSeenByReceiver(data);
     if (lastMessageSeen.success) {
@@ -106,7 +106,7 @@ export default class SocketService {
       } catch (error) {
         console.error(
           "❌ Error updating unread count after message seen:",
-          error,
+          error
         );
       }
 
@@ -132,11 +132,11 @@ export default class SocketService {
   // Emit check user is following event to the receiver
   static async HandleCheckUserIsFollowing(
     data: { user_id: number; thisuser_id: number },
-    socket: Socket,
+    socket: Socket
   ) {
     const response = await FollowerService.CheckUserFollowing(
       data.user_id,
-      data.thisuser_id,
+      data.thisuser_id
     );
     if (response.status && "followId" in response) {
       socket.emit("isFollowing", {
@@ -151,13 +151,13 @@ export default class SocketService {
   // Emit follow user event to the receiver
   static async HandleFollowUser(
     data: HandleFollowUserDataProps,
-    socket: Socket,
+    socket: Socket
   ) {
     const response = await FollowerService.FollowUser(
       data.user_id,
       data.profile_id,
       data.status,
-      data.followId,
+      data.followId
     );
     socket.emit("followed", {
       status: response.action === "followed",
@@ -242,7 +242,7 @@ export default class SocketService {
     socket: Socket,
     userRoom: string,
     user: SocketUser,
-    io: any,
+    io: any
   ) {
     try {
       const messageResult = await SaveMessageToDb.SaveMessage(data);
@@ -279,7 +279,6 @@ export default class SocketService {
           };
           socket.emit("message-error", errorResponse);
         }
-
 
         return;
       }
@@ -338,7 +337,7 @@ export default class SocketService {
           // If receiver is active, emit prefetch to them too
           io.to(found.socket_id).emit(
             "prefetch-conversations",
-            "conversations",
+            "conversations"
           );
 
           // Emit real-time unread count update to the receiver
@@ -365,7 +364,7 @@ export default class SocketService {
         }
       } else {
         console.error(
-          "❌ SaveMessageToDb.SaveMessage returned unexpected result",
+          "❌ SaveMessageToDb.SaveMessage returned unexpected result"
         );
         const errorResponse: MessageErrorResponse = {
           message: "An error occurred while sending this message",
@@ -424,8 +423,9 @@ export default class SocketService {
 
   // Handle Restore Notifications
   static async HandleRestoreNotifications(socket: Socket, userId: string) {
-    const notifications =
-      await NotificationService.GetUnreadNotifications(userId);
+    const notifications = await NotificationService.GetUnreadNotifications(
+      userId
+    );
     socket.join(`notifications-${userId}`);
     socket.emit(`notifications-${userId}`, notifications);
   }
@@ -474,13 +474,14 @@ export default class SocketService {
   static async GetCachedConversations(userId: string) {
     let conversations = await redis.get(`conversations:${userId}`);
     if (!conversations) {
-      const userConversations =
-        await ConversationService.GetUserConversations(userId);
+      const userConversations = await ConversationService.GetUserConversations(
+        userId
+      );
       redis.set(
         `conversations:${userId}`,
         JSON.stringify(userConversations),
         "EX",
-        60,
+        60
       );
       return userConversations;
     }

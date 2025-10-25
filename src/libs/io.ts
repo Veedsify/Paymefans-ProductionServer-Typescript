@@ -12,11 +12,13 @@ const {
   VERIFICATION_URL,
   APP_URL,
   LIVESTREAM_PORT,
+  SERVER_ORIGINAL_URL,
 } = process.env;
 
 // Helper to construct full URL if origin is a port number
 const constructOrigin = (origin: string | undefined) => {
-  if (!origin || typeof origin !== "string" || origin.trim() === "") return null;
+  if (!origin || typeof origin !== "string" || origin.trim() === "")
+    return null;
   if (origin.startsWith("http")) return origin;
   const port = parseInt(origin);
   if (!isNaN(port)) return `http://0.0.0.0:${port}`;
@@ -29,15 +31,16 @@ const allowedOrigins = [
   constructOrigin(ADMIN_PANEL_URL),
   constructOrigin(APP_URL),
   constructOrigin(LIVESTREAM_PORT),
+  constructOrigin(SERVER_ORIGINAL_URL),
 ].filter((origin) => origin !== null);
 
 // In development, if no origins are set, allow localhost origins for common ports
 if (allowedOrigins.length === 0 && process.env.NODE_ENV === "development") {
   allowedOrigins.push(
-    "http://0.0.0.0:3000", // Client
-    "http://0.0.0.0:3002", // Verification
-    "http://0.0.0.0:8080", // Admin
-    "http://0.0.0.0:3009", // Server (if needed)
+    "http://localhost:3000", // Client
+    "http://localhost:3002", // Verification
+    "http://localhost:8080", // Admin
+    "http://localhost:3009" // Server (if needed)
   );
 }
 
@@ -46,7 +49,6 @@ export default {
     let adapter;
 
     try {
-      // ✅ Wait for both Redis clients to be ready
       await Promise.all([
         new Promise<void>((resolve, reject) => {
           if (redis.status === "ready") {
@@ -66,21 +68,23 @@ export default {
         }),
       ]);
 
-      // ✅ Now create adapter — clients are guaranteed ready
       adapter = createAdapter(redis, redisSub);
     } catch (error) {
-      console.warn("⚠️ Redis adapter failed, falling back to in-memory:", error);
+      console.warn(
+        "⚠️ Redis adapter failed, falling back to in-memory:",
+        error
+      );
     }
 
     const socketOptions: Partial<ServerOptions> = {
       cors: {
         origin: allowedOrigins,
-        methods: ["GET", "POST"],
+        methods: "*",
         credentials: true,
       },
-      pingTimeout: 60000,     // 60 seconds to respond to ping
-      pingInterval: 25000,    // Send ping every 25s
-      connectTimeout: 45000,  // Initial connection timeout
+      pingTimeout: 60000, // 60 seconds to respond to ping
+      pingInterval: 25000, // Send ping every 25s
+      connectTimeout: 45000, // Initial connection timeout
       ...(adapter && { adapter }),
     };
 

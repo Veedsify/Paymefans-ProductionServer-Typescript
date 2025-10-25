@@ -26,14 +26,16 @@ async function AppSocket(io: any) {
     clearInterval(cleanupInterval);
   });
   io.use((socket: any, next: (err?: Error) => void) => {
-    const username = socket.handshake.query.username as string;
+    const username = decodeURIComponent(
+      socket.handshake.query.username as string
+    );
     if (!username || typeof username !== "string") {
       console.error("❌ Missing or invalid username:", socket.id);
       return next(new Error("Username is required"));
     }
     // Optional: Attach to socket for later use
     socket.username = username;
-    next(); // ✅ allow connection
+    next();
   });
   io.on("connection", (socket: any) => {
     const username = socket.username; // ← already validated and attached
