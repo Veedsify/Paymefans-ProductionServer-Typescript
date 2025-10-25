@@ -25,13 +25,13 @@ async function AppSocket(io: any) {
   process.on("SIGINT", () => {
     clearInterval(cleanupInterval);
   });
+
+  // Initializing Socket Connection
   io.use((socket: any, next: (err?: Error) => void) => {
-    const username = decodeURIComponent(
-      socket.handshake.query.username as string
-    );
+    const username = socket.handshake.headers['x-username'];
     if (!username || typeof username !== "string") {
       console.error("❌ Missing or invalid username:", socket.id);
-      return next(new Error("Username is required"));
+      return socket.disconnect(true);
     }
     // Optional: Attach to socket for later use
     socket.username = username;
@@ -51,6 +51,7 @@ async function AppSocket(io: any) {
       return user;
     };
 
+    // Adding User To A Room
     const AddToUserRoom = async (data: any) => {
       await SocketService.setUserRoom(socket.id, data);
       const user = await SocketService.getUserFromSocket(socket.id);
@@ -345,8 +346,8 @@ async function AppSocket(io: any) {
       try {
         await SocketService.HandleUserInactive(
           user?.username ||
-            username ||
-            (socket.handshake.query.username as string),
+          username ||
+          (socket.handshake.query.username as string),
         );
         EmitActiveUsers(io);
       } catch (error) {

@@ -181,6 +181,7 @@ app.use(
       "X-Forwarded-Proto",
       "X-Real-IP",
       "X-Client-IP",
+      "X-Username"
     ],
   })
 );
