@@ -2,10 +2,10 @@ import { redis } from "@libs/RedisStore";
 import { Socket } from "socket.io";
 import IoInstance from "../libs/io";
 import type {
-  HandleFollowUserDataProps,
-  HandleSeenProps,
-  MessageErrorResponse,
-  SocketUser,
+    HandleFollowUserDataProps,
+    HandleSeenProps,
+    MessageErrorResponse,
+    SocketUser,
 } from "types/socket";
 import MessageService from "./MessageService";
 import ConversationService from "./ConversationService";
@@ -23,503 +23,511 @@ import EmitActiveUsers from "@jobs/EmitActiveUsers";
 // import SupportReview from "../models/SupportReview";
 
 export default class SocketService {
-  // Redis-based user state management utilities
-  static async getUserFromSocket(socketId: string): Promise<SocketUser | null> {
-    const userData = await redis.get(`socket:${socketId}:user`);
-    return userData ? JSON.parse(userData) : null;
-  }
-
-  static async setUserForSocket(
-    socketId: string,
-    user: SocketUser
-  ): Promise<void> {
-    await redis.setex(`socket:${socketId}:user`, 3600, JSON.stringify(user));
-    if (user.userId) {
-      await redis.sadd(`user:${user.userId}:sockets`, socketId);
-      await redis.expire(`user:${user.userId}:sockets`, 3600);
+    // Redis-based user state management utilities
+    static async getUserFromSocket(
+        socketId: string,
+    ): Promise<SocketUser | null> {
+        const userData = await redis.get(`socket:${socketId}:user`);
+        return userData ? JSON.parse(userData) : null;
     }
-  }
 
-  static async getUserRoom(socketId: string): Promise<string | null> {
-    return await redis.get(`socket:${socketId}:room`);
-  }
-
-  static async setUserRoom(socketId: string, roomId: string): Promise<void> {
-    await redis.setex(`socket:${socketId}:room`, 3600, roomId);
-  }
-
-  static async removeSocketState(socketId: string): Promise<void> {
-    const user = await this.getUserFromSocket(socketId);
-    if (user?.userId) {
-      await redis.srem(`user:${user.userId}:sockets`, socketId);
-    }
-    await redis.del(`socket:${socketId}:user`);
-    await redis.del(`socket:${socketId}:room`);
-  }
-
-  static async getUserSockets(userId: string): Promise<string[]> {
-    return await redis.smembers(`user:${userId}:sockets`);
-  }
-
-  // Emit active users to a specific socket
-
-  // Handle join room
-  static async HandleJoinRoom(
-    cb: (value: any) => void,
-    socket: Socket,
-    data: any
-  ) {
-    cb(data);
-    socket.join(data);
-    socket.to(data).emit("joined", { message: "User Joined Room" });
-  }
-
-  // Handle message seen
-  static async HandleMessageSeen(
-    data: HandleSeenProps,
-    socket: Socket,
-    userRoom: string,
-    _: any
-  ) {
-    const lastMessageSeen = await MessageService.MessagesSeenByReceiver(data);
-    if (lastMessageSeen.success) {
-      socket.to(userRoom).emit("message-seen-updated", {
-        messageId: lastMessageSeen.data?.message_id,
-        seen: true,
-      });
-      await redis.del(`conversations:${data.userId}`);
-      await redis.del(`conversations:${data.receiver_id}`);
-
-      // Update unread count for the user who saw the message
-      try {
-        const ConversationService = (await import("./ConversationService"))
-          .default;
-        const unreadCountResult = await ConversationService.GetUnreadCount({
-          user: { user_id: data.userId } as any,
-        });
-
-        if (!unreadCountResult.error && unreadCountResult.count !== undefined) {
-          socket.emit("unread-count-updated", {
-            unreadCount: unreadCountResult.count,
-          });
-        }
-      } catch (error) {
-        console.error(
-          "❌ Error updating unread count after message seen:",
-          error
+    static async setUserForSocket(
+        socketId: string,
+        user: SocketUser,
+    ): Promise<void> {
+        await redis.setex(
+            `socket:${socketId}:user`,
+            3600,
+            JSON.stringify(user),
         );
-      }
-
-      // const conversations = await this.GetCachedConversations(data.userId);
-      // const receiverConversations = await this.GetCachedConversations(data.receiver_id);
-      // io.to(userRoom).emit("prefetch-conversations", "conversations");
-      // socket.to(userRoom).emit("conversations", receiverConversations);
-    }
-  }
-
-  // Handle typing
-  // Emit typing event to other users in the room
-  // Emit typing event to the sender
-  static async HandleTyping(data: any, socket: Socket, userRoom: string) {
-    socket.to(userRoom).emit("sender-typing", {
-      value: true,
-      sender_id: data.sender_id,
-    });
-  }
-
-  // Handle check user is following
-  // Emit check user is following event to the sender
-  // Emit check user is following event to the receiver
-  static async HandleCheckUserIsFollowing(
-    data: { user_id: number; thisuser_id: number },
-    socket: Socket
-  ) {
-    const response = await FollowerService.CheckUserFollowing(
-      data.user_id,
-      data.thisuser_id
-    );
-    if (response.status && "followId" in response) {
-      socket.emit("isFollowing", {
-        status: response.status,
-        followID: response.followId || null,
-      });
-    }
-  }
-
-  // Handle follow user
-  // Emit follow user event to the sender
-  // Emit follow user event to the receiver
-  static async HandleFollowUser(
-    data: HandleFollowUserDataProps,
-    socket: Socket
-  ) {
-    const response = await FollowerService.FollowUser(
-      data.user_id,
-      data.profile_id,
-      data.status,
-      data.followId
-    );
-    socket.emit("followed", {
-      status: response.action === "followed",
-      followID: response.followUuid,
-    });
-  }
-
-  // Join upload room
-  // Join upload room for file uploads
-  static async JoinUploadRoom(socket: Socket, room: string) {
-    socket.join(room);
-    socket.emit("joined-upload-room", { message: "Joined Upload Room" });
-  }
-
-  // Handle post viewed
-  // Emit post viewed event to the sender
-  static async HandlePostViewed(data: { userId: number; postId: number }) {
-    try {
-      let canUpdate: boolean = false;
-      await query.$transaction(async (prisma) => {
-        const postViewed = await prisma.postImpression.findFirst({
-          where: {
-            post_id: data.postId,
-            user_id: data.userId,
-          },
-        });
-        if (!postViewed) {
-          await prisma.postImpression.create({
-            data: {
-              post_id: data.postId,
-              user_id: data.userId,
-            },
-          });
-          canUpdate = true;
+        if (user.userId) {
+            await redis.sadd(`user:${user.userId}:sockets`, socketId);
+            await redis.expire(`user:${user.userId}:sockets`, 3600);
         }
-        return;
-      });
-      if (!canUpdate) return;
-      await query.post.update({
-        where: {
-          id: data.postId,
-        },
-        data: {
-          post_impressions: {
-            increment: 1,
-          },
-        },
-      });
-      return {
-        status: true,
-        message: "Post Viewed",
-        postId: data.postId,
-      };
-    } catch (error) {
-      console.log("Error in HandlePostViewed", error);
-      throw new Error("Error in HandlePostViewed");
     }
-  }
 
-  // Handle notification join
-  // Join notification room for user notifications
-  static async HandleNotificationJoin(userId: string, socket: Socket) {
-    socket.join(`notifications-${userId}`);
-    const unreadNotifications =
-      await NotificationService.GetUnreadNotifications(userId);
-    socket.emit(`notifications-${userId}`, unreadNotifications);
-  }
+    static async getUserRoom(socketId: string): Promise<string | null> {
+        return await redis.get(`socket:${socketId}:room`);
+    }
 
-  // Handle conversations opened
-  // Join conversations room for user conversations
-  // static async HandleConversationsOpened(
-  //   conversationId: string,
-  //   socket: Socket
-  // ) {
-  //   socket.emit("prefetch-conversations", conversationId);
-  // }
-  // Save message to database
+    static async setUserRoom(socketId: string, roomId: string): Promise<void> {
+        await redis.setex(`socket:${socketId}:room`, 3600, roomId);
+    }
 
-  // Handle New Message
-  static async HandleMessage(
-    data: any,
-    socket: Socket,
-    userRoom: string,
-    user: SocketUser,
-    io: any
-  ) {
-    try {
-      const messageResult = await SaveMessageToDb.SaveMessage(data);
-
-      if (
-        messageResult &&
-        "success" in messageResult &&
-        messageResult.success === false
-      ) {
-        // Handle specific error cases
-
-        if (messageResult.error === "INSUFFICIENT_POINTS") {
-          const errorResponse: MessageErrorResponse = {
-            message: messageResult.message || "Insufficient points",
-            error: "INSUFFICIENT_POINTS",
-            currentPoints: messageResult.currentPoints,
-            requiredPoints: messageResult.requiredPoints,
-          };
-          socket.emit("message-error", errorResponse);
-        } else if (messageResult.error === "USERS_NOT_FOUND") {
-          const errorResponse: MessageErrorResponse = {
-            message: "User not found",
-            error: "USERS_NOT_FOUND",
-          };
-          socket.emit("message-error", errorResponse);
-        } else {
-          const errorResponse: MessageErrorResponse = {
-            message:
-              messageResult.message ||
-              "An error occurred while sending this message",
-            error:
-              (messageResult.error as MessageErrorResponse["error"]) ||
-              "UNKNOWN_ERROR",
-          };
-          socket.emit("message-error", errorResponse);
+    static async removeSocketState(socketId: string): Promise<void> {
+        const user = await this.getUserFromSocket(socketId);
+        if (user?.userId) {
+            await redis.srem(`user:${user.userId}:sockets`, socketId);
         }
+        await redis.del(`socket:${socketId}:user`);
+        await redis.del(`socket:${socketId}:room`);
+    }
 
-        return;
-      }
+    static async getUserSockets(userId: string): Promise<string[]> {
+        return await redis.smembers(`user:${userId}:sockets`);
+    }
 
-      if (
-        messageResult &&
-        typeof messageResult === "object" &&
-        !("success" in messageResult)
-      ) {
-        // Emit message without rawFiles (they're only for sender UI)
-        const messageForReceiver = {
-          ...data,
-          rawFiles: [],
-        };
+    // Emit active users to a specific socket
 
-        socket.to(userRoom).emit("message", messageForReceiver);
+    // Handle join room
+    static async HandleJoinRoom(
+        cb: (value: any) => void,
+        socket: Socket,
+        data: any,
+    ) {
+        cb(data);
+        socket.join(data);
+        socket.to(data).emit("joined", { message: "User Joined Room" });
+    }
 
-        //clear cached conversations
-        const userMessageKey = `user:${user.userId}:conversations:${userRoom}`;
-        const receiverMessageKey = `user:${data.receiver_id}:conversations:${userRoom}`;
-        await redis.del(userMessageKey);
-        await redis.del(receiverMessageKey);
-        await redis.del(`conversations:${user.userId}`);
-        await redis.del(`conversations:${data.receiver_id}`);
-
-        // Emit prefetch event to both sender and receiver
-        io.to(socket.id).emit("prefetch-conversations", "conversations");
-
-        // Check If Receiver Is Active
-        const allActiveUsers = await redis.hgetall("activeUsers");
-        const targetUsername = messageResult.receiver.username;
-
-        const foundStr = Object.values(allActiveUsers).find((str) => {
-          const obj = JSON.parse(str);
-          return obj.username === targetUsername;
-        });
-
-        const found = foundStr
-          ? (JSON.parse(foundStr) as { username: string; socket_id: string })
-          : undefined;
-
-        // Send New Message If Receiver Is Not Active
-        if (!found) {
-          const name =
-            messageResult.receiver.name.split(" ")[0] ??
-            messageResult.receiver.name;
-          const subject = `You've received a new message on PayMeFans!`;
-          const link = `${process.env.APP_URL}/chats/${messageResult.conversationsId}`;
-          await EmailService.SendNewMessageEmail({
-            email: messageResult.receiver.email,
-            name: name,
-            subject,
-            link,
-          });
-        } else {
-          // If receiver is active, emit prefetch to them too
-          io.to(found.socket_id).emit(
-            "prefetch-conversations",
-            "conversations"
-          );
-
-          // Emit real-time unread count update to the receiver
-          try {
-            const ConversationService = (await import("./ConversationService"))
-              .default;
-            const unreadCountResult = await ConversationService.GetUnreadCount({
-              user: { user_id: data.receiver_id } as any,
+    // Handle message seen
+    static async HandleMessageSeen(
+        data: HandleSeenProps,
+        socket: Socket,
+        userRoom: string,
+        _: any,
+    ) {
+        const lastMessageSeen =
+            await MessageService.MessagesSeenByReceiver(data);
+        if (lastMessageSeen.success) {
+            socket.to(userRoom).emit("message-seen-updated", {
+                messageId: lastMessageSeen.data?.message_id,
+                seen: true,
             });
+            await redis.del(`conversations:${data.userId}`);
+            await redis.del(`conversations:${data.receiver_id}`);
 
-            if (
-              !unreadCountResult.error &&
-              unreadCountResult.count !== undefined
-            ) {
-              io.to(found.socket_id).emit("unread-count-updated", {
-                unreadCount: unreadCountResult.count,
-              });
+            // Update unread count for the user who saw the message
+            try {
+                const ConversationService = (
+                    await import("./ConversationService")
+                ).default;
+                const unreadCountResult =
+                    await ConversationService.GetUnreadCount({
+                        user: { user_id: data.userId } as any,
+                    });
+
+                if (
+                    !unreadCountResult.error &&
+                    unreadCountResult.count !== undefined
+                ) {
+                    socket.emit("unread-count-updated", {
+                        unreadCount: unreadCountResult.count,
+                    });
+                }
+            } catch (error) {
+                console.error(
+                    "❌ Error updating unread count after message seen:",
+                    error,
+                );
             }
 
-            socket.emit("message-sent", messageResult);
-          } catch (error) {
-            console.error("❌ Error updating unread count:", error);
-          }
+            // const conversations = await this.GetCachedConversations(data.userId);
+            // const receiverConversations = await this.GetCachedConversations(data.receiver_id);
+            // io.to(userRoom).emit("prefetch-conversations", "conversations");
+            // socket.to(userRoom).emit("conversations", receiverConversations);
         }
-      } else {
-        console.error(
-          "❌ SaveMessageToDb.SaveMessage returned unexpected result"
+    }
+
+    // Handle typing
+    // Emit typing event to other users in the room
+    // Emit typing event to the sender
+    static async HandleTyping(data: any, socket: Socket, userRoom: string) {
+        socket.to(userRoom).emit("sender-typing", {
+            value: true,
+            sender_id: data.sender_id,
+        });
+    }
+
+    // Handle check user is following
+    // Emit check user is following event to the sender
+    // Emit check user is following event to the receiver
+    static async HandleCheckUserIsFollowing(
+        data: { user_id: number; thisuser_id: number },
+        socket: Socket,
+    ) {
+        const response = await FollowerService.CheckUserFollowing(
+            data.user_id,
+            data.thisuser_id,
         );
-        const errorResponse: MessageErrorResponse = {
-          message: "An error occurred while sending this message",
-          error: "UNKNOWN_ERROR",
+        if (response.status && "followId" in response) {
+            socket.emit("isFollowing", {
+                status: response.status,
+                followID: response.followId || null,
+            });
+        }
+    }
+
+    // Handle follow user
+    // Emit follow user event to the sender
+    // Emit follow user event to the receiver
+    static async HandleFollowUser(
+        data: HandleFollowUserDataProps,
+        socket: Socket,
+    ) {
+        const response = await FollowerService.FollowUser(
+            data.user_id,
+            data.profile_id,
+            data.status,
+            data.followId,
+        );
+        socket.emit("followed", {
+            status: response.action === "followed",
+            followID: response.followUuid,
+        });
+    }
+
+    // Join upload room
+    // Join upload room for file uploads
+    static async JoinUploadRoom(socket: Socket, room: string) {
+        socket.join(room);
+        socket.emit("joined-upload-room", { message: "Joined Upload Room" });
+    }
+
+    // Handle post viewed
+    // Emit post viewed event to the sender
+    static async HandlePostViewed(data: { userId: number; postId: number }) {
+        try {
+            let canUpdate: boolean = false;
+            await query.$transaction(async (prisma) => {
+                const postViewed = await prisma.postImpression.findFirst({
+                    where: {
+                        post_id: data.postId,
+                        user_id: data.userId,
+                    },
+                });
+                if (!postViewed) {
+                    await prisma.postImpression.create({
+                        data: {
+                            post_id: data.postId,
+                            user_id: data.userId,
+                        },
+                    });
+                    canUpdate = true;
+                }
+                return;
+            });
+            if (!canUpdate) return;
+            await query.post.update({
+                where: {
+                    id: data.postId,
+                },
+                data: {
+                    post_impressions: {
+                        increment: 1,
+                    },
+                },
+            });
+            return {
+                status: true,
+                message: "Post Viewed",
+                postId: data.postId,
+            };
+        } catch (error) {
+            console.log("Error in HandlePostViewed", error);
+            throw new Error("Error in HandlePostViewed");
+        }
+    }
+
+    // Handle notification join
+    // Join notification room for user notifications
+    static async HandleNotificationJoin(userId: string, socket: Socket) {
+        socket.join(`notifications-${userId}`);
+        const unreadNotifications =
+            await NotificationService.GetUnreadNotifications(userId);
+        socket.emit(`notifications-${userId}`, unreadNotifications);
+    }
+
+    // Handle New Message
+    static async HandleMessage(
+        data: any,
+        socket: Socket,
+        userRoom: string,
+        user: SocketUser,
+        io: any,
+    ) {
+        try {
+            const messageResult = await SaveMessageToDb.SaveMessage(data);
+
+            if (
+                messageResult &&
+                "success" in messageResult &&
+                messageResult.success === false
+            ) {
+                // Handle specific error cases
+
+                if (messageResult.error === "INSUFFICIENT_POINTS") {
+                    const errorResponse: MessageErrorResponse = {
+                        message: messageResult.message || "Insufficient points",
+                        error: "INSUFFICIENT_POINTS",
+                        currentPoints: messageResult.currentPoints,
+                        requiredPoints: messageResult.requiredPoints,
+                    };
+                    socket.emit("message-error", errorResponse);
+                } else if (messageResult.error === "USERS_NOT_FOUND") {
+                    const errorResponse: MessageErrorResponse = {
+                        message: "User not found",
+                        error: "USERS_NOT_FOUND",
+                    };
+                    socket.emit("message-error", errorResponse);
+                } else {
+                    const errorResponse: MessageErrorResponse = {
+                        message:
+                            messageResult.message ||
+                            "An error occurred while sending this message",
+                        error:
+                            (messageResult.error as MessageErrorResponse["error"]) ||
+                            "UNKNOWN_ERROR",
+                    };
+                    socket.emit("message-error", errorResponse);
+                }
+
+                return;
+            }
+
+            if (
+                messageResult &&
+                typeof messageResult === "object" &&
+                !("success" in messageResult)
+            ) {
+                // Emit message without rawFiles (they're only for sender UI)
+                const messageForReceiver = {
+                    ...data,
+                    rawFiles: [],
+                };
+
+                io.to(userRoom).emit("message-receiver", messageForReceiver);
+
+                //clear cached conversations
+                const userMessageKey = `user:${user.userId}:conversations:${userRoom}`;
+                const receiverMessageKey = `user:${data.receiver_id}:conversations:${userRoom}`;
+                await redis.del(userMessageKey);
+                await redis.del(receiverMessageKey);
+                await redis.del(`conversations:${user.userId}`);
+                await redis.del(`conversations:${data.receiver_id}`);
+
+                // Emit prefetch event to both sender and receiver
+                io.to(socket.id).emit(
+                    "prefetch-conversations",
+                    "conversations",
+                );
+
+                // Check If Receiver Is Active
+                const allActiveUsers = await redis.hgetall("activeUsers");
+                const targetUsername = messageResult.receiver.username;
+
+                const foundStr = Object.values(allActiveUsers).find((str) => {
+                    const obj = JSON.parse(str);
+                    return obj.username === targetUsername;
+                });
+
+                const found = foundStr
+                    ? (JSON.parse(foundStr) as {
+                          username: string;
+                          socket_id: string;
+                      })
+                    : undefined;
+
+                // Send New Message If Receiver Is Not Active
+                if (!found) {
+                    const name =
+                        messageResult.receiver.name.split(" ")[0] ??
+                        messageResult.receiver.name;
+                    const subject = `You've received a new message on PayMeFans!`;
+                    const link = `${process.env.APP_URL}/chats/${messageResult.conversationsId}`;
+                    await EmailService.SendNewMessageEmail({
+                        email: messageResult.receiver.email,
+                        name: name,
+                        subject,
+                        link,
+                    });
+                } else {
+                    // If receiver is active, emit prefetch to them too
+                    io.to(found.socket_id).emit(
+                        "prefetch-conversations",
+                        "conversations",
+                    );
+
+                    // Emit real-time unread count update to the receiver
+                    try {
+                        const unreadCountResult =
+                            await ConversationService.GetUnreadCount({
+                                user: { user_id: data.receiver_id } as any,
+                            });
+
+                        if (
+                            !unreadCountResult.error &&
+                            unreadCountResult.count !== undefined
+                        ) {
+                            io.to(found.socket_id).emit(
+                                "unread-count-updated",
+                                {
+                                    unreadCount: unreadCountResult.count,
+                                },
+                            );
+                        }
+
+                        socket.emit("message-sent", messageResult);
+                    } catch (error) {
+                        console.error("❌ Error updating unread count:", error);
+                    }
+                }
+            } else {
+                console.error(
+                    "❌ SaveMessageToDb.SaveMessage returned unexpected result",
+                );
+                const errorResponse: MessageErrorResponse = {
+                    message: "An error occurred while sending this message",
+                    error: "UNKNOWN_ERROR",
+                };
+                socket.emit("message-error", errorResponse);
+            }
+        } catch (e) {
+            console.error("❌ Error in HandleMessage:", e);
+            const error = e as Error;
+            console.error("🔍 Error details:", {
+                name: error.name,
+                message: error.message,
+                stack: error.stack,
+            });
+            const errorResponse: MessageErrorResponse = {
+                message: "An error occurred while sending this message",
+                error: "SOCKET_ERROR",
+            };
+            socket.emit("message-error", errorResponse);
+        }
+    }
+
+    // Handle user connected
+    static async HandleUserConnected(socket: Socket, _: SocketUser, data: any) {
+        const updatedUser = {
+            socketId: socket.id,
+            username: data.username,
+            userId: data.userId,
         };
-        socket.emit("message-error", errorResponse);
-      }
-    } catch (e) {
-      console.error("❌ Error in HandleMessage:", e);
-      const error = e as Error;
-      console.error("🔍 Error details:", {
-        name: error.name,
-        message: error.message,
-        stack: error.stack,
-      });
-      const errorResponse: MessageErrorResponse = {
-        message: "An error occurred while sending this message",
-        error: "SOCKET_ERROR",
-      };
-      socket.emit("message-error", errorResponse);
+        await this.setUserForSocket(socket.id, updatedUser);
+        return updatedUser;
     }
-  }
 
-  // Handle user connected
-  static async HandleUserConnected(socket: Socket, _: SocketUser, data: any) {
-    const updatedUser = {
-      socketId: socket.id,
-      username: data.username,
-      userId: data.userId,
-    };
-    await this.setUserForSocket(socket.id, updatedUser);
-    return updatedUser;
-  }
+    // Handle Reconnect To Rooms
+    static async HandleReconnectToRooms(socket: Socket, userId: string) {
+        const roomId = await redis.get(`user:${userId}:room`);
+        if (roomId) {
+            socket.join(roomId);
+            // Set the user room in socket state
+            await this.setUserRoom(socket.id, roomId);
 
-  // Handle Reconnect To Rooms
-  static async HandleReconnectToRooms(socket: Socket, userId: string) {
-    const roomId = await redis.get(`user:${userId}:room`);
-    if (roomId) {
-      socket.join(roomId);
-      // Set the user room in socket state
-      await this.setUserRoom(socket.id, roomId);
-
-      // Try to get existing user data or create basic user
-      let user = await this.getUserFromSocket(socket.id);
-      if (!user) {
-        user = {
-          socketId: socket.id,
-          userId,
-          username: "", // Optional: can pull from database if needed
-        };
-        await this.setUserForSocket(socket.id, user);
-      }
-      await redis.hset(`room:${roomId}`, userId, JSON.stringify(user));
+            // Try to get existing user data or create basic user
+            let user = await this.getUserFromSocket(socket.id);
+            if (!user) {
+                user = {
+                    socketId: socket.id,
+                    userId,
+                    username: "", // Optional: can pull from database if needed
+                };
+                await this.setUserForSocket(socket.id, user);
+            }
+            await redis.hset(`room:${roomId}`, userId, JSON.stringify(user));
+        }
     }
-  }
 
-  // Handle Restore Notifications
-  static async HandleRestoreNotifications(socket: Socket, userId: string) {
-    const notifications = await NotificationService.GetUnreadNotifications(
-      userId
-    );
-    socket.join(`notifications-${userId}`);
-    socket.emit(`notifications-${userId}`, notifications);
-  }
-
-  // Handle Still Active
-  static async HandleStillActive(username: string, socket: Socket) {
-    if (!username) return; // don't do anything if username is falsy
-
-    try {
-      const userKey = `user:${username}`;
-
-      // Fetch user's show_active preference from database
-      const user = await query.user.findFirst({
-        where: { username },
-        select: { show_active: true },
-      });
-
-      const userData = {
-        username,
-        socket_id: socket.id,
-        last_active: Date.now(),
-        show_active: user?.show_active ?? true, // Default to true if user not found
-      };
-
-      await redis.hset("activeUsers", userKey, JSON.stringify(userData));
-      // Emit updated active users when someone updates their activity
-      await EmitActiveUsers(IoInstance.getIO());
-    } catch (error) {
-      console.error("❌ Error in HandleStillActive:", error);
-      // Fallback to basic user data if database query fails
-      const userKey = `user:${username}`;
-      const userData = {
-        username,
-        socket_id: socket.id,
-        last_active: Date.now(),
-        show_active: true, // Default fallback
-      };
-      await redis.hset("activeUsers", userKey, JSON.stringify(userData));
-      await EmitActiveUsers(IoInstance.getIO());
+    // Handle Restore Notifications
+    static async HandleRestoreNotifications(socket: Socket, userId: string) {
+        const notifications =
+            await NotificationService.GetUnreadNotifications(userId);
+        socket.join(`notifications-${userId}`);
+        socket.emit(`notifications-${userId}`, notifications);
     }
-  }
 
-  // Cached Conversations
-  // Get cached conversations
-  // If not found, fetch from database and cache it
-  static async GetCachedConversations(userId: string) {
-    let conversations = await redis.get(`conversations:${userId}`);
-    if (!conversations) {
-      const userConversations = await ConversationService.GetUserConversations(
-        userId
-      );
-      redis.set(
-        `conversations:${userId}`,
-        JSON.stringify(userConversations),
-        "EX",
-        60
-      );
-      return userConversations;
+    // Handle Still Active
+    static async HandleStillActive(username: string, socket: Socket) {
+        if (!username) return; // don't do anything if username is falsy
+
+        try {
+            const userKey = `user:${username}`;
+
+            // Fetch user's show_active preference from database
+            const user = await query.user.findFirst({
+                where: { username },
+                select: { show_active: true },
+            });
+
+            const userData = {
+                username,
+                socket_id: socket.id,
+                last_active: Date.now(),
+                show_active: user?.show_active ?? true, // Default to true if user not found
+            };
+
+            await redis.hset("activeUsers", userKey, JSON.stringify(userData));
+            // Emit updated active users when someone updates their activity
+            await EmitActiveUsers(IoInstance.getIO());
+        } catch (error) {
+            console.error("❌ Error in HandleStillActive:", error);
+            // Fallback to basic user data if database query fails
+            const userKey = `user:${username}`;
+            const userData = {
+                username,
+                socket_id: socket.id,
+                last_active: Date.now(),
+                show_active: true, // Default fallback
+            };
+            await redis.hset("activeUsers", userKey, JSON.stringify(userData));
+            await EmitActiveUsers(IoInstance.getIO());
+        }
     }
-    return JSON.parse(conversations);
-  }
 
-  // Handle user inactive status
-  // Remove user from active users list
-  // Emit updated active users list
-  static async HandleUserInactive(username: string) {
-    const userKey = `user:${username}`;
-    await redis.hdel("activeUsers", userKey);
-  }
-
-  //  Handle user active status
-  // Add user to active users list
-  // Emit updated active users list
-  static async HandleUserActive(username: string, socket: Socket) {
-    try {
-      const userKey = `user:${username}`;
-
-      // Fetch user's show_active preference from database
-      const user = await query.user.findFirst({
-        where: { username },
-        select: { show_active: true },
-      });
-
-      const userData = {
-        username,
-        socket_id: socket.id,
-        last_active: Date.now(),
-        show_active: user?.show_active ?? true, // Default to true if user not found
-      };
-
-      await redis.hdel("activeUsers", userKey);
-      await redis.hset("activeUsers", userKey, JSON.stringify(userData));
-    } catch (error) {
-      console.error("❌ Error in HandleUserActive:", error);
+    // Cached Conversations
+    // Get cached conversations
+    // If not found, fetch from database and cache it
+    static async GetCachedConversations(userId: string) {
+        let conversations = await redis.get(`conversations:${userId}`);
+        if (!conversations) {
+            const userConversations =
+                await ConversationService.GetUserConversations(userId);
+            redis.set(
+                `conversations:${userId}`,
+                JSON.stringify(userConversations),
+                "EX",
+                60,
+            );
+            return userConversations;
+        }
+        return JSON.parse(conversations);
     }
-  }
+
+    // Handle user inactive status
+    // Remove user from active users list
+    // Emit updated active users list
+    static async HandleUserInactive(username: string) {
+        const userKey = `user:${username}`;
+        await redis.hdel("activeUsers", userKey);
+    }
+
+    //  Handle user active status
+    // Add user to active users list
+    // Emit updated active users list
+    static async HandleUserActive(username: string, socket: Socket) {
+        try {
+            const userKey = `user:${username}`;
+
+            // Fetch user's show_active preference from database
+            const user = await query.user.findFirst({
+                where: { username },
+                select: { show_active: true },
+            });
+
+            const userData = {
+                username,
+                socket_id: socket.id,
+                last_active: Date.now(),
+                show_active: user?.show_active ?? true, // Default to true if user not found
+            };
+
+            await redis.hdel("activeUsers", userKey);
+            await redis.hset("activeUsers", userKey, JSON.stringify(userData));
+        } catch (error) {
+            console.error("❌ Error in HandleUserActive:", error);
+        }
+    }
 }
