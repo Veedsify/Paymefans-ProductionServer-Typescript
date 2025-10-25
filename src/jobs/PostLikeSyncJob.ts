@@ -38,12 +38,11 @@ export const schedulePostLikeSync = async () => {
             } as PostLikeSyncJobData,
             {
                 repeat: {
-                    pattern: "*/5 * * * *", // Every 5 minutes
+                    pattern: "*/1 * * * *", // Every 5 minutes
                 },
                 jobId: "sync-all-likes",
-            }
+            },
         );
-
     } catch (error) {
         console.error("❌ Error scheduling post like sync job:", error);
     }
@@ -56,7 +55,6 @@ export const PostLikeSyncWorker = new Worker(
         const { type, postId } = job.data;
 
         try {
-
             switch (type) {
                 case "sync_all_likes":
                     const result = await RedisPostService.syncAllPendingLikes();
@@ -72,7 +70,9 @@ export const PostLikeSyncWorker = new Worker(
 
                 case "sync_single_post":
                     if (!postId) {
-                        throw new Error("Post ID is required for single post sync");
+                        throw new Error(
+                            "Post ID is required for single post sync",
+                        );
                     }
 
                     await RedisPostService.syncPostLikes(postId);
@@ -95,22 +95,16 @@ export const PostLikeSyncWorker = new Worker(
     {
         connection: redis,
         concurrency: 5, // Process up to 5 jobs concurrently
-    }
+    },
 );
 
 // Error handling for the worker
 PostLikeSyncWorker.on("failed", (job, err) => {
-    console.error(
-        `❌ Post like sync job ${job?.id} failed:`,
-        err.message
-    );
+    console.error(`❌ Post like sync job ${job?.id} failed:`, err.message);
 });
 
 PostLikeSyncWorker.on("completed", (job, result) => {
-    console.log(
-        `✅ Post like sync job ${job.id} completed:`,
-        result.message
-    );
+    console.log(`✅ Post like sync job ${job.id} completed:`, result.message);
 });
 
 PostLikeSyncWorker.on("stalled", (jobId) => {
@@ -118,7 +112,10 @@ PostLikeSyncWorker.on("stalled", (jobId) => {
 });
 
 // Utility function to manually trigger sync for a specific post
-export const triggerPostSync = async (postId: string, triggeredBy: string = "manual") => {
+export const triggerPostSync = async (
+    postId: string,
+    triggeredBy: string = "manual",
+) => {
     try {
         const job = await PostLikeSyncQueue.add(
             `sync-post-${postId}`,
@@ -129,7 +126,7 @@ export const triggerPostSync = async (postId: string, triggeredBy: string = "man
             } as PostLikeSyncJobData,
             {
                 priority: 10, // Higher priority than scheduled jobs
-            }
+            },
         );
 
         return job;
@@ -152,7 +149,11 @@ export const getPostLikeSyncStats = async () => {
             active: active.length,
             completed: completed.length,
             failed: failed.length,
-            total: waiting.length + active.length + completed.length + failed.length,
+            total:
+                waiting.length +
+                active.length +
+                completed.length +
+                failed.length,
         };
     } catch (error) {
         console.error("❌ Error getting queue stats:", error);

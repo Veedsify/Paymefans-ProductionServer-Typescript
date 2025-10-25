@@ -20,7 +20,7 @@ export class RedisPostService {
     static async getLikeCount(postId: string): Promise<number> {
         try {
             const key = this.LIKE_COUNT_PREFIX + postId;
-            const count = await redis.get(key);
+            let count = await redis.get(key);
 
             if (count !== null) {
                 // Redis has the data, use it and refresh TTL
@@ -33,6 +33,9 @@ export class RedisPostService {
             if (pendingOps.length > 0) {
                 // Data expired but has pending operations
                 // Need to reconstruct the true count by getting DB state and applying pending ops
+                console.log(
+                    `⚠️ Post ${postId} has pending ops but no Redis data, reconstructing...`,
+                );
                 const post = await query.post.findFirst({
                     where: { post_id: postId },
                     select: {
@@ -76,8 +79,28 @@ export class RedisPostService {
                 return finalLikedUsers.size;
             }
 
-            // No Redis data and no pending operations, get from database but don't cache yet
-            // Caching will happen when user first interacts with the post
+            // No Redis data and no pending operations - initialize from database
+            console.log(
+                `🔄 Redis data missing for post ${postId} like count, initializing...`,
+            );
+            const initSuccess = await this.initializePostFromDB(postId);
+
+            if (initSuccess) {
+                // After successful initialization, check Redis again
+                count = await redis.get(key);
+                if (count !== null) {
+                    await redis.expire(key, 7200);
+                    console.log(
+                        `✅ Retrieved like count from Redis after initialization for post ${postId}`,
+                    );
+                    return parseInt(count, 10);
+                }
+            }
+
+            // Fallback to database if initialization failed
+            console.warn(
+                `⚠️ Could not initialize Redis for post ${postId}, falling back to database`,
+            );
             const post = await query.post.findFirst({
                 where: { post_id: postId },
                 select: { post_likes: true },
@@ -85,7 +108,7 @@ export class RedisPostService {
 
             return post?.post_likes || 0;
         } catch (error) {
-            console.error("Error getting like count:", error);
+            console.error("❌ Error getting like count:", error);
             // Fallback to database
             try {
                 const post = await query.post.findFirst({
@@ -108,7 +131,7 @@ export class RedisPostService {
     ): Promise<boolean> {
         try {
             const key = this.LIKED_USERS_PREFIX + postId;
-            const exists = await redis.exists(key);
+            let exists = await redis.exists(key);
 
             if (exists) {
                 // Redis has data for this post
@@ -118,9 +141,32 @@ export class RedisPostService {
                 return isLiked === 1;
             }
 
-            // No Redis data yet, check database but don't initialize
-            // Initialization happens on first like action
-            // FIXED: Must get post's numeric id first, then check PostLike table
+            // No Redis data yet - initialize from database to ensure consistency
+            console.log(
+                `🔄 Redis data missing for post ${postId}, initializing...`,
+            );
+            const initSuccess = await this.initializePostFromDB(postId);
+
+            if (initSuccess) {
+                // After successful initialization, check Redis again
+                exists = await redis.exists(key);
+                if (exists) {
+                    const isLiked = await redis.sismember(
+                        key,
+                        userId.toString(),
+                    );
+                    await redis.expire(key, 7200);
+                    console.log(
+                        `✅ Checked like status from Redis after initialization for post ${postId}`,
+                    );
+                    return isLiked === 1;
+                }
+            }
+
+            // Fallback to database if initialization failed
+            console.warn(
+                `⚠️ Could not initialize Redis for post ${postId}, falling back to database`,
+            );
             const post = await query.post.findFirst({
                 where: { post_id: postId },
                 select: { id: true },
@@ -136,7 +182,7 @@ export class RedisPostService {
             });
             return !!dbLike;
         } catch (error) {
-            console.error("Error checking user like status:", error);
+            console.error("❌ Error checking user like status:", error);
             // Fallback to database
             try {
                 const post = await query.post.findFirst({
@@ -160,7 +206,7 @@ export class RedisPostService {
     }
 
     /**
-     * Like a post (add like)
+     * Like or unlike a post (toggle)
      */
     static async likePost(
         postId: string,
@@ -171,17 +217,38 @@ export class RedisPostService {
             const likeCountKey = this.LIKE_COUNT_PREFIX + postId;
             const likedUsersKey = this.LIKED_USERS_PREFIX + postId;
 
-            const hasRedisData = await redis.exists(likeCountKey);
+            let hasRedisData = await redis.exists(likeCountKey);
 
             if (!hasRedisData) {
                 // First interaction with this post - initialize from database
-                await this.initializePostFromDB(postId);
+                console.log(`🔄 Initializing post ${postId} from database...`);
+                const initSuccess = await this.initializePostFromDB(postId);
+
+                if (!initSuccess) {
+                    console.error(
+                        `❌ Failed to initialize post ${postId} from database`,
+                    );
+                    return { success: false, isLiked: false, newCount: 0 };
+                }
+
+                // Verify initialization succeeded by checking if data now exists in Redis
+                hasRedisData = await redis.exists(likeCountKey);
+                if (!hasRedisData) {
+                    console.error(
+                        `❌ Post ${postId} initialization completed but data not in Redis`,
+                    );
+                    return { success: false, isLiked: false, newCount: 0 };
+                }
+
+                console.log(
+                    `✅ Post ${postId} successfully initialized in Redis`,
+                );
             }
 
             const pipeline = redis.pipeline();
             const syncPendingKey = this.SYNC_PENDING_PREFIX + postId;
 
-            // Check if user already liked the post
+            // Check if user already liked the post (will use Redis data after initialization)
             const alreadyLiked = await this.hasUserLiked(postId, userId);
 
             if (alreadyLiked) {
@@ -201,6 +268,19 @@ export class RedisPostService {
                 pipeline.expire(syncPendingKey, this.SYNC_PENDING_TTL); // 7 days - cleanup failed syncs
 
                 const results = await pipeline.exec();
+
+                // Check if pipeline executed successfully
+                if (!results || results.some((r) => r[0] !== null)) {
+                    console.error(
+                        `❌ Pipeline execution failed for unlike on post ${postId}`,
+                    );
+                    return {
+                        success: false,
+                        isLiked: alreadyLiked,
+                        newCount: currentCountNum,
+                    };
+                }
+
                 const newCount = Math.max(
                     0,
                     (results?.[1]?.[1] as number) || 0,
@@ -215,7 +295,9 @@ export class RedisPostService {
                     await redis.set(likeCountKey, "0", "EX", 7200);
                 }
 
-                console.log(`✅ Post ${postId} new count: ${newCount}`);
+                console.log(
+                    `✅ Post ${postId} unliked - new count: ${newCount}`,
+                );
                 return { success: true, isLiked: false, newCount };
             } else {
                 // Like the post
@@ -233,13 +315,52 @@ export class RedisPostService {
                 pipeline.expire(syncPendingKey, this.SYNC_PENDING_TTL); // 7 days - cleanup failed syncs
 
                 const results = await pipeline.exec();
+
+                // Check if pipeline executed successfully
+                if (!results || results.some((r) => r[0] !== null)) {
+                    console.error(
+                        `❌ Pipeline execution failed for like on post ${postId}`,
+                    );
+                    return {
+                        success: false,
+                        isLiked: alreadyLiked,
+                        newCount: currentCountNum,
+                    };
+                }
+
                 const newCount = (results?.[1]?.[1] as number) || 1;
 
-                console.log(`✅ Post ${postId} new count: ${newCount}`);
+                console.log(`✅ Post ${postId} liked - new count: ${newCount}`);
                 return { success: true, isLiked: true, newCount };
             }
         } catch (error) {
-            console.error("Error liking/unliking post:", error);
+            console.error("❌ Error liking/unliking post:", error);
+
+            // Try to return current state from database as fallback
+            try {
+                const post = await query.post.findFirst({
+                    where: { post_id: postId },
+                    select: {
+                        id: true,
+                        post_likes: true,
+                        PostLike: {
+                            where: { user_id: userId },
+                            select: { user_id: true },
+                        },
+                    },
+                });
+
+                if (post) {
+                    return {
+                        success: false,
+                        isLiked: (post.PostLike as any[]).length > 0,
+                        newCount: post.post_likes,
+                    };
+                }
+            } catch (dbError) {
+                console.error("❌ Database fallback also failed:", dbError);
+            }
+
             return { success: false, isLiked: false, newCount: 0 };
         }
     }
@@ -248,7 +369,9 @@ export class RedisPostService {
      * Initialize post data from database on first interaction
      * CRITICAL: Checks for pending sync operations to avoid overwriting uncommitted likes
      */
-    private static async initializePostFromDB(postId: string): Promise<void> {
+    private static async initializePostFromDB(
+        postId: string,
+    ): Promise<boolean> {
         try {
             // IMPORTANT: Check for pending operations first!
             // If there are pending operations, it means Redis expired but sync hasn't happened
@@ -266,7 +389,12 @@ export class RedisPostService {
                 },
             });
 
-            if (!post) return;
+            if (!post) {
+                console.error(
+                    `❌ Post ${postId} not found in database during initialization`,
+                );
+                return false;
+            }
 
             const pipeline = redis.pipeline();
             const likedUsersKey = this.LIKED_USERS_PREFIX + postId;
@@ -330,20 +458,26 @@ export class RedisPostService {
 
             pipeline.expire(likedUsersKey, 7200);
             await pipeline.exec();
+
+            console.log(
+                `✅ Successfully initialized post ${postId} in Redis with count: ${finalLikeCount}`,
+            );
+            return true;
         } catch (error) {
-            console.error("Error initializing post from DB:", error);
+            console.error("❌ Error initializing post from DB:", error);
+            return false;
         }
     }
 
     /**
-     * Force sync a post's likes to database immediately (for critical operations)
+     * Force sync a specific post's likes to database (bypasses normal sync queue)
      */
     static async forceSyncPost(postId: string): Promise<boolean> {
         try {
             await this.syncPostLikes(postId);
             return true;
         } catch (error) {
-            console.error(`Failed to force sync post ${postId}:`, error);
+            console.error(`Error force syncing post ${postId}:`, error);
             return false;
         }
     }
@@ -354,7 +488,8 @@ export class RedisPostService {
     static async getPendingSyncOps(postId: string): Promise<string[]> {
         try {
             const key = this.SYNC_PENDING_PREFIX + postId;
-            return await redis.smembers(key);
+            const ops = await redis.smembers(key);
+            return ops;
         } catch (error) {
             console.error("Error getting pending sync ops:", error);
             return [];
@@ -362,7 +497,7 @@ export class RedisPostService {
     }
 
     /**
-     * Clear pending sync operations after successful sync
+     * Clear pending sync operations for a post
      */
     static async clearPendingSyncOps(postId: string): Promise<void> {
         try {
@@ -374,23 +509,25 @@ export class RedisPostService {
     }
 
     /**
-     * Sync all pending operations for all posts
+     * Sync all posts with pending operations
      */
     static async syncAllPendingLikes(): Promise<{
         synced: number;
         errors: number;
     }> {
         try {
-            const pattern = this.SYNC_PENDING_PREFIX + "*";
-            const keys: string[] = [];
+            let synced = 0;
+            let errors = 0;
 
-            // Use SCAN instead of KEYS for better memory efficiency
+            // Scan for all pending sync keys
+            const keys: string[] = [];
             let cursor = 0;
+
             do {
                 const [nextCursor, scanKeys] = await redis.scan(
                     cursor,
                     "MATCH",
-                    pattern,
+                    `${this.SYNC_PENDING_PREFIX}*`,
                     "COUNT",
                     100,
                 );
@@ -398,9 +535,7 @@ export class RedisPostService {
                 keys.push(...scanKeys);
             } while (cursor !== 0);
 
-            let synced = 0;
-            let errors = 0;
-
+            // Extract post IDs from keys
             for (const key of keys) {
                 const postId = key.replace(this.SYNC_PENDING_PREFIX, "");
                 try {
@@ -414,13 +549,13 @@ export class RedisPostService {
 
             return { synced, errors };
         } catch (error) {
-            console.error("Error syncing all pending likes:", error);
-            return { synced: 0, errors: 1 };
+            console.error("Error in syncAllPendingLikes:", error);
+            throw error;
         }
     }
 
     /**
-     * Sync likes for a specific post from Redis to database
+     * Sync a specific post's likes to the database
      */
     static async syncPostLikes(postId: string): Promise<void> {
         try {
@@ -610,6 +745,9 @@ export class RedisPostService {
 
             const results = await pipeline.exec();
 
+            // Track posts that need initialization
+            const postsToInitialize: string[] = [];
+
             let resultIndex = 0;
             for (const postId of postIds) {
                 const redisCount = results?.[resultIndex]?.[1] as string | null;
@@ -627,7 +765,9 @@ export class RedisPostService {
                         resultIndex += 1;
                     }
                 } else {
-                    // No Redis data, get from database
+                    // No Redis data, get from database and mark for initialization
+                    postsToInitialize.push(postId);
+
                     try {
                         const post = await query.post.findFirst({
                             where: { post_id: postId },
@@ -661,6 +801,37 @@ export class RedisPostService {
                 }
 
                 result.set(postId, { count, isLiked });
+            }
+
+            // Proactively initialize posts in Redis to prevent future like failures
+            // Do this in background without blocking the response
+            if (postsToInitialize.length > 0) {
+                console.log(
+                    `🔄 Proactively initializing ${postsToInitialize.length} posts in Redis`,
+                );
+
+                // Initialize in background without awaiting
+                Promise.all(
+                    postsToInitialize.map((postId) =>
+                        this.initializePostFromDB(postId).catch((err) =>
+                            console.error(
+                                `Failed to initialize post ${postId}:`,
+                                err,
+                            ),
+                        ),
+                    ),
+                )
+                    .then(() => {
+                        console.log(
+                            `✅ Completed background initialization of ${postsToInitialize.length} posts`,
+                        );
+                    })
+                    .catch((err) => {
+                        console.error(
+                            `❌ Error during background initialization:`,
+                            err,
+                        );
+                    });
             }
 
             return result;
@@ -713,6 +884,157 @@ export class RedisPostService {
             }
 
             return result;
+        }
+    }
+
+    /**
+     * Warm up Redis cache for a specific post
+     * Useful when you want to ensure a post has cached data before users interact with it
+     */
+    static async warmupPostCache(postId: string): Promise<boolean> {
+        try {
+            console.log(`🔥 Warming up cache for post ${postId}...`);
+
+            // Check if already cached
+            const hasData = await redis.exists(this.LIKE_COUNT_PREFIX + postId);
+
+            if (hasData) {
+                console.log(`✅ Post ${postId} already cached`);
+                return true;
+            }
+
+            // Initialize from database
+            const success = await this.initializePostFromDB(postId);
+
+            if (success) {
+                console.log(
+                    `✅ Successfully warmed up cache for post ${postId}`,
+                );
+            } else {
+                console.error(`❌ Failed to warm up cache for post ${postId}`);
+            }
+
+            return success;
+        } catch (error) {
+            console.error(
+                `❌ Error warming up cache for post ${postId}:`,
+                error,
+            );
+            return false;
+        }
+    }
+
+    /**
+     * Warm up Redis cache for multiple posts in batch
+     * Returns number of successfully cached posts
+     */
+    static async warmupMultiplePostsCache(postIds: string[]): Promise<number> {
+        try {
+            console.log(`🔥 Warming up cache for ${postIds.length} posts...`);
+
+            const results = await Promise.allSettled(
+                postIds.map((postId) => this.warmupPostCache(postId)),
+            );
+
+            const successCount = results.filter(
+                (r) => r.status === "fulfilled" && r.value === true,
+            ).length;
+
+            console.log(
+                `✅ Successfully warmed up ${successCount}/${postIds.length} posts`,
+            );
+            return successCount;
+        } catch (error) {
+            console.error(`❌ Error warming up multiple posts:`, error);
+            return 0;
+        }
+    }
+
+    /**
+     * Check Redis health for a post - returns diagnostic information
+     */
+    static async checkPostRedisHealth(postId: string): Promise<{
+        hasLikeCount: boolean;
+        hasLikedUsers: boolean;
+        hasPendingSync: boolean;
+        likeCount: number | null;
+        pendingOpsCount: number;
+    }> {
+        try {
+            const likeCountKey = this.LIKE_COUNT_PREFIX + postId;
+            const likedUsersKey = this.LIKED_USERS_PREFIX + postId;
+            const syncPendingKey = this.SYNC_PENDING_PREFIX + postId;
+
+            const [
+                hasLikeCount,
+                hasLikedUsers,
+                hasPendingSync,
+                likeCount,
+                pendingOps,
+            ] = await Promise.all([
+                redis.exists(likeCountKey),
+                redis.exists(likedUsersKey),
+                redis.exists(syncPendingKey),
+                redis.get(likeCountKey),
+                redis.smembers(syncPendingKey),
+            ]);
+
+            return {
+                hasLikeCount: hasLikeCount === 1,
+                hasLikedUsers: hasLikedUsers === 1,
+                hasPendingSync: hasPendingSync === 1,
+                likeCount: likeCount ? parseInt(likeCount, 10) : null,
+                pendingOpsCount: pendingOps.length,
+            };
+        } catch (error) {
+            console.error(
+                `❌ Error checking Redis health for post ${postId}:`,
+                error,
+            );
+            return {
+                hasLikeCount: false,
+                hasLikedUsers: false,
+                hasPendingSync: false,
+                likeCount: null,
+                pendingOpsCount: 0,
+            };
+        }
+    }
+
+    /**
+     * Force refresh a post's cache from database
+     * Useful when you suspect Redis data is stale or incorrect
+     */
+    static async forceRefreshPostCache(postId: string): Promise<boolean> {
+        try {
+            console.log(`🔄 Force refreshing cache for post ${postId}...`);
+
+            // Clear existing data
+            const likeCountKey = this.LIKE_COUNT_PREFIX + postId;
+            const likedUsersKey = this.LIKED_USERS_PREFIX + postId;
+
+            await redis.del(likeCountKey, likedUsersKey);
+
+            // Reinitialize from database
+            const success = await this.initializePostFromDB(postId);
+
+            if (success) {
+                console.log(
+                    `✅ Successfully force refreshed cache for post ${postId}`,
+                );
+            } else {
+                console.error(
+                    `❌ Failed to force refresh cache for post ${postId}`,
+                );
+            }
+
+            return success;
+        } catch (error) {
+            console.error(
+                `❌ Error force refreshing cache for post ${postId}:`,
+                error,
+            );
+            return false;
         }
     }
 }
