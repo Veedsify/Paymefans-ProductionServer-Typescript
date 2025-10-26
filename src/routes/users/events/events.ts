@@ -22,43 +22,67 @@ events.get(
     res.setHeader("Connection", "keep-alive");
     res.flushHeaders();
 
-    // Send welcome event
-    res.write(`event: ping\ndata: Connected to SSE for userId=${userId}\n\n`);
+    // Initial connection message
+    res.write(
+      `event: ping\ndata: Connected to story media SSE for userId=${userId}\n\n`
+    );
 
     const channelName = `media:processed:${userId}`;
+    let writeCount = 0;
+    const maxWrites = 5;
+    let interval: NodeJS.Timeout | null = null;
+    let lastData: string | null = null; // cache the most recent payload
 
-    // Set up the message listener for this specific channel
-    const messageHandler = (channel: string, mediaId: string) => {
-      if (channel === channelName) {
-        res.write(
-          `event: story-processing-complete\ndata: ${JSON.stringify({
-            mediaId: mediaId,
-            userid: userId,
-          })}\n\n`,
-        );
+    // Redis message listener
+    const messageHandler = async (channel: string, mediaId: string) => {
+      if (channel !== channelName) return;
+
+      const data = JSON.stringify({ mediaId, userId });
+      lastData = data; // store the latest data
+
+      // Start sending only when we get first data
+      if (!interval) {
+        res.write(`event: story-processing-complete\ndata: ${data}\n\n`);
+        writeCount++;
+
+        interval = setInterval(async () => {
+          if (writeCount >= maxWrites) {
+            clearInterval(interval!);
+            await cleanup();
+            res.end();
+            console.log(
+              `Finished sending ${maxWrites} updates for user ${userId}`
+            );
+            return;
+          }
+
+          if (lastData) {
+            res.write(
+              `event: story-processing-complete\ndata: ${lastData}\n\n`
+            );
+            writeCount++;
+            console.log(`Sent update #${writeCount} for user ${userId}`);
+          }
+        }, 10_000); // 10 seconds apart
       }
     };
 
-    // Subscribe to the channel
     await redisSub.subscribe(channelName);
     redisSub.on("message", messageHandler);
 
-    // Cleanup function
     const cleanup = async () => {
       redisSub.off("message", messageHandler);
       await redisSub.unsubscribe(channelName);
-      console.log(`Unsubscribed from ${channelName} for userId:`, userId);
+      if (interval) clearInterval(interval);
+      console.log(`Cleaned up SSE for user ${userId}`);
     };
 
-    // Optional: Timeout protection
-    const timeout = setTimeout(
-      async () => {
-        console.log("SSE connection timed out for userId:", userId);
-        await cleanup();
-        res.end();
-      },
-      5 * 60 * 1000,
-    ); // 5 minutes
+    // Timeout safety (optional)
+    const timeout = setTimeout(async () => {
+      console.log(`SSE connection timed out for userId: ${userId}`);
+      await cleanup();
+      res.end();
+    }, 5 * 60 * 1000);
 
     req.on("close", async () => {
       clearTimeout(timeout);
@@ -69,7 +93,7 @@ events.get(
       clearTimeout(timeout);
       await cleanup();
     });
-  },
+  }
 );
 
 events.get(
@@ -94,20 +118,45 @@ events.get(
     );
 
     const channelName = `media:processed:${userId}`;
+    let writeCount = 0;
+    const maxWrites = 5;
+    let interval: NodeJS.Timeout | null = null;
+    let lastData: string | null = null;
 
-    // Set up the message listener for this specific channel
-    const messageHandler = (channel: string, mediaId: string) => {
-      if (channel === channelName) {
-        res.write(
-          `event: message-processing-complete\ndata: ${JSON.stringify({
-            mediaId: mediaId,
-            userid: userId,
-          })}\n\n`
-        );
+    // Redis message listener
+    const messageHandler = async (channel: string, mediaId: string) => {
+      if (channel !== channelName) return;
+
+      const data = JSON.stringify({ mediaId, userId });
+      lastData = data; // store latest data
+
+      // Start sending only on first data
+      if (!interval) {
+        res.write(`event: message-processing-complete\ndata: ${data}\n\n`);
+        writeCount++;
+
+        interval = setInterval(async () => {
+          if (writeCount >= maxWrites) {
+            clearInterval(interval!);
+            await cleanup();
+            res.end();
+            console.log(
+              `Finished sending ${maxWrites} updates for user ${userId}`
+            );
+            return;
+          }
+
+          if (lastData) {
+            res.write(
+              `event: message-processing-complete\ndata: ${lastData}\n\n`
+            );
+            writeCount++;
+            console.log(`Sent update #${writeCount} for user ${userId}`);
+          }
+        }, 10_000); // every 10 seconds
       }
     };
 
-    // Subscribe to the channel
     await redisSub.subscribe(channelName);
     redisSub.on("message", messageHandler);
 
@@ -115,15 +164,16 @@ events.get(
     const cleanup = async () => {
       redisSub.off("message", messageHandler);
       await redisSub.unsubscribe(channelName);
-      console.log(`Unsubscribed from ${channelName} for userId:`, userId);
+      if (interval) clearInterval(interval);
+      console.log(`Cleaned up SSE for user ${userId}`);
     };
 
-    // Optional: Timeout protection
+    // Optional timeout protection
     const timeout = setTimeout(async () => {
-      console.log("SSE connection timed out for userId:", userId);
+      console.log(`SSE connection timed out for userId: ${userId}`);
       await cleanup();
       res.end();
-    }, 5 * 60 * 1000); // 5 minutes
+    }, 5 * 60 * 1000);
 
     req.on("close", async () => {
       clearTimeout(timeout);
@@ -136,5 +186,6 @@ events.get(
     });
   }
 );
+
 
 export default events;
