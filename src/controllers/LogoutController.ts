@@ -2,7 +2,7 @@ import type { Request, Response } from "express";
 import SocketService from "@services/SocketService";
 import { redis } from "@libs/RedisStore";
 import { serialize } from "cookie";
-
+const { MAIN_DOMAIN } = process.env;
 
 export default class LogOutController {
   static async Logout(req: Request, res: Response): Promise<void> {
@@ -19,7 +19,9 @@ export default class LogOutController {
           sameSite: "lax",
           path: "/",
           domain:
-          process.env.NODE_ENV === "production" ? "paymefans.shop" : undefined, // Allow subdomain access
+            process.env.NODE_ENV === "production"
+              ? (MAIN_DOMAIN as string)
+              : undefined, // Allow subdomain access
           expires: new Date(0),
         }),
         serialize("refresh_token", "", {
@@ -28,11 +30,14 @@ export default class LogOutController {
           sameSite: "lax",
           path: "/",
           domain:
-          process.env.NODE_ENV === "production" ? "paymefans.shop" : undefined, // Allow subdomain access
+            process.env.NODE_ENV === "production"
+              ? (MAIN_DOMAIN as string)
+              : undefined, // Allow subdomain access
           expires: new Date(0),
-        })
+        }),
       ])
-      .status(200).json({
+      .status(200)
+      .json({
         success: true,
       });
   }

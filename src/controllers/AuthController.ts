@@ -10,6 +10,7 @@ import { serialize } from "cookie";
 import { Authenticate } from "@libs/jwt";
 import { redis } from "@libs/RedisStore";
 import { durationInSeconds } from "@utils/helpers";
+const { MAIN_DOMAIN } = process.env;
 const REFRESH_TOKEN_EXPIRATION = process.env.REFRESH_TOKEN_EXPIRATION || "7d";
 
 export default class AuthController {
@@ -92,7 +93,9 @@ export default class AuthController {
         sameSite: "lax" as const,
         path: "/",
         domain:
-          process.env.NODE_ENV === "production" ? "paymefans.shop" : undefined, // Allow subdomain access
+          process.env.NODE_ENV === "production"
+            ? (MAIN_DOMAIN as string)
+            : undefined, // Allow subdomain access
       };
 
       if (LoginAccount.token && !LoginAccount.tfa) {
@@ -196,7 +199,9 @@ export default class AuthController {
         sameSite: "lax" as const,
         path: "/",
         domain:
-          process.env.NODE_ENV === "production" ? "paymefans.shop" : undefined, // Allow subdomain access
+          process.env.NODE_ENV === "production"
+            ? (MAIN_DOMAIN as string)
+            : undefined, // Allow subdomain access
       };
 
       if (user.token) {
@@ -267,7 +272,9 @@ export default class AuthController {
         sameSite: "lax" as const,
         path: "/",
         domain:
-          process.env.NODE_ENV === "production" ? "paymefans.shop" : undefined,
+          process.env.NODE_ENV === "production"
+            ? (MAIN_DOMAIN as string)
+            : undefined,
       };
 
       if (user.token) {
@@ -391,7 +398,7 @@ export default class AuthController {
           path: "/",
           domain:
             process.env.NODE_ENV === "production"
-              ? "paymefans.shop"
+              ? (MAIN_DOMAIN as string)
               : undefined, // Allow subdomain access
         }),
         serialize("refresh_token", refreshToken as string, {
@@ -401,7 +408,7 @@ export default class AuthController {
           path: "/",
           domain:
             process.env.NODE_ENV === "production"
-              ? "paymefans.shop"
+              ? (MAIN_DOMAIN as string)
               : undefined, // Allow subdomain access
         }),
       ]);
