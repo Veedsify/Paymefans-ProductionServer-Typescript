@@ -22,8 +22,9 @@ async function InitializeQueueJobs() {
       repeat: {
         every: 30000, // 30 seconds - fallback for missed events
       },
+      removeOnComplete: true,
       jobId: "activeUsersJob",
-    },
+    }
   );
   // Prune inactive users
   await pruneInactiveUsersQueue.add(
