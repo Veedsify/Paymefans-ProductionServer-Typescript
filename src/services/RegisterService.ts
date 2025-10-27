@@ -140,7 +140,7 @@ export default class RegisterService {
     }
 
     return {
-      shouldRedirect: false,
+      shouldRedirect: true,
       message:
         "Account created successfully. Please check your email for verification code.",
       error: false,
