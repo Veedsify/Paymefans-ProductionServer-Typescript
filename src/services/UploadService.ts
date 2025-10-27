@@ -28,17 +28,19 @@ export default class UploadService {
 
     let watermarkUid = null;
     if (isWatermarkEnabled) {
-      watermarkUid = await WatermarkService.getUserWatermarkUid(
-        authUser.user?.id!,
+      const getwatermarkUid = await WatermarkService.getUserWatermarkUid(
+        authUser.user?.id!
       );
-      if (!watermarkUid) {
+      if (getwatermarkUid) {
+        watermarkUid = getwatermarkUid;
+      } else {
         watermarkUid = await WatermarkService.createWatermarkForUser(
-          authUser.user?.id!,
+          authUser.user?.id!
         );
       }
     } else {
       watermarkUid = await WatermarkService.createWatermarkForUser(
-        authUser.user?.id!,
+        authUser.user?.id!
       );
     }
     try {
@@ -49,7 +51,7 @@ export default class UploadService {
           "*.paymefans.com",
           "*.paymefans.shop",
           "localhost:3000",
-          "0.0.0.0:3000",
+          "127.0.0.1:3000",
           "192.168.0.175:3000",
         ];
         const uplaodMetadata = {
@@ -57,7 +59,7 @@ export default class UploadService {
           name: fileName,
           filetype: fileType,
           allowedorigins: btoa(allowedOrigins.join(",")),
-          watermark: isWatermarkEnabled && btoa(watermarkUid!),
+          watermark: isWatermarkEnabled && btoa(watermarkUid as string),
           ...(data.shouldUseSignedUrls && {
             requiresignedurls: btoa(true.toString()),
           }),
@@ -80,14 +82,14 @@ export default class UploadService {
               "Upload-Length": `${fileSize}`,
               "Upload-Metadata": uploadMetadataString,
             },
-          },
+          }
         );
 
         if (!response.ok) {
           const errorData = await response.json().catch(() => ({}));
           throw new Error(
             errorData?.errors?.[0]?.message ||
-            `Failed to get upload URL: ${response.statusText} `,
+              `Failed to get upload URL: ${response.statusText} `
           );
         }
 

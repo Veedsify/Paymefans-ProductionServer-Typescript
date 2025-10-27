@@ -80,7 +80,7 @@ export default class WatermarkService {
     opacity: "1.0",
     padding: "0.02",
     scale: "0.8",
-    position: "lowerRight",
+    position: "lowerLeft",
   };
 
   private static readonly defaultWatermarkStyle: WatermarkStyle = {
@@ -99,7 +99,7 @@ export default class WatermarkService {
   static async uploadWatermarkImage(
     filePath: string,
     fileName: string,
-    config: Partial<WatermarkConfig> = {},
+    config: Partial<WatermarkConfig> = {}
   ): Promise<string> {
     const cloudflareConfig = CloudflareWatermarkConfig.getInstance();
     const watermarkConfig = { ...this.defaultWatermarkConfig, ...config };
@@ -131,7 +131,7 @@ export default class WatermarkService {
             Authorization: `Bearer ${cloudflareConfig.accountToken}`,
             "Content-Type": `multipart/form-data`,
           },
-        },
+        }
       );
 
       const data: CloudflareResponse = response.data;
@@ -144,7 +144,9 @@ export default class WatermarkService {
       return data.result.uid;
     } catch (error) {
       throw new Error(
-        `Failed to upload watermark image: ${error instanceof Error ? error.message : "Unknown error"}`,
+        `Failed to upload watermark image: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`
       );
     }
   }
@@ -153,7 +155,7 @@ export default class WatermarkService {
    * Create watermark PNG image file using tmp (converted from SVG)
    */
   static async createWatermarkImage(
-    user: Partial<AuthUser>,
+    user: Partial<AuthUser>
   ): Promise<WatermarkFile> {
     return this.createWatermarkImageAsPNG(user);
   }
@@ -162,7 +164,7 @@ export default class WatermarkService {
    * Create watermark as PNG file (default method)
    */
   static async createWatermarkImageAsPNG(
-    user: Partial<AuthUser>,
+    user: Partial<AuthUser>
   ): Promise<WatermarkFile> {
     if (!user?.username) {
       throw new Error("User username is required to create watermark");
@@ -173,7 +175,7 @@ export default class WatermarkService {
     const sanitizedUsername = username.replace(/@/g, "_");
     const svgString = this.generateWatermarkSVG(
       cloudflareConfig.appUrl,
-      username,
+      username
     );
 
     try {
@@ -195,7 +197,7 @@ export default class WatermarkService {
           {
             fit: "contain",
             background: { r: 0, g: 0, b: 0, alpha: 0 }, // Transparent background
-          },
+          }
         )
         .toFile(pngFilePath);
 
@@ -206,7 +208,9 @@ export default class WatermarkService {
       };
     } catch (error) {
       throw new Error(
-        `Failed to create watermark PNG file: ${error instanceof Error ? error.message : "Unknown error"}`,
+        `Failed to create watermark PNG file: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`
       );
     }
   }
@@ -215,7 +219,7 @@ export default class WatermarkService {
    * Create watermark as SVG file (alternative method)
    */
   static async createWatermarkImageAsSVG(
-    user: Partial<AuthUser>,
+    user: Partial<AuthUser>
   ): Promise<WatermarkFile> {
     if (!user?.username) {
       throw new Error("User username is required to create watermark");
@@ -225,7 +229,7 @@ export default class WatermarkService {
     const sanitizedUsername = username.replace(/@/g, "_");
     const svgString = this.generateWatermarkSVG(
       cloudflareConfig.appUrl,
-      username,
+      username
     );
 
     try {
@@ -243,7 +247,7 @@ export default class WatermarkService {
           "utf8",
           (err: Error | null) => {
             err ? reject(err) : resolve();
-          },
+          }
         );
       });
 
@@ -254,7 +258,9 @@ export default class WatermarkService {
       };
     } catch (error) {
       throw new Error(
-        `Failed to create watermark SVG file: ${error instanceof Error ? error.message : "Unknown error"}`,
+        `Failed to create watermark SVG file: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`
       );
     }
   }
@@ -264,7 +270,7 @@ export default class WatermarkService {
    */
   static async createCustomWatermarkImageAsPNG(
     user: Partial<AuthUser>,
-    customStyle: Partial<WatermarkStyle> = {},
+    customStyle: Partial<WatermarkStyle> = {}
   ): Promise<WatermarkFile> {
     if (!user?.username) {
       throw new Error("User username is required to create watermark");
@@ -277,7 +283,7 @@ export default class WatermarkService {
     const svgString = this.generateCustomWatermarkSVG(
       cloudflareConfig.appUrl,
       username,
-      style,
+      style
     );
 
     try {
@@ -307,7 +313,9 @@ export default class WatermarkService {
       };
     } catch (error) {
       throw new Error(
-        `Failed to create custom watermark PNG file: ${error instanceof Error ? error.message : "Unknown error"}`,
+        `Failed to create custom watermark PNG file: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`
       );
     }
   }
@@ -318,31 +326,51 @@ export default class WatermarkService {
   private static generateCustomWatermarkSVG(
     appUrl: string,
     username: string,
-    style: WatermarkStyle,
+    style: WatermarkStyle
   ): string {
     const escapedUsername = username.replace(/@/g, "");
 
     const svg = `
-<svg xmlns="http://www.w3.org/2000/svg" width="${style.width}" height="${style.height}" viewBox="0 0 ${style.width} ${style.height}">
-  <rect width="${style.width}" height="${style.height}" fill="${style.backgroundColor || "none"}"/>
-  <defs>
-    <filter id="blur" x="-100%" y="-100%" width="100%" height="100%">
-      <feGaussianBlur stdDeviation="6" />
-    </filter>
-  </defs>
-  <text
-    x="20" y="${style.height - 10}" font-size="${style.fontSize}" font-weight="medium"
-    font-family="${style.fontFamily}" fill="#000000" filter="url(#blur)" text-anchor="start"
-    opacity="${style.opacity ?? 1}">
-      ${appUrl}/${escapedUsername}
-  </text>
-  <text
-    x="20" y="${style.height - 10}" font-size="${style.fontSize}" font-weight="medium"
-    font-family="${style.fontFamily}" fill="${style.textColor}" text-anchor="start"
-    opacity="${style.opacity ?? 1}">
-      ${appUrl}/${escapedUsername}
-  </text>
-</svg>`;
+    <svg xmlns="http://www.w3.org/2000/svg" width="${style.width}" height="${
+      style.height
+    }" viewBox="0 0 ${style.width} ${style.height}">
+      <rect width="${style.width}" height="${style.height}" fill="${
+      style.backgroundColor || "none"
+    }"/>
+      <defs>
+        <filter id="blur" x="-100%" y="-100%" width="300%" height="300%">
+          <feGaussianBlur stdDeviation="6" />
+        </filter>
+      </defs>
+    
+      <!-- Blurred text -->
+      <text
+        x="4"
+        y="${style.fontSize + 4}" 
+        font-size="${style.fontSize}" 
+        font-weight="medium"
+        font-family="${style.fontFamily}" 
+        fill="#000000" 
+        filter="url(#blur)" 
+        text-anchor="start"
+        opacity="${style.opacity ?? 1}">
+          ${appUrl}/${escapedUsername}
+      </text>
+    
+      <!-- Visible text -->
+      <text
+        x="4"
+        y="${style.fontSize + 4}" 
+        font-size="${style.fontSize}" 
+        font-weight="medium"
+        font-family="${style.fontFamily}" 
+        fill="${style.textColor}" 
+        text-anchor="start"
+        opacity="${style.opacity ?? 1}">
+          ${appUrl}/${escapedUsername}
+      </text>
+    </svg>
+    `;
 
     return svg;
   }
@@ -352,12 +380,12 @@ export default class WatermarkService {
    */
   private static generateWatermarkSVG(
     appUrl: string,
-    username: string,
+    username: string
   ): string {
     return this.generateCustomWatermarkSVG(
       appUrl,
       username,
-      this.defaultWatermarkStyle,
+      this.defaultWatermarkStyle
     );
   }
 
@@ -382,7 +410,7 @@ export default class WatermarkService {
       tempFile = await this.createWatermarkImage(userResult.user);
       const uid = await this.uploadWatermarkImage(
         tempFile.filePath,
-        tempFile.fileName,
+        tempFile.fileName
       );
 
       await query.settings.update({
@@ -393,7 +421,9 @@ export default class WatermarkService {
       return uid;
     } catch (error) {
       throw new Error(
-        `Failed to create watermark for user ${userId}: ${error instanceof Error ? error.message : "Unknown error"}`,
+        `Failed to create watermark for user ${userId}: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`
       );
     } finally {
       if (tempFile?.cleanup) {
@@ -416,7 +446,7 @@ export default class WatermarkService {
     } catch (error) {
       console.error(
         `Failed to retrieve watermark UID for user ${userId}:`,
-        error,
+        error
       );
       return null;
     }
@@ -462,7 +492,7 @@ export default class WatermarkService {
     } catch (error) {
       console.error(
         `Failed to check watermark status for user ${userId}:`,
-        error,
+        error
       );
       return false;
     }
@@ -478,7 +508,7 @@ export default class WatermarkService {
           headers: {
             Authorization: `Bearer ${cloudflareConfig.accountToken}`,
           },
-        },
+        }
       );
 
       if (!response.ok)
@@ -491,7 +521,9 @@ export default class WatermarkService {
       }
     } catch (error) {
       throw new Error(
-        `Failed to delete watermark: ${error instanceof Error ? error.message : "Unknown error"}`,
+        `Failed to delete watermark: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`
       );
     }
   }
