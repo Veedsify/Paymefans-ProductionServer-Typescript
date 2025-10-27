@@ -82,9 +82,8 @@ export default {
         methods: "*",
         credentials: true,
       },
-      pingTimeout: 60000, // 60 seconds to respond to ping
-      pingInterval: 25000, // Send ping every 25s
-      connectTimeout: 45000, // Initial connection timeout
+      pingTimeout: 5000, // 60 seconds to respond to ping
+      pingInterval: 10000, // Send ping every 25s
       ...(adapter && { adapter }),
     };
 
