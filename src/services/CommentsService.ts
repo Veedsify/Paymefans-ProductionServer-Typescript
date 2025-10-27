@@ -192,44 +192,42 @@ export default class CommentsService {
 
                 try {
                     if (parentId) {
-                        if (parentId && Number(reply_to) !== user.id) {
-                            notificationPromises.push(
-                                UserNotificationQueue.add(
-                                    "post-reply-notification",
-                                    {
-                                        user_id: reply_to
-                                            ? Number(reply_to)
-                                            : postDetails.user_id,
-                                        url: `/posts/${postDetails.post_id}`,
-                                        message: `${user.username} replied to your comment`,
-                                        action: "reply",
-                                        notification_id: `NOT${GenerateUniqueId()}`,
-                                        read: false,
-                                    },
-                                    {
-                                        removeOnComplete: true,
-                                        attempts: 3,
-                                    },
-                                ),
-                            );
-                        }
-                        Promise.all(notificationPromises);
+                      notificationPromises.push(
+                        UserNotificationQueue.add(
+                          "post-reply-notification",
+                          {
+                            user_id: reply_to
+                              ? Number(reply_to)
+                              : postDetails.user_id,
+                            url: `/posts/${postDetails.post_id}`,
+                            message: `${user.username} replied to your comment`,
+                            action: "reply",
+                            notification_id: `NOT${GenerateUniqueId()}`,
+                            read: false,
+                          },
+                          {
+                            removeOnComplete: true,
+                            attempts: 3,
+                          }
+                        )
+                      );
+                      Promise.all(notificationPromises);
                     } else {
-                        await UserNotificationQueue.add(
-                            "post-comment-notification",
-                            {
-                                user_id: postDetails.user_id,
-                                url: `/posts/${postDetails.post_id}`,
-                                message: `Hi ${ownerGreeting}, <strong><a href="${commenterUrl}">${commenterDisplay}</a></strong> commented on your post.`,
-                                action: "comment",
-                                notification_id: `NOT${GenerateUniqueId()}`,
-                                read: false,
-                            },
-                            {
-                                removeOnComplete: true,
-                                attempts: 3,
-                            },
-                        );
+                      await UserNotificationQueue.add(
+                        "post-comment-notification",
+                        {
+                          user_id: postDetails.user_id,
+                          url: `/posts/${postDetails.post_id}`,
+                          message: `Hi ${ownerGreeting}, <strong><a href="${commenterUrl}">${commenterDisplay}</a></strong> commented on your post.`,
+                          action: "comment",
+                          notification_id: `NOT${GenerateUniqueId()}`,
+                          read: false,
+                        },
+                        {
+                          removeOnComplete: true,
+                          attempts: 3,
+                        }
+                      );
                     }
                 } catch (notificationError) {
                     console.error(
