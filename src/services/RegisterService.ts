@@ -23,131 +23,139 @@ export default class RegisterService {
   static async RegisterNewUser(
     data: RegisterServiceProp,
   ): Promise<RegisterServiceResponse> {
-    if (!data) return { message: "Invalid request", error: true };
-    const RequiredFields = [
-      "name",
-      "username",
-      "email",
-      "phone",
-      "password",
-      "location",
-    ];
-    const MissingFields = Object.entries(data)
-      .filter(([key, value]) => {
-        if (RequiredFields.includes(key) && !value) {
-          return key;
-        }
-        return null;
-      })
-      .map(([key]) => key)
-      .join(", ");
+    try {
+      if (!data) return { message: "Invalid request", error: true };
+      const RequiredFields = [
+        "name",
+        "username",
+        "email",
+        "phone",
+        "password",
+        "location",
+      ];
+      const MissingFields = Object.entries(data)
+        .filter(([key, value]) => {
+          if (RequiredFields.includes(key) && !value) {
+            return key;
+          }
+          return null;
+        })
+        .map(([key]) => key)
+        .join(", ");
 
-    if (MissingFields) {
-      return {
-        message: `Sorry, ${MissingFields} field is missing`,
-        error: true,
-      };
-    }
+      if (MissingFields) {
+        return {
+          message: `Sorry, ${MissingFields} field is missing`,
+          error: true,
+        };
+      }
 
-    if (data.username.length < 5) {
-      return {
-        message: "Username must be at least 5 characters long",
-        error: true,
-      };
-    }
+      if (data.username.length < 5) {
+        return {
+          message: "Username must be at least 5 characters long",
+          error: true,
+        };
+      }
 
-    if (data.username.length > 20) {
-      return {
-        message: "Username must not be more than 20 characters long",
-        error: true,
-      };
-    }
+      if (data.username.length > 20) {
+        return {
+          message: "Username must not be more than 20 characters long",
+          error: true,
+        };
+      }
 
-    if (!(await this.isValidUsername(data.username))) {
-      return {
-        message: "Username can only contain letters, numbers, and underscores",
-        error: true,
-      };
-    }
+      if (!(await this.isValidUsername(data.username))) {
+        return {
+          message:
+            "Username can only contain letters, numbers, and underscores",
+          error: true,
+        };
+      }
 
-    const { checkPhone, checkEmail } = await this.CheckPhoneAndEmail(
-      data.phone,
-      data.email,
-    );
-    if (checkPhone) {
-      return {
-        message:
-          "Sorry This Account Already Exists, Check Your Phone Number or Email",
-        error: true,
-      };
-    }
+      const { checkPhone, checkEmail } = await this.CheckPhoneAndEmail(
+        data.phone,
+        data.email
+      );
+      if (checkPhone) {
+        return {
+          message:
+            "Sorry This Account Already Exists, Check Your Phone Number or Email",
+          error: true,
+        };
+      }
 
-    if (checkEmail) {
-      return {
-        message:
-          "Sorry This Email Already Exists Please Check Your Phone Number or Email",
-        error: true,
-      };
-    }
+      if (checkEmail) {
+        return {
+          message:
+            "Sorry This Email Already Exists Please Check Your Phone Number or Email",
+          error: true,
+        };
+      }
 
-    const user = await this.CreateUser(data);
-    const welcomeAccount = await this.CheckForWelcomeAccount(user);
-    if (welcomeAccount?.error) {
-      return { message: welcomeAccount.message, error: true };
-    }
-    const admin = await this.CheckForAdmin(user);
-    if (admin?.error) {
-      return { message: admin.message, error: true };
-    }
+      const user = await this.CreateUser(data);
+      const welcomeAccount = await this.CheckForWelcomeAccount(user);
+      if (welcomeAccount?.error) {
+        return { message: welcomeAccount.message, error: true };
+      }
+      const admin = await this.CheckForAdmin(user);
+      if (admin?.error) {
+        return { message: admin.message, error: true };
+      }
 
-    const WelcomeData = [
-      await this.CreateWelcomeConversationAndMessage(
-        user,
-        welcomeAccount.userId
-      ),
-      await this.CreateWelcomeNotification(user),
-      await this.CreateFollowing(user, admin.id),
-    ];
-    await Promise.all(WelcomeData);
+      const WelcomeData = [
+        await this.CreateWelcomeConversationAndMessage(
+          user,
+          welcomeAccount.userId
+        ),
+        await this.CreateWelcomeNotification(user),
+        await this.CreateFollowing(user, admin.id),
+      ];
+      await Promise.all(WelcomeData);
 
-    // Generate verification code
-    const { random } = await import("lodash");
-    const verificationCode = random(100000, 999999);
+      // Generate verification code
+      const { random } = await import("lodash");
+      const verificationCode = random(100000, 999999);
 
-    // Store verification code in TwoFactorAuth table (reusing for email verification)
-    await query.twoFactorAuth.create({
-      data: {
+      // Store verification code in TwoFactorAuth table (reusing for email verification)
+      await query.twoFactorAuth.create({
+        data: {
+          code: verificationCode,
+          user_id: user.id,
+        },
+      });
+
+      // Send verification email
+      const FormatName = (await import("@utils/FormatName")).default;
+      const sendVerificationEmail = await EmailService.SendTwoFactorAuthEmail({
+        email: data.email,
         code: verificationCode,
-        user_id: user.id,
-      },
-    });
+        subject: "Verify Your Email Address",
+        name: FormatName(data.name.split(" ")[0] ?? data.name),
+      });
 
-    // Send verification email
-    const FormatName = (await import("@utils/FormatName")).default;
-    const sendVerificationEmail = await EmailService.SendTwoFactorAuthEmail({
-      email: data.email,
-      code: verificationCode,
-      subject: "Verify Your Email Address",
-      name: FormatName(data.name.split(" ")[0] ?? data.name),
-    });
+      if (sendVerificationEmail.error) {
+        return {
+          message:
+            "Account created but failed to send verification email. Please contact support.",
+          error: true,
+        };
+      }
 
-    if (sendVerificationEmail.error) {
       return {
+        shouldRedirect: true,
         message:
-          "Account created but failed to send verification email. Please contact support.",
-        error: true,
+          "Account created successfully. Please check your email for verification code.",
+        error: false,
+        requiresVerification: true,
+        email: data.email,
+        data: user,
       };
+    } catch (error: any) {
+      if (error instanceof Error) {
+        console.error("Registration Error:", error.message);
+      }
+      return { message: error.message, error: true };
     }
-
-    return {
-      shouldRedirect: true,
-      message:
-        "Account created successfully. Please check your email for verification code.",
-      error: false,
-      requiresVerification: true,
-      email: data.email,
-      data: user,
-    };
   }
 
   // Verify Registration
@@ -224,6 +232,14 @@ export default class RegisterService {
     if (!uniqueUserId || uniqueUserId.length === 0) {
       throw new Error("Could not generate a unique user ID");
     }
+
+  const checkUser = await query.user.findUnique({
+    where: { username: String(`@${data.username}`).toLocaleLowerCase() },
+  });
+
+  if (checkUser) {
+    throw new Error("Username already taken");
+  }
 
     const hashPass = await CreateHashedPassword(data.password);
     const walletId = `WL${GenerateUniqueId()}`;

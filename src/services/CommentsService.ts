@@ -30,6 +30,10 @@ export default class CommentsService {
                 path: string;
                 type: string;
             }[] = [];
+
+            console.log(parentId, reply_to, post_id);
+
+
             if (files && files.length > 0) {
                 const uploadPromises = files.map(
                     async (file: Express.Multer.File) => {
