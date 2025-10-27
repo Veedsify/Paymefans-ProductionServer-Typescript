@@ -155,6 +155,12 @@ const serverUrl = SERVER_ORIGINAL_URL || "http://localhost:3009";
 const origins = [verificationUrl, adminPanelUrl, appUrl, serverUrl].filter(
   Boolean
 );
+// Allow CORS for specified origins
+app.use((_, res, next) => {
+  res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
+  next();
+});
+
 
 // CORS configuration
 app.use(
@@ -163,6 +169,8 @@ app.use(
     credentials: true,
     optionsSuccessStatus: 200,
     allowedHeaders: [
+      "Cross-Origin-Resource-Policy",
+      "Allow-Access-Control-Origin",
       "Content-Type",
       "Authorization",
       "x-csrf-token",
@@ -181,7 +189,7 @@ app.use(
       "X-Forwarded-Proto",
       "X-Real-IP",
       "X-Client-IP",
-      "X-Username"
+      "X-Username",
     ],
   })
 );
