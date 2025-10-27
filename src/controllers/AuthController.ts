@@ -102,7 +102,7 @@ export default class AuthController {
         res.setHeader("Set-Cookie", [
           serialize("token", LoginAccount.token as string, {
             ...cookieOptions,
-            maxAge: 3600,
+            maxAge: 43200,
           }),
           serialize("refresh_token", LoginAccount.refresh as string, {
             ...cookieOptions,
@@ -208,7 +208,7 @@ export default class AuthController {
         res.setHeader("Set-Cookie", [
           serialize("token", user.token.accessToken as string, {
             ...cookieOptions,
-            maxAge: 3600,
+            maxAge: 43200,
           }),
           serialize("refresh_token", user.token.refreshToken as string, {
             ...cookieOptions,
@@ -281,7 +281,7 @@ export default class AuthController {
         res.setHeader("Set-Cookie", [
           serialize("token", user.token.accessToken as string, {
             ...cookieOptions,
-            maxAge: 3600,
+            maxAge: 43200,
           }),
           serialize("refresh_token", user.token.refreshToken as string, {
             ...cookieOptions,
