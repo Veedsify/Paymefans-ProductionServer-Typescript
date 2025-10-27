@@ -350,7 +350,7 @@ export default class WatermarkService {
         font-size="${style.fontSize}" 
         font-weight="medium"
         font-family="${style.fontFamily}" 
-        fill="#000000" 
+        fill="#00000080" 
         filter="url(#blur)" 
         text-anchor="start"
         opacity="${style.opacity ?? 1}">
