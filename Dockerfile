@@ -33,6 +33,28 @@ RUN npm run build
 # Production stage
 FROM node:22-alpine
 
+# Install base font packages and utilities
+RUN apt-get update && apt-get install -y \
+    fonts-helvetica \
+    fonts-liberation \
+    fonts-dejavu \
+    fonts-freefont-ttf \
+    fonts-roboto \
+    fontconfig \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Optionally install Microsoft Core Fonts (includes Arial, Helvetica equivalents)
+RUN curl -fsSL https://github.com/ryanoasis/nerd-fonts/releases/latest/download/CodeFonts.zip -o /tmp/fonts.zip \
+    && unzip -o /tmp/fonts.zip -d /usr/share/fonts/truetype/ \
+    && rm /tmp/fonts.zip
+
+# Update font cache
+RUN fc-cache -f -v
+
+# Verify font installation
+RUN fc-list | grep -i "helvetica\|arial\|dejavu\|liberation"
+
 WORKDIR /app
 
 # Install only runtime dependencies (if needed by your app)
