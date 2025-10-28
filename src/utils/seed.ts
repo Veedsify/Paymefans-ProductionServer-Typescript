@@ -651,7 +651,37 @@ async function main() {
         title: "About Us",
         page_id: GenerateUniqueId(),
         slug: "about-us",
-        content: "about_us",
+        content: `<div class="keep-styles">
+        <h2>Welcome to Paymefans</h2>
+        <p>
+            We're a community-driven platform that empowers creators to monetize their content and connect with their fans. 
+            Our mission is to provide a safe, secure, and innovative space for creators to share their exclusive content, 
+            and for fans to support the talent they love.
+        </p>
+    
+        <h2>Our Story</h2>
+        <p>
+            We believe that everyone has a unique story to tell and a talent to share. 
+            Our platform is designed to help creators take control of their content, build their brand, 
+            and earn money doing what they love. Whether you're a photographer, artist, writer, skit maker, or performer, 
+            we're here to support you every step of the way.
+        </p>
+    
+        <h2>What We Offer</h2>
+        <ul>
+            <li><strong>Monetize Your Content:</strong> Take control of your content and earn money from your most loyal fans.</li>
+            <li><strong>Connect with Your Fans:</strong> Build a community around your work and share exclusive content that resonates with your audience.</li>
+            <li><strong>Creative Freedom:</strong> Share your work without compromise, and decide what you want to create and share.</li>
+            <li><strong>Safe and Secure:</strong> Our platform is designed with safety and security in mind, so you can focus on creating.</li>
+        </ul>
+    
+        <h2>Join Our Community</h2>
+        <p>
+            Whether you're a creator looking to monetize your content, or a fan looking to support your favorite talent, 
+            we invite you to join our community. Sign up today and discover a world of exclusive content, creativity, and connection.
+        </p>
+    </div>
+    `,
       },
     ],
     skipDuplicates: true,
