@@ -83,7 +83,7 @@
     "nodemon": "^3.1.10",
     "prisma": "^6.18.0",
     "sanitize-html": "^2.17.0",
-    "sharp": "^0.33.5",
+    "sharp": "^0.34.4",
     "socket.io": "^4.8.1",
     "tmp": "^0.2.5",
     "tmp-promise": "^3.0.3",
