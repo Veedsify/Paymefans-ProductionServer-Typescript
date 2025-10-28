@@ -28,20 +28,11 @@ COPY . .
 
 # Generate Prisma client and build the application
 RUN npx prisma generate
+
 RUN npm run build
 
-# Install fonts and dependencies
-RUN apk add --no-cache \
-    msttcorefonts-installer \
-    fontconfig \
-    && update-ms-fonts \
-    && fc-cache -f -v
-
-# Install additional free fonts
-RUN apk add --no-cache \
-    ttf-dejavu \
-    ttf-liberation \
-    ttf-freefont
+# Production stage
+FROM node:22-alpine
 
 WORKDIR /app
 
