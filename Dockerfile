@@ -30,9 +30,6 @@ COPY . .
 RUN npx prisma generate
 RUN npm run build
 
-# Production stage
-FROM node:22-alpine
-
 # Install fonts and dependencies
 RUN apk add --no-cache \
     msttcorefonts-installer \
