@@ -118,15 +118,16 @@ export const triggerPostSync = async (
 ) => {
     try {
         const job = await PostLikeSyncQueue.add(
-            `sync-post-${postId}`,
-            {
-                type: "sync_single_post",
-                postId,
-                triggeredBy,
-            } as PostLikeSyncJobData,
-            {
-                priority: 10, // Higher priority than scheduled jobs
-            },
+          `sync-post-${postId}`,
+          {
+            type: "sync_single_post",
+            postId,
+            triggeredBy,
+          } as PostLikeSyncJobData,
+          {
+            removeOnComplete: 10,
+            priority: 10, // Higher priority than scheduled jobs
+          }
         );
 
         return job;

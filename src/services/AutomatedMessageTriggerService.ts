@@ -27,6 +27,7 @@ export default class AutomatedMessageTriggerService {
                     messageData: automatedMessage,
                 },
                 {
+                    removeOnComplete: true,
                     delay: 1000, // Small delay to ensure the follow action is completed
                 }
             );
