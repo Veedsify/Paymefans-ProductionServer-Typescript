@@ -245,6 +245,12 @@ async function main() {
         slug: "terms-and-conditions",
         content: "terms_and_conditions",
       },
+      {
+        title: "About Us",
+        page_id: GenerateUniqueId(),
+        slug: "about-us",
+        content: "about_us",
+      },
     ],
     skipDuplicates: true,
   });
