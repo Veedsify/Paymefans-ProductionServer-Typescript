@@ -7,47 +7,60 @@ const conversations = express.Router();
 const attachments = CreateUpload("attachments");
 
 conversations.get(
-  "/my-conversations",
-  Auth,
-  ConversationController.MyConversations
+    "/my-conversations",
+    Auth,
+    ConversationController.MyConversations,
 );
 conversations.get(
-  "/messages/:conversationId",
-  Auth,
-  ConversationController.AllConversations
+    "/messages/:conversationId",
+    Auth,
+    ConversationController.AllConversations,
 );
 conversations.get(
-  "/receiver/:conversationId",
-  Auth,
-  ConversationController.ConversationReceiver
+    "/receiver/:conversationId",
+    Auth,
+    ConversationController.ConversationReceiver,
 );
 conversations.post(
-  "/create-new",
-  Auth,
-  ConversationController.CreateConversation
+    "/create-new",
+    Auth,
+    ConversationController.CreateConversation,
 );
 conversations.post(
-  "/upload/attachments",
-  attachments.fields([{ name: "attachments[]", maxCount: 20 }]),
-  ConversationController.UploadAttachments
+    "/upload/attachments",
+    attachments.fields([{ name: "attachments[]", maxCount: 20 }]),
+    ConversationController.UploadAttachments,
 );
 conversations.post(
-  "/presigned-urls",
-  Auth,
-  ConversationController.GetPresignedUrls
+    "/presigned-urls",
+    Auth,
+    ConversationController.GetPresignedUrls,
 );
 conversations.post(
-  "/complete-upload",
-  Auth,
-  ConversationController.CompleteUpload
+    "/complete-upload",
+    Auth,
+    ConversationController.CompleteUpload,
+);
+conversations.post(
+    "/media-status",
+    Auth,
+    ConversationController.CheckMediaStatus,
 );
 conversations.get("/search/", Auth, ConversationController.SearchConversations);
 conversations.post(
-  "/search/messages/:conversationId",
-  Auth,
-  ConversationController.SearchMessages
+    "/search/messages/:conversationId",
+    Auth,
+    ConversationController.SearchMessages,
 );
 conversations.get("/unread-count", Auth, ConversationController.GetUnreadCount);
-conversations.post("/toggle-free-messages", Auth, ConversationController.ToggleFreeMessages);
-conversations.get("/free-message-status/:conversationId", Auth, ConversationController.GetFreeMessageStatus);
+conversations.post(
+    "/toggle-free-messages",
+    Auth,
+    ConversationController.ToggleFreeMessages,
+);
+conversations.get(
+    "/free-message-status/:conversationId",
+    Auth,
+    ConversationController.GetFreeMessageStatus,
+);
 export default conversations;

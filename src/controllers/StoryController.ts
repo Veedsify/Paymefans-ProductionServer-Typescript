@@ -82,6 +82,51 @@ export default class StoryController {
             });
         }
     }
+
+    // Check Media Status - Poll endpoint for checking processing state
+    static async CheckMediaStatus(req: Request, res: Response): Promise<any> {
+        try {
+            const { media_ids } = req.body;
+            const userId = req.user?.id!;
+
+            if (!media_ids || !Array.isArray(media_ids)) {
+                return res.status(400).json({
+                    message: "media_ids array is required in request body",
+                    status: false,
+                    error: true,
+                });
+            }
+
+            const mediaIdsArray = media_ids;
+
+            if (mediaIdsArray.length === 0) {
+                return res.status(400).json({
+                    message: "At least one media_id is required",
+                    status: false,
+                    error: true,
+                });
+            }
+
+            const result = await StoryService.CheckMediaStatus({
+                mediaIds: mediaIdsArray as string[],
+                userId,
+            });
+
+            if (result.error) {
+                return res.status(400).json(result);
+            }
+
+            res.status(200).json({ ...result });
+        } catch (error: any) {
+            console.log(error);
+            res.status(500).json({
+                message: "An error occurred while checking media status",
+                error: error.message,
+                status: false,
+            });
+        }
+    }
+
     // Save Story
     static async SaveStory(req: Request, res: Response): Promise<any> {
         try {

@@ -47,6 +47,7 @@ const story = express();
 story.get("/all", Auth, StoryController.GetStories);
 story.get("/user/:username", Auth, StoryController.GetUserStories);
 story.get("/media", Auth, StoryController.GetMyMedia);
+story.post("/media-status", Auth, StoryController.CheckMediaStatus);
 story.post("/save", Auth, StoryController.SaveStory);
 story.post("/presigned-urls", Auth, StoryController.GetPresignedUrls);
 story.post("/complete-upload", Auth, StoryController.CompleteUpload);

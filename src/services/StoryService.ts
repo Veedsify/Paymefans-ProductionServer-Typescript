@@ -371,6 +371,68 @@ export default class StoryService {
             throw new Error(error);
         }
     }
+
+    // Check Media Status - Query processing state of media files
+    static async CheckMediaStatus({
+        mediaIds,
+        userId,
+    }: {
+        mediaIds: string[];
+        userId: number;
+    }): Promise<{
+        error: boolean;
+        message: string;
+        data?: any;
+    }> {
+        try {
+            // Fetch media records from database
+            const mediaRecords = await query.uploadedMedia.findMany({
+                where: {
+                    media_id: {
+                        in: mediaIds,
+                    },
+                    user_id: userId,
+                },
+                select: {
+                    media_id: true,
+                    media_state: true,
+                    url: true,
+                    type: true,
+                    created_at: true,
+                    updated_at: true,
+                },
+            });
+
+            // Create a map for easy lookup
+            const mediaStatusMap = mediaRecords.reduce(
+                (acc, media) => {
+                    acc[media.media_id] = {
+                        media_id: media.media_id,
+                        media_state: media.media_state,
+                        url: media.url,
+                        type: media.type,
+                        created_at: media.created_at,
+                        updated_at: media.updated_at,
+                    };
+                    return acc;
+                },
+                {} as Record<string, any>,
+            );
+
+            return {
+                error: false,
+                message: "Media status fetched successfully",
+                data: mediaStatusMap,
+            };
+        } catch (error) {
+            console.error(error);
+            return {
+                error: true,
+                message: "An error occurred while checking media status",
+            };
+        }
+    }
+
     // Save Story
     static async SaveStory({
         stories,
