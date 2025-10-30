@@ -21,6 +21,7 @@ import { GenerateUniqueId } from "@utils/GenerateUniqueId";
 import { redis } from "@libs/RedisStore";
 import { PaystackService } from "./PaystackService";
 import ReferralService from "./ReferralService";
+import { SPECIAL_USERNAMES } from "@utils/SpecialUsernames";
 
 export default class ModelService {
     static async GetModels(body: {
@@ -36,7 +37,7 @@ export default class ModelService {
                        "Model"."hookup", "Model"."verification_status"
                   FROM "User"
                   INNER JOIN "Model" ON "User"."id" = "Model"."user_id"
-                  AND "User"."role" NOT IN ('admin', 'superadmin')
+                  AND "User"."role" NOT IN ('admin')
                   WHERE "User"."is_model" = true
                   AND "User".active_status = true
                   AND "Model"."verification_status" = true
@@ -102,6 +103,16 @@ export default class ModelService {
                     NOT: [
                         {
                             id: user.id,
+                        },
+                        {
+                            role: {
+                                in: ["admin"],
+                            },
+                        },
+                        {
+                            username: {
+                                notIn: SPECIAL_USERNAMES,
+                            },
                         },
                     ],
                     OR: [
