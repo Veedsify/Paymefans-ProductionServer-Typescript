@@ -9,6 +9,7 @@ import query from "@utils/prisma";
 const EmailQueue = new Queue("emailQueues", {
     connection: redis,
     defaultJobOptions: {
+        priority: 10,
         removeOnComplete: true,
         attempts: 3,
         backoff: 5000,
@@ -46,9 +47,8 @@ const QueueWorker = new Worker(
 );
 
 QueueWorker.on("completed", async (job) => {
-    const logEntry = `${new Date().toISOString()} - Job ${
-        job.id
-    } completed - ${JSON.stringify(job.data)}`;
+    const logEntry = `${new Date().toISOString()} - Job ${job.id
+        } completed - ${JSON.stringify(job.data)}`;
     await query.batchProcessLogs.create({
         data: {
             job_id: job.id as string,
