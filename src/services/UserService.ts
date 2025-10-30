@@ -4,6 +4,8 @@ import type {
     RetrieveUserResponse,
     UpdateTwoFactorAuthResponse,
     UserJwtPayloadResponse,
+    UserPasswordResetType,
+    UserResetPasswordResponse,
     VerificationControllerResponse,
 } from "../types/user";
 import query from "@utils/prisma";
@@ -644,6 +646,89 @@ export default class UserService {
                 error: true,
                 status: false,
             };
+        }
+    }
+
+    // Reset User Password
+
+    static async ResetUserPassword({ email, code, newPassword }: UserPasswordResetType): Promise<UserResetPasswordResponse> {
+
+        try {
+
+            const cacheKey = `password-reset:code:${code}`
+            const user = await redis.get(cacheKey)
+
+            if (!user) {
+                return {
+                    error: true,
+                    message: "Invalid verification code",
+                    status: false,
+                };
+            }
+
+            const parsedUser = JSON.parse(user)
+
+
+            if (parsedUser.email !== email) {
+                return {
+                    error: true,
+                    message: "Invalid verification code",
+                    status: false,
+                };
+            }
+
+            const userExists = await query.user.findFirst({
+                where: {
+                    email: {
+                        equals: email,
+                        mode: "insensitive",
+                    },
+                },
+            });
+
+            if (!userExists) {
+                return {
+                    error: true,
+                    message: "User not found",
+                    status: false,
+                };
+            }
+
+            const { CreateHashedPassword } = await import("@libs/HashPassword");
+            const hashPassword = await CreateHashedPassword(newPassword);
+
+            // Update User 
+            const updatePassword = await query.user.update({
+                where: {
+                    id: parsedUser.id,
+                    email: email,
+                },
+                data: {
+                    password: hashPassword
+                }
+            })
+
+            if (!updatePassword) {
+                return {
+                    error: true,
+                    message: "Sorry an error occured while trying to update your password",
+                    status: false,
+                };
+            }
+
+
+            return {
+                error: false,
+                message: "Password Updated Successfully",
+                status: true,
+            };
+
+
+        } catch (error) {
+            if (error instanceof Error) {
+                throw new Error(error.message)
+            }
+            throw new Error()
         }
     }
 }

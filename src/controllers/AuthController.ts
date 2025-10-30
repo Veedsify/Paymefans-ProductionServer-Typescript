@@ -10,6 +10,7 @@ import { serialize } from "cookie";
 import { Authenticate } from "@libs/jwt";
 import { redis } from "@libs/RedisStore";
 import { durationInSeconds } from "@utils/helpers";
+import { isValidEmail } from "@utils/validate";
 const { MAIN_DOMAIN } = process.env;
 const REFRESH_TOKEN_EXPIRATION = process.env.REFRESH_TOKEN_EXPIRATION || "7d";
 
@@ -430,7 +431,6 @@ export default class AuthController {
   static async SendResetCode(req: Request, res: Response): Promise<any> {
     try {
       const { email } = req.body
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
       if (!email) {
         return res.status(400).json({
@@ -440,7 +440,7 @@ export default class AuthController {
         });
       }
 
-      if (!emailRegex.test(email)) {
+      if (!isValidEmail(email)) {
         return res.status(200).json({
           message: "Invalid email address",
           status: false,
@@ -456,6 +456,47 @@ export default class AuthController {
       }
 
       return res.status(200).json(sendResetCode);
+
+    } catch (error) {
+      return res
+        .status(500)
+        .json({ message: "Internal server error", status: false });
+    }
+  }
+
+  // Reset Password
+  static async ResetPassword(req: Request, res: Response): Promise<any> {
+    try {
+
+      const { email, code, newPassword } = req.body
+
+      if (!email || !code || !newPassword) {
+        return res.status(400).json({
+          error: true,
+          message: "One or more fields are missing",
+          status: false,
+        })
+      }
+
+      if (!isValidEmail(email)) {
+        return res.status(200).json({
+          message: "Invalid email address",
+          status: false,
+          error: true,
+        });
+      }
+
+
+      const resetPassword = await UserService.ResetUserPassword({
+        ...req.body
+      })
+
+      if (resetPassword.error) {
+        return res.status(400).json(resetPassword);
+      }
+
+      return res.status(200).json(resetPassword);
+
 
     } catch (error) {
       return res

@@ -70,3 +70,16 @@ export type UserJwtPayloadResponse = {
         two_factor_auth: boolean;
     } | null;
 };
+
+
+export interface UserPasswordResetType {
+    email: string;
+    code: string;
+    newPassword: string;
+}
+
+export interface UserResetPasswordResponse {
+    error: boolean;
+    message: string;
+    status?: boolean
+}
