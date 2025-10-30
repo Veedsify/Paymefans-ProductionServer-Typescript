@@ -402,8 +402,10 @@ export default class UserService {
             const code = random(100000, 999999);
 
             // Update existing code
-            const cacheKey = `user:reset:code:${code}`
-            redis.set(cacheKey, JSON.stringify(user))
+            const cacheKey = `password-reset:code:${code}`
+            await redis.set(cacheKey, JSON.stringify(user), "EX", 900) // Code Expired In 15 Minutes
+
+            console.log(`Reset Code: ${code}`)
 
             // Send email
             const EmailService = (await import("./EmailService")).default;
@@ -425,7 +427,7 @@ export default class UserService {
             }
 
             return {
-                message: "Verification code sent successfully",
+                message: "Password Reset Code Sent",
                 error: false,
                 status: true,
             };
