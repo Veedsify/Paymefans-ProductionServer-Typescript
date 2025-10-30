@@ -300,8 +300,8 @@ export default class ModelService {
                     firstname: firstname.toLowerCase(),
                     lastname: lastname.toLowerCase(),
                     dob: new Date(dob),
-                    gender: gender,
-                    country,
+                    gender: gender.toLowerCase(),
+                    country: country.toLowerCase(),
                     hookup: available === "yes",
                     verification_status: false,
                     token: referenceId,
@@ -360,14 +360,6 @@ export default class ModelService {
                 "referrer",
             );
 
-            if (!signUpUserAsModel) {
-                return {
-                    error: true,
-                    errorTitle: "Error signing up",
-                    status: false,
-                    message: "An error occurred while signing you up",
-                };
-            }
             return {
                 errorTitle: "You are now a model",
                 message: "You have been signed up as a model",
