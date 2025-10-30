@@ -39,5 +39,6 @@ auth.post(
 );
 auth.post(Paths.API.Auth.Logout, LogOutController.Logout);
 auth.post(Paths.API.Auth.TokenRefresh, AuthController.RefreshToken);
+auth.post(Paths.API.Auth.SendResetCode, AuthController.SendResetCode);
 
 export default auth;

@@ -425,4 +425,42 @@ export default class AuthController {
         .json({ message: "Internal server error", status: false });
     }
   }
+
+  // Send User Password Reset Code:
+  static async SendResetCode(req: Request, res: Response): Promise<any> {
+    try {
+      const { email } = req.body
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+      if (!email) {
+        return res.status(400).json({
+          message: "Email is required",
+          status: false,
+          error: true,
+        });
+      }
+
+      if (!emailRegex.test(email)) {
+        return res.status(200).json({
+          message: "Invalid email address",
+          status: false,
+          error: true,
+        });
+      }
+
+
+      const sendResetCode = await UserService.SendUserAccountResetCode(email)
+
+      if (sendResetCode.error) {
+        return res.status(400).json(sendResetCode);
+      }
+
+      return res.status(200).json(sendResetCode);
+
+    } catch (error) {
+      return res
+        .status(500)
+        .json({ message: "Internal server error", status: false });
+    }
+  }
 }

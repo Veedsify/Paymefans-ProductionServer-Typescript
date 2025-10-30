@@ -383,12 +383,12 @@ export default class EmailService {
                 duration >= 168
                     ? "6 Months"
                     : duration >= 84
-                      ? "3 Months"
-                      : duration >= 28
-                        ? "1 Month"
-                        : duration >= 14
-                          ? "1 Week"
-                          : duration;
+                        ? "3 Months"
+                        : duration >= 28
+                            ? "1 Month"
+                            : duration >= 14
+                                ? "1 Week"
+                                : duration;
 
             const options = {
                 emailData: {
@@ -564,10 +564,16 @@ export default class EmailService {
 
     //   Password Reset
     static async PasswordResetEmail(
-        name: string,
-        email: string,
-        username: string,
-        resetLink: string,
+        { name,
+            email,
+            username,
+            resetCode
+        }: {
+            name: string;
+            email: string;
+            username: string;
+            resetCode: number
+        }
     ): Promise<{
         message: string;
         error: boolean;
@@ -586,7 +592,7 @@ export default class EmailService {
                 templateData: {
                     name,
                     username,
-                    resetLink,
+                    resetCode,
                 },
             };
 

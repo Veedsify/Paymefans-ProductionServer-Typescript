@@ -23,6 +23,8 @@ const Paths = {
       Points: "/points",
       Wallet: "/wallet",
       Retrieve: "/retrieve",
+      SendResetCode: "/send-reset-code",
+      ResetPassword: "/reset-password",
       TwoFactorAuthentication: "/two-factor-authentication",
       VerifyTwoFactorAuth: "/verify/authentication",
       ResendTwoFactorCode: "/verify/resend",

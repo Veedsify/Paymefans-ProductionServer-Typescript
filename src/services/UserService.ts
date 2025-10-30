@@ -11,6 +11,7 @@ import query from "@utils/prisma";
 import LoginHistoryService from "./LoginHistory";
 import EmailService from "./EmailService";
 import FormatName from "@utils/FormatName";
+import { redis } from "@libs/RedisStore";
 
 export default class UserService {
     static async GetUserJwtPayload(
@@ -354,6 +355,77 @@ export default class UserService {
 
             return {
                 message: "Verification code resent successfully",
+                error: false,
+                status: true,
+            };
+        } catch (error) {
+            console.log(error);
+            return {
+                message: "Internal server error",
+                error: true,
+                status: false,
+            };
+        }
+    }
+
+    static async SendUserAccountResetCode(
+        email: string,
+    ): Promise<{ message: string; error: boolean; status: boolean }> {
+        try {
+            // Find the user with a pending 2FA code
+            const user = await query.user.findFirst({
+                where: {
+                    email: {
+                        equals: email,
+                        mode: "insensitive",
+                    },
+                },
+                select: {
+                    id: true,
+                    name: true,
+                    username: true,
+                    email: true,
+                }
+            });
+
+            if (!user) {
+                return {
+                    message:
+                        "Sorry This Account Does Not Exists",
+                    error: true,
+                    status: false,
+                };
+            }
+
+            // Generate new code
+            const { random } = await import("lodash");
+            const code = random(100000, 999999);
+
+            // Update existing code
+            const cacheKey = `user:reset:code:${code}`
+            redis.set(cacheKey, JSON.stringify(user))
+
+            // Send email
+            const EmailService = (await import("./EmailService")).default;
+            const FormatName = (await import("@utils/FormatName")).default;
+
+            const sendAuthEmail = await EmailService.PasswordResetEmail({
+                email: user.email,
+                resetCode: code,
+                username: user.username,
+                name: FormatName(user.name.split(" ")[0] ?? user.name),
+            });
+
+            if (sendAuthEmail.error) {
+                return {
+                    message: sendAuthEmail.message,
+                    error: true,
+                    status: false,
+                };
+            }
+
+            return {
+                message: "Verification code sent successfully",
                 error: false,
                 status: true,
             };
