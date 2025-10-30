@@ -1,15 +1,15 @@
 import ComparePasswordHash from "@libs/ComparePassordHash";
 import query from "@utils/prisma";
 import type {
-  ChangePassWordProps,
-  ChangePasswordResponse,
-  CheckUserNameResponse,
-  HookupStatusChangeResponse,
-  HookUpStatusProps,
-  SetMessagePriceProps,
-  SetMessagePriceResponse,
-  SettingProfileProps,
-  SettingsProfileChangeResponse,
+    ChangePassWordProps,
+    ChangePasswordResponse,
+    CheckUserNameResponse,
+    HookupStatusChangeResponse,
+    HookUpStatusProps,
+    SetMessagePriceProps,
+    SetMessagePriceResponse,
+    SettingProfileProps,
+    SettingsProfileChangeResponse,
 } from "types/settings";
 import type { AuthUser } from "types/user";
 import { passwordStrength } from "check-password-strength";
@@ -17,302 +17,361 @@ import { CreateHashedPassword } from "@libs/HashPassword";
 import { redis } from "@libs/RedisStore";
 
 export default class SettingsService {
-  // SettingsProfileChange Function To Change Users Profile Data
-  static async SettingsProfileChange(
-    body: SettingProfileProps,
-    userId: number,
-    userName: string,
-  ): Promise<SettingsProfileChangeResponse> {
-    try {
-      const { name, location, bio, website, email, username } = body;
-      return await query.$transaction(async (tx) => {
-        const checkUser = await tx.user.findUnique({
-          where: {
-            username: username,
-          },
-        });
-        if (checkUser && checkUser.id !== userId) {
-          return {
-            error: true,
-            message: "Username already exists",
-          };
+    // SettingsProfileChange Function To Change Users Profile Data
+    static async SettingsProfileChange(
+        body: SettingProfileProps,
+        userId: number,
+        userName: string,
+    ): Promise<SettingsProfileChangeResponse> {
+        try {
+            const { name, location, bio, website, email, username } = body;
+            return await query.$transaction(async (tx) => {
+                const checkUser = await tx.user.findUnique({
+                    where: {
+                        username: username,
+                    },
+                });
+                if (checkUser && checkUser.id !== userId) {
+                    return {
+                        error: true,
+                        message: "Username already exists",
+                    };
+                }
+                await tx.user.update({
+                    where: {
+                        id: userId,
+                    },
+                    data: {
+                        name,
+                        location,
+                        bio,
+                        username: username.trim().toLowerCase(),
+                        email,
+                        website,
+                    },
+                });
+
+                await tx.oldUsername.create({
+                    data: {
+                        user_id: userId,
+                        old_username: userName || "",
+                    },
+                });
+
+                return {
+                    error: false,
+                    message: "Profile Updated Successfully",
+                };
+            });
+        } catch (err: any) {
+            console.log(err);
+            throw new Error("Internal Server Error");
         }
-        await tx.user.update({
-          where: {
-            id: userId,
-          },
-          data: {
-            name,
-            location,
-            bio,
-            username: username.trim().toLowerCase(),
-            email,
-            website,
-          },
-        });
-
-        await tx.oldUsername.create({
-          data: {
-            user_id: userId,
-            old_username: userName || "",
-          },
-        });
-
-        return {
-          error: false,
-          message: "Profile Updated Successfully",
-        };
-      });
-    } catch (err: any) {
-      console.log(err);
-      throw new Error("Internal Server Error");
     }
-  }
 
-  static async HookupStatusChange(
-    body: HookUpStatusProps,
-    user: AuthUser,
-  ): Promise<HookupStatusChangeResponse> {
-    try {
-      const { hookup } = body;
-      const result = await query.$transaction(async (tx) => {
-        const changeHookupStatus = await tx.user.update({
-          where: { id: user.id },
-          data: {
-            Model: {
-              update: {
-                hookup: hookup === true ? true : false,
-              },
-            },
-          },
-        });
-        if (!changeHookupStatus) {
-          throw new Error("Error updating hookup status");
+    static async HookupStatusChange(
+        body: HookUpStatusProps,
+        user: AuthUser,
+    ): Promise<HookupStatusChangeResponse> {
+        try {
+            const { hookup } = body;
+            const result = await query.$transaction(async (tx) => {
+                const changeHookupStatus = await tx.user.update({
+                    where: { id: user.id },
+                    data: {
+                        Model: {
+                            update: {
+                                hookup: hookup === true ? true : false,
+                            },
+                        },
+                    },
+                });
+                if (!changeHookupStatus) {
+                    throw new Error("Error updating hookup status");
+                }
+                return {
+                    error: false,
+                    message: "Hookup status updated successfully",
+                };
+            });
+            return result;
+        } catch (err: any) {
+            console.log(err);
+            throw new Error("Internal Server Error");
         }
-        return {
-          error: false,
-          message: "Hookup status updated successfully",
-        };
-      });
-      return result;
-    } catch (err: any) {
-      console.log(err);
-      throw new Error("Internal Server Error");
     }
-  }
 
-  static async ChangePassword(
-    body: ChangePassWordProps,
-    user: AuthUser,
-  ): Promise<ChangePasswordResponse> {
-    try {
-      const { oldPassword, newPassword } = body;
+    static async ChangePassword(
+        body: ChangePassWordProps,
+        user: AuthUser,
+    ): Promise<ChangePasswordResponse> {
+        try {
+            const { oldPassword, newPassword } = body;
 
-      const result = await query.$transaction(async (tx) => {
-        const userPassword = await tx.user.findFirst({
-          where: { user_id: user.user_id },
-          select: { password: true },
-        });
+            const result = await query.$transaction(async (tx) => {
+                const userPassword = await tx.user.findFirst({
+                    where: { user_id: user.user_id },
+                    select: { password: true },
+                });
 
-        if (!userPassword) {
-          return {
-            error: true,
-            status: false,
-            message: "User not found",
-          };
+                if (!userPassword) {
+                    return {
+                        error: true,
+                        status: false,
+                        message: "User not found",
+                    };
+                }
+
+                const match = await ComparePasswordHash(
+                    oldPassword,
+                    userPassword.password,
+                );
+                if (!match) {
+                    return {
+                        error: true,
+                        status: false,
+                        message: "Old password is incorrect",
+                    };
+                }
+
+                const passwordStrengthResult =
+                    passwordStrength(newPassword).value;
+                if (passwordStrengthResult === "Weak") {
+                    return {
+                        error: true,
+                        status: false,
+                        message: "Password is weak",
+                    };
+                }
+
+                const hashPass = await CreateHashedPassword(newPassword);
+                await tx.user.update({
+                    where: { user_id: user.user_id },
+                    data: { password: hashPass },
+                });
+
+                return {
+                    error: false,
+                    message: "Password changed successfully",
+                    status: true,
+                };
+            });
+            return result;
+        } catch (error: any) {
+            console.error(error);
+            throw new Error(error.message);
         }
+    }
 
-        const match = await ComparePasswordHash(
-          oldPassword,
-          userPassword.password,
-        );
-        if (!match) {
-          return {
-            error: true,
-            status: false,
-            message: "Old password is incorrect",
-          };
+    static async SetMessagePrice(
+        body: SetMessagePriceProps,
+        user: AuthUser,
+    ): Promise<SetMessagePriceResponse> {
+        const { price_per_message, enable_free_message, subscription_price } =
+            body;
+
+        try {
+            const result = await query.$transaction(async (tx) => {
+                await tx.settings.update({
+                    where: { user_id: user.id },
+                    data: {
+                        subscription_price: parseFloat(subscription_price),
+                        price_per_message: parseFloat(price_per_message),
+                        enable_free_message,
+                    },
+                });
+
+                // Update Redis after transaction is successful
+                const PriceKey = `price_per_message:${user.user_id}`;
+                await redis.set(PriceKey, price_per_message);
+
+                return {
+                    message: "Message price updated successfully",
+                    status: true,
+                    error: false,
+                };
+            });
+
+            return result;
+        } catch (error) {
+            console.error(error);
+            return {
+                message: "Error updating message price",
+                status: false,
+                error: true,
+            };
         }
+    }
 
-        const passwordStrengthResult = passwordStrength(newPassword).value;
-        if (passwordStrengthResult === "Weak") {
-          return {
-            error: true,
-            status: false,
-            message: "Password is weak",
-          };
+    // Check Username Before Change
+    static async CheckUserName(
+        username: string,
+        user: AuthUser,
+    ): Promise<CheckUserNameResponse> {
+        try {
+            if (!username) {
+                return {
+                    status: false,
+                    error: true,
+                    username: "",
+                    message: "Username is required",
+                };
+            }
+
+            const checkUsername = await query.user.findFirst({
+                where: {
+                    username: {
+                        equals: username,
+                        mode: "insensitive",
+                    },
+                },
+                select: {
+                    username: true,
+                },
+            });
+
+            if (!checkUsername) {
+                return {
+                    status: true,
+                    error: false,
+                    username: username,
+                    message: "Username is available",
+                };
+            }
+
+            if (checkUsername.username === user?.username) {
+                return {
+                    status: true,
+                    error: false,
+                    username: username,
+                    message: "Username is available",
+                };
+            }
+
+            return {
+                status: false,
+                error: true,
+                username: "",
+                message: "Username already exists",
+            };
+        } catch (error: any) {
+            throw new Error(error.message);
         }
-
-        const hashPass = await CreateHashedPassword(newPassword);
-        await tx.user.update({
-          where: { user_id: user.user_id },
-          data: { password: hashPass },
-        });
-
-        return {
-          error: false,
-          message: "Password changed successfully",
-          status: true,
-        };
-      });
-      return result;
-    } catch (error: any) {
-      console.error(error);
-      throw new Error(error.message);
     }
-  }
 
-  static async SetMessagePrice(
-    body: SetMessagePriceProps,
-    user: AuthUser,
-  ): Promise<SetMessagePriceResponse> {
-    const { price_per_message, enable_free_message, subscription_price } = body;
+    // Update Show Active Status
+    static async UpdateShowActiveStatus(
+        show_active: boolean,
+        user: AuthUser,
+    ): Promise<{ message: string; status: boolean; error: boolean }> {
+        try {
+            if (typeof show_active !== "boolean") {
+                return {
+                    status: false,
+                    error: true,
+                    message: "show_active must be a boolean value",
+                };
+            }
 
-    try {
-      const result = await query.$transaction(async (tx) => {
-        await tx.settings.update({
-          where: { user_id: user.id },
-          data: {
-            subscription_price: parseFloat(subscription_price),
-            price_per_message: parseFloat(price_per_message),
-            enable_free_message,
-          },
-        });
+            await query.user.update({
+                where: { id: user.id },
+                data: { show_active },
+            });
 
-        // Update Redis after transaction is successful
-        const PriceKey = `price_per_message:${user.user_id}`;
-        await redis.set(PriceKey, price_per_message);
-
-        return {
-          message: "Message price updated successfully",
-          status: true,
-          error: false,
-        };
-      });
-
-      return result;
-    } catch (error) {
-      console.error(error);
-      return {
-        message: "Error updating message price",
-        status: false,
-        error: true,
-      };
+            return {
+                status: true,
+                error: false,
+                message: `Active status visibility ${show_active ? "enabled" : "disabled"} successfully`,
+            };
+        } catch (error: any) {
+            console.error("Error updating show_active status:", error);
+            return {
+                status: false,
+                error: true,
+                message: "Error updating active status visibility",
+            };
+        }
     }
-  }
 
-  // Check Username Before Change
-  static async CheckUserName(
-    username: string,
-    user: AuthUser,
-  ): Promise<CheckUserNameResponse> {
-    try {
-      if (!username) {
-        return {
-          status: false,
-          error: true,
-          username: "",
-          message: "Username is required",
-        };
-      }
+    static async GetUserSettings(userId: number) {
+        try {
+            const settings = await query.settings.findUnique({
+                where: { user_id: userId },
+            });
 
-      const checkUsername = await query.user.findFirst({
-        where: {
-          username: {
-            equals: username,
-            mode: "insensitive",
-          },
-        },
-        select: {
-          username: true,
-        },
-      });
+            if (!settings) {
+                throw new Error("Settings not found");
+            }
 
-      if (!checkUsername) {
-        return {
-          status: true,
-          error: false,
-          username: username,
-          message: "Username is available",
-        };
-      }
-
-      if (checkUsername.username === user?.username) {
-        return {
-          status: true,
-          error: false,
-          username: username,
-          message: "Username is available",
-        };
-      }
-
-      return {
-        status: false,
-        error: true,
-        username: "",
-        message: "Username already exists",
-      };
-    } catch (error: any) {
-      throw new Error(error.message);
+            return {
+                error: false,
+                message: "Settings retrieved successfully",
+                settings,
+            };
+        } catch (error: any) {
+            console.error("Error retrieving user settings:", error);
+            return {
+                error: true,
+                message: "Error retrieving user settings",
+                settings: null,
+            };
+        }
     }
-  }
 
-  // Update Show Active Status
-  static async UpdateShowActiveStatus(
-    show_active: boolean,
-    user: AuthUser,
-  ): Promise<{ message: string; status: boolean; error: boolean }> {
-    try {
-      if (typeof show_active !== "boolean") {
-        return {
-          status: false,
-          error: true,
-          message: "show_active must be a boolean value",
-        };
-      }
+    // Water Mark Status
+    static async UpdateWatermarkStatus(
+        enabled: boolean,
+        user: AuthUser,
+    ): Promise<{ message: string; status: boolean; error: boolean }> {
+        try {
+            if (typeof enabled !== "boolean") {
+                return {
+                    status: false,
+                    error: true,
+                    message: "Watermark status must be a boolean value",
+                };
+            }
 
-      await query.user.update({
-        where: { id: user.id },
-        data: { show_active },
-      });
+            await query.user.update({
+                where: { id: user.id },
+                data: { watermarkEnabled: enabled },
+            });
 
-      return {
-        status: true,
-        error: false,
-        message: `Active status visibility ${show_active ? "enabled" : "disabled"} successfully`,
-      };
-    } catch (error: any) {
-      console.error("Error updating show_active status:", error);
-      return {
-        status: false,
-        error: true,
-        message: "Error updating active status visibility",
-      };
+            return {
+                status: true,
+                error: false,
+                message: `Watermark status ${enabled ? "enabled" : "disabled"} successfully`,
+            };
+        } catch (error: any) {
+            console.error("Error updating watermark status:", error);
+            return {
+                status: false,
+                error: true,
+                message: "Error updating watermark status",
+            };
+        }
     }
-  }
 
-  static async GetUserSettings(userId: number) {
-    try {
-      const settings = await query.settings.findUnique({
-        where: { user_id: userId },
-      });
+    // Get Watermark Status
+    static async GetWatermarkStatus(
+        user: AuthUser,
+    ): Promise<{ enabled: boolean }> {
+        try {
+            const userSettings = await query.user.findUnique({
+                where: { id: user.id },
+                select: { watermarkEnabled: true },
+            });
 
-      if (!settings) {
-        throw new Error("Settings not found");
-      }
+            if (!userSettings) {
+                throw new Error("User not found");
+            }
 
-      return {
-        error: false,
-        message: "Settings retrieved successfully",
-        settings,
-      };
-    } catch (error: any) {
-      console.error("Error retrieving user settings:", error);
-      return {
-        error: true,
-        message: "Error retrieving user settings",
-        settings: null,
-      };
+            return {
+                enabled: userSettings.watermarkEnabled,
+            };
+        } catch (error: any) {
+            console.error("Error retrieving watermark status:", error);
+            throw new Error("Error retrieving watermark status");
+        }
     }
-  }
 }

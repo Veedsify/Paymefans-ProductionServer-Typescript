@@ -6,20 +6,22 @@ const settings = express.Router();
 settings.get("/", Auth, SettingsController.GetUserSettings);
 settings.post("/update", Auth, SettingsController.SettingsProfileChange);
 settings.post(
-  "/update/hookup-status",
-  Auth,
-  SettingsController.HookupStatusChange,
+    "/update/hookup-status",
+    Auth,
+    SettingsController.HookupStatusChange,
 );
 settings.patch("/update/password", Auth, SettingsController.ChangePassword);
 settings.post(
-  "/billings/message-price",
-  Auth,
-  SettingsController.SetMessagePrice,
+    "/billings/message-price",
+    Auth,
+    SettingsController.SetMessagePrice,
 );
 settings.post("/check-username", Auth, SettingsController.CheckUserName);
 settings.post(
-  "/update/show-active",
-  Auth,
-  SettingsController.UpdateShowActiveStatus,
+    "/update/show-active",
+    Auth,
+    SettingsController.UpdateShowActiveStatus,
 );
+settings.post("/watermark", Auth, SettingsController.UpdateWatermarkStatus);
+settings.get("/watermark", Auth, SettingsController.GetWatermarkStatus);
 export default settings;
