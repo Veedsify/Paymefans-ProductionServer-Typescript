@@ -294,7 +294,7 @@ export default class ModelService {
             }
 
             const referenceId = `MDL${GenerateUniqueId()}`;
-            let signUpUserAsModel = await query.model.create({
+            await query.model.create({
                 data: {
                     user_id: user.id,
                     firstname: firstname.toLowerCase(),
