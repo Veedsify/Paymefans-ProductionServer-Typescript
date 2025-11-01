@@ -63,4 +63,10 @@ conversations.get(
     Auth,
     ConversationController.GetFreeMessageStatus,
 );
+
+conversations.delete(
+  "/delete/:conversationId",
+  Auth,
+  ConversationController.DeleteConversation
+);
 export default conversations;

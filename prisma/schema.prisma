@@ -145,12 +145,13 @@ model Participants {
 }
 
 model Conversations {
-    id              Int            @id @default(autoincrement())
-    conversation_id String         @unique
-    created_at      DateTime       @default(now())
-    updated_at      DateTime       @updatedAt
-    messages        Messages[]
-    participants    Participants[] @relation("ConversationsToParticipants")
+    id                  Int            @id @default(autoincrement())
+    conversation_id     String         @unique
+    created_at          DateTime       @default(now())
+    updated_at          DateTime       @updatedAt
+    messages            Messages[]
+    conversation_status Boolean        @default(true)
+    participants        Participants[] @relation("ConversationsToParticipants")
 }
 
 model Messages {
