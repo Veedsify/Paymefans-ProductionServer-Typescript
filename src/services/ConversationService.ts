@@ -22,7 +22,6 @@ import { UploadImageToS3 } from "@libs/UploadImageToS3";
 import tusUploader from "@libs/tus";
 import { Permissions, RBAC } from "@utils/FlagsConfig";
 import { String } from "aws-sdk/clients/acm";
-import UserService from "./UserService";
 
 export default class ConversationService {
   // Conversation Receiver
